@@ -155,24 +155,17 @@ app.get("/api/cron/cleanup", async (req, res) => {
 // Global Error Handler (Must be at the end)
 app.use(errorHandler);
 
-// Serve frontend static files
-const publicPath = path.join(process.cwd(), "public");
-
-app.use(express.static(publicPath, { maxAge: "7d", etag: true }));
+// Serve uploaded files statically
 app.use(
   "/uploads",
   express.static(path.join(process.cwd(), "uploads"), { maxAge: "30d" }),
 );
 
-// Catch-all: serve index.html for any non-API route (React Router support)
+// Fallback for unknown routes
 app.use((req, res) => {
-  const indexPath = path.join(publicPath, "index.html");
-  if (fs.existsSync(indexPath)) {
-    res.sendFile(indexPath);
-  } else {
-    res.status(404).send("Frontend index.html not found");
-  }
+  res.status(404).json({ error: "API Endpoint not found" });
 });
+
 
 // Socket.io for Real-time chat & Online Status
 const onlineUsers = new Map(); // socketId -> userId

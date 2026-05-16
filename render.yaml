@@ -14,7 +14,8 @@ services:
       - key: JWT_SECRET
         generateValue: true
       - key: FRONTEND_URL
-        value: https://leadcity-backend.onrender.com # Change this if using custom domain
+        value: https://leadcity-frontend.onrender.com
+
       - key: ADMIN_JWT_SECRET
         generateValue: true
       - key: CRON_SECRET
@@ -60,3 +61,18 @@ services:
       - type: rewrite
         source: /*
         destination: /index.html
+
+  # 4. Main Platform Frontend (Static Site)
+  - type: static
+    name: leadcity-frontend
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    publishPath: dist
+    envVars:
+      - key: VITE_API_URL
+        value: https://leadcity-backend.onrender.com
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+

@@ -52,7 +52,7 @@ services:
         sync: false
 
   # 3. Admin Portal (Static Frontend)
-  - type: static
+  - type: static_site
     name: leadcity-admin-portal
     rootDir: admin-frontend
     buildCommand: npm install && npm run build
@@ -63,10 +63,11 @@ services:
         destination: /index.html
 
   # 4. Main Platform Frontend (Static Site)
-  - type: static
+  - type: static_site
     name: leadcity-frontend
     rootDir: frontend
     buildCommand: npm install && npm run build
+
     publishPath: dist
     envVars:
       - key: VITE_API_URL

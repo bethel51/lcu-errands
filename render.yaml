@@ -39,6 +39,16 @@ services:
         value: https://leadcity-admin-portal.onrender.com
       - key: FRONTEND_URL
         value: https://leadcity-backend.onrender.com
+      - key: CRON_SECRET
+        sync: false
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        sync: false
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
 
   # 3. Admin Portal (Static Frontend)
   - type: static

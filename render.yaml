@@ -1,0 +1,51 @@
+services:
+  # 1. Main Platform Backend (Serves Main Frontend)
+  - type: web
+    name: leadcity-backend
+    env: node
+    plan: free
+    rootDir: .
+    dockerfilePath: Dockerfile
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MONGODB_URI
+        fromConfig: true
+      - key: JWT_SECRET
+        generateValue: true
+      - key: FRONTEND_URL
+        value: https://leadcity-backend.onrender.com # Change this if using custom domain
+
+  # 2. Administrative Backend
+  - type: web
+    name: leadcity-admin-service
+    env: node
+    plan: free
+    rootDir: admin-service
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MONGODB_URI
+        fromConfig: true
+      - key: JWT_SECRET
+        generateValue: true
+      - key: ADMIN_FRONTEND_URL
+        value: https://leadcity-admin-portal.onrender.com
+
+  # 3. Admin Portal (Static Frontend)
+  - type: static_site
+    name: leadcity-admin-portal
+    rootDir: admin-frontend
+    buildCommand: npm install && npm run build
+    publishDir: dist
+    envVars:
+      - key: VITE_ADMIN_API_URL
+        value: https://leadcity-admin-service.onrender.com
+      - key: VITE_API_URL
+        value: https://leadcity-backend.onrender.com
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html

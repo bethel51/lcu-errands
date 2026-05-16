@@ -1,0 +1,26 @@
+{
+  "name": "leadcity-errand-monorepo",
+  "version": "1.0.0",
+  "description": "Enterprise-grade monorepo for LeadCity Errands",
+  "private": true,
+  "workspaces": [
+    "frontend",
+    "backend",
+    "admin-frontend",
+    "admin-service"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev -w backend\" \"npm run dev -w admin-service\" \"npm run dev -w frontend\" \"npm run dev -w admin-frontend\"",
+    "install:all": "npm install",
+    "build:all": "npm run build --workspaces",
+    "start:backend": "npm start -w backend",
+    "start:admin": "npm start -w admin-service",
+    "clean": "npm run clean --workspaces && rimraf node_modules",
+    "lint": "npm run lint --workspaces"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2",
+    "gh-pages": "^6.3.0",
+    "rimraf": "^5.0.0"
+  }
+}

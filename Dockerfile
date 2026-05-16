@@ -14,7 +14,6 @@ RUN npm install --omit=dev
 
 # Copy backend source
 COPY backend/src ./src
-COPY backend/index.js ./
 
 # Copy frontend build to backend public folder
 COPY --from=frontend-build /app/dist ./public

@@ -1,16 +1,29 @@
 import nodemailer from "nodemailer";
 
 const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST || process.env.EMAIL_HOST,
-  port: Number(process.env.SMTP_PORT || process.env.EMAIL_PORT),
-  secure: false, // true for 465, false for other ports
+  host: process.env.SMTP_HOST || "smtp.gmail.com",
+  port: Number(process.env.SMTP_PORT) || 587,
+  secure: process.env.SMTP_SECURE === "true", // true for 465, false for other ports
+  pool: true,
+  maxConnections: 5,
+  maxMessages: 100,
+  connectionTimeout: 10000,
+  greetingTimeout: 8000,
+  socketTimeout: 15000,
   auth: {
     user: process.env.SMTP_USER || process.env.EMAIL_USER,
     pass: process.env.SMTP_PASS || process.env.EMAIL_PASS,
   },
 });
 
-// Mail service configuration
+// Verify SMTP config on startup
+transporter.verify((error) => {
+  if (error) {
+    console.error("⚠️ SMTP connection failed:", error.message);
+  } else {
+    console.log("✅ SMTP server is ready to send emails.");
+  }
+});
 
 export const sendEmail = async (to, subject, text, html) => {
   const user = process.env.SMTP_USER || process.env.EMAIL_USER;
@@ -307,4 +320,23 @@ export const sendBroadcastEmail = async (
     </div>
   `;
   await sendEmail(userEmail, subject, "Official Platform Update", html);
+};
+
+export const sendOtpEmail = async (userEmail, userName, otp) => {
+  const subject = "LeadCity Errands - Your Verification Code";
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px;">
+      <h2 style="color: #1E4DB7; margin-bottom: 20px;">Email Verification</h2>
+      <p style="font-size: 16px; color: #333;">Hi ${userName},</p>
+      <p style="font-size: 16px; color: #333;">Please use the following verification code to complete your registration. This code expires in 10 minutes.</p>
+      <div style="background-color: #f5f7fa; padding: 20px; border-radius: 8px; text-align: center; margin: 30px 0;">
+        <span style="font-size: 36px; font-weight: bold; letter-spacing: 8px; color: #1E4DB7;">${otp}</span>
+      </div>
+        <p style="color: #6B7280; font-size: 14px; margin-bottom: 24px;">If you did not request this, please ignore this email. Do not share this code with anyone.</p>
+        <hr style="border: 0; border-top: 1px solid #F3F4F6; margin-bottom: 24px;" />
+        <p style="color: #9CA3AF; font-size: 14px; margin: 0;">This is an automated notification from Lead City University Errands.</p>
+      </div>
+    </div>
+  `;
+  await sendEmail(userEmail, subject, `Your OTP is: ${otp}`, html);
 };

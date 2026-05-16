@@ -15,6 +15,10 @@ services:
         generateValue: true
       - key: FRONTEND_URL
         value: https://leadcity-backend.onrender.com # Change this if using custom domain
+      - key: ADMIN_JWT_SECRET
+        generateValue: true
+      - key: CRON_SECRET
+        generateValue: true
 
   # 2. Administrative Backend
   - type: web
@@ -22,17 +26,19 @@ services:
     env: node
     plan: free
     rootDir: admin-service
-    buildCommand: npm install && npm run build
-    startCommand: npm start
+    buildCommand: npm install
+    startCommand: node src/index.js
     envVars:
       - key: NODE_ENV
         value: production
       - key: MONGODB_URI
         fromConfig: true
-      - key: JWT_SECRET
+      - key: ADMIN_JWT_SECRET
         generateValue: true
       - key: ADMIN_FRONTEND_URL
         value: https://leadcity-admin-portal.onrender.com
+      - key: FRONTEND_URL
+        value: https://leadcity-backend.onrender.com
 
   # 3. Admin Portal (Static Frontend)
   - type: static

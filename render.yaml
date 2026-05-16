@@ -35,16 +35,11 @@ services:
         value: https://leadcity-admin-portal.onrender.com
 
   # 3. Admin Portal (Static Frontend)
-  - type: static_site
+  - type: static
     name: leadcity-admin-portal
     rootDir: admin-frontend
     buildCommand: npm install && npm run build
-    publishDir: dist
-    envVars:
-      - key: VITE_ADMIN_API_URL
-        value: https://leadcity-admin-service.onrender.com
-      - key: VITE_API_URL
-        value: https://leadcity-backend.onrender.com
+    publishPath: dist
     routes:
       - type: rewrite
         source: /*

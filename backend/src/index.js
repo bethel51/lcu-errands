@@ -20,6 +20,7 @@ import reviewRoutes from "./routes/reviewRoutes.js";
 import chatRoutes from "./routes/chatRoutes.js";
 import notificationRoutes from "./routes/notificationRoutes.js";
 import payoutRoutes from "./routes/payoutRoutes.js";
+import debugRoutes from "./routes/debugRoutes.js";
 import { errorHandler } from "./middleware/errorMiddleware.js";
 import { Message } from "./models/Message.js";
 import { User } from "./models/User.js";
@@ -129,6 +130,7 @@ app.use("/api/reviews", reviewRoutes);
 app.use("/api/chat", chatRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/withdrawals", payoutRoutes);
+app.use("/api/debug", debugRoutes);
 
 // Vercel Cron Job Route for Boost Cleanup
 app.get("/api/cron/cleanup", async (req, res) => {

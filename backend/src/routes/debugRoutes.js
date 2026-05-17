@@ -37,10 +37,15 @@ router.post("/email", catchAsync(async (req, res) => {
 
   console.log(`[DEBUG] Executing direct SMTP test to: ${email}`);
 
+  const smtpPort = Number(process.env.SMTP_PORT) || 465;
+  const smtpSecure = process.env.SMTP_SECURE !== undefined 
+    ? process.env.SMTP_SECURE === "true" 
+    : smtpPort === 465;
+
   const transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST || "smtp.gmail.com",
-    port: Number(process.env.SMTP_PORT) || 587,
-    secure: process.env.SMTP_SECURE === "true",
+    port: smtpPort,
+    secure: smtpSecure,
     auth: { user, pass },
   });
 

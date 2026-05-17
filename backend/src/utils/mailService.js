@@ -4,10 +4,15 @@ import dns from "dns";
 // Force Node.js to resolve IPv4 addresses first (fixes Render ENETUNREACH IPv6 issue)
 dns.setDefaultResultOrder("ipv4first");
 
+const smtpPort = Number(process.env.SMTP_PORT) || 465;
+const smtpSecure = process.env.SMTP_SECURE !== undefined 
+  ? process.env.SMTP_SECURE === "true" 
+  : smtpPort === 465;
+
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST || "smtp.gmail.com",
-  port: Number(process.env.SMTP_PORT) || 587,
-  secure: process.env.SMTP_SECURE === "true", // true for 465, false for other ports
+  port: smtpPort,
+  secure: smtpSecure,
   pool: true,
   maxConnections: 5,
   maxMessages: 100,

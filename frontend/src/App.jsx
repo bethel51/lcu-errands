@@ -1,7 +1,7 @@
 import { lazy, Suspense, useState, useEffect } from "react";
 import "./App.css";
 import {
-  HashRouter as Router,
+  BrowserRouter as Router,
   Routes,
   Route,
   Navigate,

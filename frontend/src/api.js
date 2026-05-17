@@ -34,17 +34,16 @@ api.interceptors.response.use(
       };
     }
 
-    const currentHash = window.location.hash;
+    const currentPath = window.location.pathname + window.location.hash;
     const isAuthPage = 
-      currentHash.includes("/login") || 
-      currentHash.includes("/register") || 
-      currentHash.includes("/forgot-password");
+      currentPath.includes("/login") || 
+      currentPath.includes("/register") || 
+      currentPath.includes("/forgot-password");
 
     if (error.response?.status === 401 && !isAuthPage) {
       console.warn("[API] Unauthorized access detected. Redirecting to login...");
       localStorage.clear();
-      // Use the hash-friendly path for login
-      window.location.hash = "/login";
+      window.location.href = "/login";
     }
     return Promise.reject(error);
   },

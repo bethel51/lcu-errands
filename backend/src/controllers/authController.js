@@ -15,7 +15,7 @@ import { catchAsync } from "./catchAsync.js";
  * @property {string} name - The user's full name.
  * @property {string} email - The user's institutional email address (must end with @lcu.edu.ng).
  * @property {string} password - The account password (min 6 characters).
- * @property {'SENDER' | 'MESSENGER'} role - The user's platform role: SENDER (posts errands) or MESSENGER (delivers tasks).
+ * @property {'sender' | 'messenger'} role - The user's platform role: sender (posts errands) or messenger (delivers tasks).
  * @property {string} location - Selected campus location (e.g. Hostels, Cafe, Gate).
  * @property {string} phoneNumber - User's contact mobile phone number.
  * @property {string} matricNumber - Unique LeadCity University matriculation number format (e.g. LCU/UG/24/1234).
@@ -25,7 +25,7 @@ import { catchAsync } from "./catchAsync.js";
  * @typedef {Object} LoginRequestBody
  * @property {string} email - User's registered email address.
  * @property {string} password - User's account password.
- * @property {'SENDER' | 'MESSENGER'} role - The expected login role (preventing crossover).
+ * @property {'sender' | 'messenger'} role - The expected login role (preventing crossover).
  */
 
 /**

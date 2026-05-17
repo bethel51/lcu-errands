@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link, useLocation, Navigate } from "react-router-dom";
 import { Eye, EyeOff, User, Bike, CheckCircle } from "lucide-react";

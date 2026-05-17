@@ -1,10 +1,7 @@
 import express from "express";
 import nodemailer from "nodemailer";
-import dns from "dns";
+import dnsPromises from "dns/promises";
 import { catchAsync } from "../controllers/catchAsync.js";
-
-// Force Node.js to resolve IPv4 addresses first (fixes Render ENETUNREACH IPv6 issue)
-dns.setDefaultResultOrder("ipv4first");
 
 const router = express.Router();
 
@@ -42,11 +39,14 @@ router.post("/email", catchAsync(async (req, res) => {
     ? process.env.SMTP_SECURE === "true" 
     : smtpPort === 465;
 
+  const smtpHostName = process.env.SMTP_HOST || "smtp.gmail.com";
+  const { address: smtpIpAddress } = await dnsPromises.lookup(smtpHostName, { family: 4 });
+
   const transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST || "smtp.gmail.com",
+    host: smtpIpAddress,
     port: smtpPort,
     secure: smtpSecure,
-    family: 4,
+    tls: { servername: smtpHostName },
     auth: { user, pass },
   });
 

@@ -162,6 +162,12 @@ export const verifyOtpAndRegister = catchAsync(async (req: Request<{}, {}, Verif
     return res.status(400).json({ message: "Verification session expired. Please start again." });
   }
 
+  // Explicitly check expiration based on the local server clock to bypass database-level clock skews
+  if (record.expiresAt < new Date()) {
+    await OTP.deleteOne({ email: normalizedEmail });
+    return res.status(400).json({ message: "Verification session expired. Please start again." });
+  }
+
   if (record.otp !== inputOtp && (process.env.NODE_ENV === "production" || inputOtp !== "123456")) {
     return res.status(400).json({
       message: "Invalid verification code. Please check your email and try again.",

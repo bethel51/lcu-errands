@@ -14,7 +14,7 @@ const otpSchema = new mongoose.Schema({
   expiresAt: {
     type: Date,
     required: true,
-    index: { expires: "10m" }, // Automatically delete after 10 minutes
+    expires: 3600, // Safe database TTL of 1 hour to avoid any clock skew / timezone mismatch deletions
   },
   formData: {
     type: Object,
@@ -26,4 +26,21 @@ const otpSchema = new mongoose.Schema({
   },
 });
 
+// Drop the old TTL index on startup so MongoDB can recreate it with the safe 1-hour expiration
+mongoose.connection.once("open", async () => {
+  try {
+    const db = mongoose.connection.db;
+    if (db) {
+      const collections = await db.listCollections({ name: "otps" }).toArray();
+      if (collections.length > 0) {
+        await db.collection("otps").dropIndex("expiresAt_1").catch(() => {});
+        console.log("🔄 Rebuilt OTP collection indexes with safe TTL.");
+      }
+    }
+  } catch (err) {
+    console.error("⚠️ OTP Index Rebuild Error:", err);
+  }
+});
+
 export const OTP = mongoose.model("OTP", otpSchema);
+

@@ -161,10 +161,16 @@ app.use(
   express.static(path.join(process.cwd(), "uploads"), { maxAge: "30d" }),
 );
 
+// Root endpoint welcome message
+app.get("/", (req, res) => {
+  res.json({ message: "Welcome to the LeadCity Errands API" });
+});
+
 // Fallback for unknown routes
 app.use((req, res) => {
   res.status(404).json({ error: "API Endpoint not found" });
 });
+
 
 
 // Socket.io for Real-time chat & Online Status

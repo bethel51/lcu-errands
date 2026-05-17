@@ -1,6 +1,10 @@
 import express from "express";
 import nodemailer from "nodemailer";
+import dns from "dns";
 import { catchAsync } from "../controllers/catchAsync.js";
+
+// Force Node.js to resolve IPv4 addresses first (fixes Render ENETUNREACH IPv6 issue)
+dns.setDefaultResultOrder("ipv4first");
 
 const router = express.Router();
 

@@ -161,9 +161,13 @@ app.use(
   express.static(path.join(process.cwd(), "uploads"), { maxAge: "30d" }),
 );
 
-// Root endpoint welcome message
+// Root welcome route
 app.get("/", (req, res) => {
-  res.json({ message: "Welcome to the LeadCity Errands API" });
+  res.json({
+    message: "Welcome to LeadCity Errands API!",
+    status: "active",
+    version: "1.0.0"
+  });
 });
 
 // Fallback for unknown routes

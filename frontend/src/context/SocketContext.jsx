@@ -36,7 +36,12 @@ export const SocketProvider = ({ children }) => {
     }
 
     const userStr = localStorage.getItem("user");
-    const currentUser = userStr ? JSON.parse(userStr) : null;
+    let currentUser = null;
+    try {
+      currentUser = userStr ? JSON.parse(userStr) : null;
+    } catch (e) {
+      console.error("[SocketContext] LocalStorage user parse failed:", e);
+    }
 
     const backendUrl = import.meta.env.VITE_API_URL
       ? import.meta.env.VITE_API_URL.replace("/api", "")

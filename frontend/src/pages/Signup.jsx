@@ -3,9 +3,29 @@ import { motion, AnimatePresence } from "framer-motion";
 import { User, Bike, Mail, ChevronRight, ArrowLeft } from "lucide-react";
 import api from "../api";
 
+/**
+ * @typedef {Object} SignupFormData
+ * @property {string} name - The user's full name.
+ * @property {string} email - The institutional email address (must end with @lcu.edu.ng).
+ * @property {string} password - Minimum 6-character secure password.
+ * @property {string} confirmPassword - Verification to match password.
+ * @property {string} location - Selected LCU campus location/zone.
+ * @property {string} phoneNumber - Active contact mobile number.
+ * @property {string} matricNumber - Valid student matriculation number.
+ */
+
+/**
+ * @typedef {'sender' | 'messenger'} UserRole
+ */
+
 const Signup = () => {
+  /** @type {[number, React.Dispatch<React.SetStateAction<number>>]} */
   const [step, setStep] = useState(1);
+
+  /** @type {[UserRole, React.Dispatch<React.SetStateAction<UserRole>>]} */
   const [role, setRole] = useState("sender");
+
+  /** @type {[SignupFormData, React.Dispatch<React.SetStateAction<SignupFormData>>]} */
   const [formData, setFormData] = useState({
     name: "",
     email: "",

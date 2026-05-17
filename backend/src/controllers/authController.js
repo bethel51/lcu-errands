@@ -10,12 +10,37 @@ import {
 } from "../utils/mailService.js";
 import { catchAsync } from "./catchAsync.js";
 
+/**
+ * @typedef {Object} SignUpRequestBody
+ * @property {string} name - The user's full name.
+ * @property {string} email - The user's institutional email address (must end with @lcu.edu.ng).
+ * @property {string} password - The account password (min 6 characters).
+ * @property {'SENDER' | 'MESSENGER'} role - The user's platform role: SENDER (posts errands) or MESSENGER (delivers tasks).
+ * @property {string} location - Selected campus location (e.g. Hostels, Cafe, Gate).
+ * @property {string} phoneNumber - User's contact mobile phone number.
+ * @property {string} matricNumber - Unique LeadCity University matriculation number format (e.g. LCU/UG/24/1234).
+ */
+
+/**
+ * @typedef {Object} LoginRequestBody
+ * @property {string} email - User's registered email address.
+ * @property {string} password - User's account password.
+ * @property {'SENDER' | 'MESSENGER'} role - The expected login role (preventing crossover).
+ */
+
+/**
+ * @typedef {Object} VerifyOtpRequestBody
+ * @property {string} email - Registered email address.
+ * @property {string} otp - 6-digit OTP code sent to user email.
+ */
+
 // Generate a 6-digit OTP
 const generateOtp = () =>
   Math.floor(100000 + Math.random() * 900000).toString();
 
 // STEP 1: Send OTP to email before registration
 export const sendOtp = catchAsync(async (req, res) => {
+  /** @type {SignUpRequestBody} */
   const { name, email, password, role, location, phoneNumber, matricNumber } =
     req.body;
 
@@ -127,6 +152,7 @@ export const resendOtp = catchAsync(async (req, res) => {
 
 // STEP 2: Verify OTP and create account
 export const verifyOtpAndRegister = catchAsync(async (req, res) => {
+  /** @type {VerifyOtpRequestBody} */
   const { email, otp } = req.body;
   const normalizedEmail = String(email || "")
     .toLowerCase()
@@ -239,6 +265,7 @@ export const register = catchAsync(async (req, res) => {
 });
 
 export const login = catchAsync(async (req, res) => {
+  /** @type {LoginRequestBody} */
   const { email, password, role } = req.body;
   const normalizedEmail = String(email || "")
     .toLowerCase()

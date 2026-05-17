@@ -4,10 +4,20 @@ import { Link, useLocation, Navigate } from "react-router-dom";
 import { Eye, EyeOff, User, Bike, CheckCircle } from "lucide-react";
 import api from "../api";
 
+/**
+ * @typedef {'sender' | 'messenger'} LoginRole
+ */
+
 const Login = () => {
   const location = useLocation();
+
+  /** @type {[LoginRole, React.Dispatch<React.SetStateAction<LoginRole>>]} */
   const [role, setRole] = useState("sender");
+
+  /** @type {[string, React.Dispatch<React.SetStateAction<string>>]} */
   const [email, setEmail] = useState("");
+
+  /** @type {[string, React.Dispatch<React.SetStateAction<string>>]} */
   const [password, setPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
   const [error, setError] = useState("");

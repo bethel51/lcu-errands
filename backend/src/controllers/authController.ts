@@ -10,39 +10,36 @@ import {
 } from "../utils/mailService.js";
 import { catchAsync } from "./catchAsync.js";
 
-/**
- * @typedef {Object} SignUpRequestBody
- * @property {string} name - The user's full name.
- * @property {string} email - The user's institutional email address (must end with @lcu.edu.ng).
- * @property {string} password - The account password (min 6 characters).
- * @property {'sender' | 'messenger'} role - The user's platform role: sender (posts errands) or messenger (delivers tasks).
- * @property {string} location - Selected campus location (e.g. Hostels, Cafe, Gate).
- * @property {string} phoneNumber - User's contact mobile phone number.
- * @property {string} matricNumber - Unique LeadCity University matriculation number format (e.g. LCU/UG/24/1234).
- */
+import { Request, Response } from "express";
 
-/**
- * @typedef {Object} LoginRequestBody
- * @property {string} email - User's registered email address.
- * @property {string} password - User's account password.
- * @property {'sender' | 'messenger'} role - The expected login role (preventing crossover).
- */
+interface SignUpRequestBody {
+  name?: string;
+  email?: string;
+  password?: string;
+  role?: "sender" | "messenger";
+  location?: string;
+  phoneNumber?: string;
+  matricNumber?: string;
+}
 
-/**
- * @typedef {Object} VerifyOtpRequestBody
- * @property {string} email - Registered email address.
- * @property {string} otp - 6-digit OTP code sent to user email.
- */
+interface LoginRequestBody {
+  email?: string;
+  password?: string;
+  role?: "sender" | "messenger";
+}
+
+interface VerifyOtpRequestBody {
+  email?: string;
+  otp?: string;
+}
 
 // Generate a 6-digit OTP
 const generateOtp = () =>
   Math.floor(100000 + Math.random() * 900000).toString();
 
 // STEP 1: Send OTP to email before registration
-export const sendOtp = catchAsync(async (req, res) => {
-  /** @type {SignUpRequestBody} */
-  const { name, email, password, role, location, phoneNumber, matricNumber } =
-    req.body;
+export const sendOtp = catchAsync(async (req: Request<{}, {}, SignUpRequestBody>, res: Response) => {
+  const { name, email, password, role, location, phoneNumber, matricNumber } = req.body;
 
   if (!email || !name || !password || !role || !matricNumber) {
     return res.status(400).json({ message: "All fields are required" });
@@ -126,7 +123,7 @@ export const sendOtp = catchAsync(async (req, res) => {
 });
 
 // Resend OTP logic
-export const resendOtp = catchAsync(async (req, res) => {
+export const resendOtp = catchAsync(async (req: Request<{}, {}, { email?: string }>, res: Response) => {
   const emailStr = String(req.body.email || "");
   const normalizedEmail = emailStr.toLowerCase().trim();
   
@@ -151,8 +148,7 @@ export const resendOtp = catchAsync(async (req, res) => {
 });
 
 // STEP 2: Verify OTP and create account
-export const verifyOtpAndRegister = catchAsync(async (req, res) => {
-  /** @type {VerifyOtpRequestBody} */
+export const verifyOtpAndRegister = catchAsync(async (req: Request<{}, {}, VerifyOtpRequestBody>, res: Response) => {
   const { email, otp } = req.body;
   const normalizedEmail = String(email || "")
     .toLowerCase()
@@ -174,7 +170,7 @@ export const verifyOtpAndRegister = catchAsync(async (req, res) => {
 
   const { name, password, role, location, phoneNumber, matricNumber } = record.formData;
 
-  const hashedPassword = await bcrypt.hash(password, 10);
+  const hashedPassword = await bcrypt.hash(password!, 10);
   
   // Final check for existing user
   const userExists = await User.findOne({
@@ -207,9 +203,8 @@ export const verifyOtpAndRegister = catchAsync(async (req, res) => {
 });
 
 // Keep the old register route for backwards compat (can be removed later)
-export const register = catchAsync(async (req, res) => {
-  const { name, email, password, role, location, phoneNumber, matricNumber } =
-    req.body;
+export const register = catchAsync(async (req: Request<{}, {}, SignUpRequestBody>, res: Response) => {
+  const { name, email, password, role, location, phoneNumber, matricNumber } = req.body;
 
   let rawMatric = String(matricNumber || "")
     .trim()
@@ -239,10 +234,10 @@ export const register = catchAsync(async (req, res) => {
     return;
   }
 
-  const hashedPassword = await bcrypt.hash(password, 10);
+  const hashedPassword = await bcrypt.hash(password!, 10);
 
   let assignedRole = role;
-  if (role === "admin" || !["sender", "messenger"].includes(role)) {
+  if ((role as string) === "admin" || !["sender", "messenger"].includes(role || "")) {
     assignedRole = "sender";
   }
 
@@ -264,8 +259,7 @@ export const register = catchAsync(async (req, res) => {
   res.status(201).json({ message: "User created successfully" });
 });
 
-export const login = catchAsync(async (req, res) => {
-  /** @type {LoginRequestBody} */
+export const login = catchAsync(async (req: Request<{}, {}, LoginRequestBody>, res: Response) => {
   const { email, password, role } = req.body;
   const normalizedEmail = String(email || "")
     .toLowerCase()
@@ -321,13 +315,13 @@ export const login = catchAsync(async (req, res) => {
     return;
   }
 
-  const isMatch = await bcrypt.compare(password, user.password);
+  const isMatch = await bcrypt.compare(password!, user.password);
   if (!isMatch) {
     res.status(400).json({ message: "Invalid credentials" });
     return;
   }
 
-  const secret = process.env.JWT_SECRET;
+  const secret = process.env.JWT_SECRET!;
 
   const token = jwt.sign({ id: user._id, role: user.role }, secret, {
     expiresIn: "1d",
@@ -349,7 +343,7 @@ export const login = catchAsync(async (req, res) => {
   });
 });
 
-export const forgotPassword = catchAsync(async (req, res) => {
+export const forgotPassword = catchAsync(async (req: Request<{}, {}, { email?: string }>, res: Response) => {
   const { email } = req.body;
   const user = await User.findOne({ email });
 
@@ -371,7 +365,7 @@ export const forgotPassword = catchAsync(async (req, res) => {
   res.status(200).json({ message: "Password reset link sent to your email" });
 });
 
-export const resetPassword = catchAsync(async (req, res) => {
+export const resetPassword = catchAsync(async (req: Request<{ token: string }, {}, { password?: string }>, res: Response) => {
   const { token } = req.params;
   const { password } = req.body;
 
@@ -387,7 +381,7 @@ export const resetPassword = catchAsync(async (req, res) => {
     return;
   }
 
-  user.password = await bcrypt.hash(password, 10);
+  user.password = await bcrypt.hash(password!, 10);
   user.resetPasswordToken = undefined;
   user.resetPasswordExpires = undefined;
   await user.save();

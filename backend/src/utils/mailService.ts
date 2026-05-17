@@ -36,7 +36,7 @@ transporter.verify((error) => {
   }
 });
 
-export const sendEmail = async (to, subject, text, html) => {
+export const sendEmail = async (to: string, subject: string, text: string, html: string) => {
   const user = process.env.SMTP_USER || process.env.EMAIL_USER;
   const pass = process.env.SMTP_PASS || process.env.EMAIL_PASS;
 
@@ -56,7 +56,7 @@ export const sendEmail = async (to, subject, text, html) => {
     console.log(
       `📧 Email sent successfully to ${to}. MessageId: ${info.messageId}`,
     );
-  } catch (error) {
+  } catch (error: any) {
     console.error("❌ FATAL EMAIL ERROR ❌");
     console.error("Target:", to);
     console.error("Subject:", subject);
@@ -70,10 +70,10 @@ export const sendEmail = async (to, subject, text, html) => {
 };
 
 export const sendErrandNotification = async (
-  userEmail,
-  userName,
-  type,
-  errandTitle,
+  userEmail: string,
+  userName: string,
+  type: "accepted" | "completed" | "completed_errander" | "requested",
+  errandTitle: string,
 ) => {
   const subjects = {
     accepted: "Your Errand has been Accepted! 🚀",
@@ -119,7 +119,7 @@ export const sendErrandNotification = async (
   await sendEmail(userEmail, subjects[type], messages[type], html);
 };
 
-export const sendPasswordResetEmail = async (userEmail, resetUrl) => {
+export const sendPasswordResetEmail = async (userEmail: string, resetUrl: string) => {
   const subject = "Password Reset Request - LCU Errands 🔑";
   const html = `
     <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 0; border: 1px solid #f0f0f0; border-radius: 16px; overflow: hidden; background-color: #ffffff;">
@@ -141,7 +141,7 @@ export const sendPasswordResetEmail = async (userEmail, resetUrl) => {
   await sendEmail(userEmail, subject, "Password Reset Request", html);
 };
 
-export const sendWelcomeEmail = async (userEmail, userName) => {
+export const sendWelcomeEmail = async (userEmail: string, userName: string) => {
   const subject = "Welcome to LCU Errands! 🎓";
   const html = `
     <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 0; border: 1px solid #f0f0f0; border-radius: 16px; overflow: hidden; background-color: #ffffff;">
@@ -171,10 +171,10 @@ export const sendWelcomeEmail = async (userEmail, userName) => {
 };
 
 export const sendPayoutNotification = async (
-  userEmail,
-  userName,
-  status,
-  amount,
+  userEmail: string,
+  userName: string,
+  status: "approved" | "rejected",
+  amount: number,
 ) => {
   const subject =
     status === "approved"
@@ -213,10 +213,10 @@ export const sendPayoutNotification = async (
 };
 
 export const sendTopUpNotification = async (
-  userEmail,
-  userName,
-  amount,
-  newBalance,
+  userEmail: string,
+  userName: string,
+  amount: number,
+  newBalance: number,
 ) => {
   const subject = "Wallet Top-Up Successful! 💳";
   const message = `Your wallet has been successfully credited with ₦${amount.toLocaleString()}. Your new balance is ₦${newBalance.toLocaleString()}.`;
@@ -245,10 +245,10 @@ export const sendTopUpNotification = async (
 };
 
 export const sendVerificationEmail = async (
-  userEmail,
-  userName,
-  status,
-  reason,
+  userEmail: string,
+  userName: string,
+  status: "verified" | "rejected",
+  reason?: string,
 ) => {
   const subject =
     status === "verified"
@@ -285,7 +285,7 @@ export const sendVerificationEmail = async (
   await sendEmail(userEmail, subject, message, html);
 };
 
-export const sendSuspensionEmail = async (userEmail, userName, isSuspended) => {
+export const sendSuspensionEmail = async (userEmail: string, userName: string, isSuspended: boolean) => {
   const subject = isSuspended
     ? "Account Suspended - LCU Errands ⚠️"
     : "Account Reactivated! ✅";
@@ -315,7 +315,7 @@ export const sendSuspensionEmail = async (userEmail, userName, isSuspended) => {
   await sendEmail(userEmail, subject, message, html);
 };
 
-export const sendOtpEmail = async (userEmail, userName, otp) => {
+export const sendOtpEmail = async (userEmail: string, userName: string, otp: string) => {
   const subject = "LeadCity Errands - Your Verification Code";
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px;">

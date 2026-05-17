@@ -3,30 +3,23 @@ import { motion, AnimatePresence } from "framer-motion";
 import { User, Bike, Mail, ChevronRight, ArrowLeft } from "lucide-react";
 import api from "../api";
 
-/**
- * @typedef {Object} SignupFormData
- * @property {string} name - The user's full name.
- * @property {string} email - The institutional email address (must end with @lcu.edu.ng).
- * @property {string} password - Minimum 6-character secure password.
- * @property {string} confirmPassword - Verification to match password.
- * @property {string} location - Selected LCU campus location/zone.
- * @property {string} phoneNumber - Active contact mobile number.
- * @property {string} matricNumber - Valid student matriculation number.
- */
+interface SignupFormData {
+  name: string;
+  email: string;
+  password: string;
+  confirmPassword: string;
+  location: string;
+  phoneNumber: string;
+  matricNumber: string;
+}
 
-/**
- * @typedef {'sender' | 'messenger'} UserRole
- */
+type UserRole = "sender" | "messenger";
 
-const Signup = () => {
-  /** @type {[number, React.Dispatch<React.SetStateAction<number>>]} */
-  const [step, setStep] = useState(1);
+const Signup: React.FC = () => {
+  const [step, setStep] = useState<number>(1);
+  const [role, setRole] = useState<UserRole>("sender");
 
-  /** @type {[UserRole, React.Dispatch<React.SetStateAction<UserRole>>]} */
-  const [role, setRole] = useState("sender");
-
-  /** @type {[SignupFormData, React.Dispatch<React.SetStateAction<SignupFormData>>]} */
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<SignupFormData>({
     name: "",
     email: "",
     password: "",
@@ -51,12 +44,12 @@ const Signup = () => {
     }
   }, [resendCooldown]);
 
-  const update = (field, value) => {
+  const update = (field: keyof SignupFormData, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
     if (error) setError("");
   };
 
-  const validateStep1 = () => {
+  const validateStep1 = (): string => {
     if (!formData.name || !formData.email || !formData.password)
       return "Please fill all fields";
     if (formData.password !== formData.confirmPassword)
@@ -80,7 +73,7 @@ const Signup = () => {
       console.log("[Signup] OTP request successful");
       setStep(2);
       setResendCooldown(30);
-    } catch (err) {
+    } catch (err: any) {
       console.error("[Signup] OTP request failed:", err);
       if (err.code === "ERR_NETWORK") {
         setError("Network Error: Cannot reach the server. Please check your internet or if the server is down.");
@@ -102,7 +95,7 @@ const Signup = () => {
       await api.post("/auth/resend-otp", { email: formData.email });
       setResendCooldown(60);
       setError(""); // Clear error on success
-    } catch (err) {
+    } catch (err: any) {
       console.error("[Signup] Resend OTP failed:", err);
       setError(err.response?.data?.message || "Failed to resend code");
     } finally {
@@ -110,7 +103,7 @@ const Signup = () => {
     }
   };
 
-  const handleOtpChange = (value, index) => {
+  const handleOtpChange = (value: string, index: number) => {
     // Handle paste: spread digits across boxes
     if (value.length > 1) {
       const digits = value.replace(/\D/g, "").slice(0, 6);
@@ -145,13 +138,13 @@ const Signup = () => {
     }
   };
 
-  const handleOtpKeyDown = (e, index) => {
+  const handleOtpKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, index: number) => {
     if (e.key === "Backspace" && !otp[index] && index > 0) {
       document.getElementById(`otp-${index - 1}`)?.focus();
     }
   };
 
-  const autoSubmitOtp = async (otpArr) => {
+  const autoSubmitOtp = async (otpArr: string[]) => {
     if (isSubmittingOtp.current) return;
     isSubmittingOtp.current = true;
     const otpString = otpArr.join("");
@@ -169,7 +162,7 @@ const Signup = () => {
       });
       // Hard redirect with success flag
       window.location.href = "/login?registration=success";
-    } catch (err) {
+    } catch (err: any) {
       setError(err.response?.data?.message || "Invalid OTP. Please try again.");
       // Don't clear OTP immediately to let user see what they typed
       isSubmittingOtp.current = false;

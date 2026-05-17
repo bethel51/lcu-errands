@@ -4,35 +4,33 @@ import { Link, useLocation, Navigate } from "react-router-dom";
 import { Eye, EyeOff, User, Bike, CheckCircle } from "lucide-react";
 import api from "../api";
 
-/**
- * @typedef {'sender' | 'messenger'} LoginRole
- */
+type LoginRole = "sender" | "messenger";
+type BackendStatus = "checking" | "connected" | "error";
 
-const Login = () => {
+const Login: React.FC = () => {
   const location = useLocation();
 
-  /** @type {[LoginRole, React.Dispatch<React.SetStateAction<LoginRole>>]} */
-  const [role, setRole] = useState("sender");
-
-  /** @type {[string, React.Dispatch<React.SetStateAction<string>>]} */
-  const [email, setEmail] = useState("");
-
-  /** @type {[string, React.Dispatch<React.SetStateAction<string>>]} */
-  const [password, setPassword] = useState("");
-  const [showPw, setShowPw] = useState(false);
-  const [error, setError] = useState("");
-  const [processing, setProcessing] = useState(false);
-  const [redirecting, setRedirecting] = useState(false);
+  const [role, setRole] = useState<LoginRole>("sender");
+  const [email, setEmail] = useState<string>("");
+  const [password, setPassword] = useState<string>("");
+  const [showPw, setShowPw] = useState<boolean>(false);
+  const [error, setError] = useState<string>("");
+  const [processing, setProcessing] = useState<boolean>(false);
+  const [redirecting, setRedirecting] = useState<boolean>(false);
 
   // Read success message from URL params (set by hard redirect from Signup)
   const searchParams = new URLSearchParams(location.search);
   const regSuccess = searchParams.get("registration") === "success";
-  const [successMsg, setSuccessMsg] = useState(
+  
+  // Need to correctly type the location state
+  const state = location.state as { message?: string } | null;
+  const [successMsg, setSuccessMsg] = useState<string>(
     regSuccess
       ? "Account created! Please log in."
-      : location.state?.message || "",
+      : state?.message || "",
   );
-  const [backendStatus, setBackendStatus] = useState("checking");
+  
+  const [backendStatus, setBackendStatus] = useState<BackendStatus>("checking");
 
   useEffect(() => {
     const checkConnection = async () => {
@@ -51,7 +49,7 @@ const Login = () => {
   const isAuth = localStorage.getItem("isAuthenticated") === "true";
   if (isAuth) return <Navigate to="/dashboard" replace />;
 
-  const handleLogin = async (e) => {
+  const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setProcessing(true);
     setError("");
@@ -74,7 +72,7 @@ const Login = () => {
       setTimeout(() => {
         window.location.href = "/dashboard";
       }, 300);
-    } catch (err) {
+    } catch (err: any) {
       if (err.code === "ERR_NETWORK") {
         setError("Network Error: Cannot reach the server. Please check your internet or if the server is down.");
       } else {

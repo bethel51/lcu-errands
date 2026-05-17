@@ -7,11 +7,11 @@
     "node": ">=20.0.0"
   },
   "scripts": {
-    "dev": "nodemon src/index.js",
-    "build": "echo 'No build needed for JS'",
-    "start": "node src/index.js",
+    "dev": "tsx watch src/index.js",
+    "build": "tsc",
+    "start": "tsx src/index.js",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "test-email": "node src/scripts/testEmail.js"
+    "test-email": "tsx src/scripts/testEmail.js"
   },
   "keywords": [],
   "author": "",
@@ -37,6 +37,18 @@
     "streamifier": "^0.1.1"
   },
   "devDependencies": {
-    "nodemon": "^3.1.14"
+    "@types/bcryptjs": "^2.4.6",
+    "@types/compression": "^1.8.1",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/mongoose": "^5.11.96",
+    "@types/morgan": "^1.9.10",
+    "@types/multer": "^2.1.0",
+    "@types/node": "^25.8.0",
+    "@types/nodemailer": "^8.0.0",
+    "nodemon": "^3.1.14",
+    "tsx": "^4.22.1",
+    "typescript": "^6.0.3"
   }
 }

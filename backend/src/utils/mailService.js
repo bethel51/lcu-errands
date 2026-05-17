@@ -13,6 +13,7 @@ const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST || "smtp.gmail.com",
   port: smtpPort,
   secure: smtpSecure,
+  family: 4,
   pool: true,
   maxConnections: 5,
   maxMessages: 100,

@@ -46,6 +46,7 @@ router.post("/email", catchAsync(async (req, res) => {
     host: process.env.SMTP_HOST || "smtp.gmail.com",
     port: smtpPort,
     secure: smtpSecure,
+    family: 4,
     auth: { user, pass },
   });
 

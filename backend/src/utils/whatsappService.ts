@@ -3,10 +3,12 @@ import axios from "axios";
 /**
  * Dispatches a 6-digit verification OTP code directly to a user's WhatsApp number using Twilio's API.
  * Supports E.164 normalization for Nigerian (+234) and international numbers automatically.
+ * Supports both standard Account SID/Auth Token and API Key SID/Secret authentication.
  */
 export const sendWhatsAppOtp = async (phoneNumber: string, name: string, otp: string): Promise<void> => {
-  const accountSid = process.env.TWILIO_ACCOUNT_SID;
-  const authToken = process.env.TWILIO_AUTH_TOKEN;
+  const accountSid = process.env.TWILIO_ACCOUNT_SID; // Always required for URL path (starts with AC...)
+  const authToken = process.env.TWILIO_AUTH_TOKEN;   // Twilio Auth Token OR Twilio API Key SID (starts with SK...)
+  const apiSecret = process.env.TWILIO_API_SECRET;   // Twilio API Key Secret (starts with iCgn... if using API Key)
   const fromNumber = process.env.TWILIO_WHATSAPP_NUMBER || "whatsapp:+14155238886"; // Twilio sandbox default
 
   if (!accountSid || !authToken) {
@@ -24,7 +26,11 @@ export const sendWhatsAppOtp = async (phoneNumber: string, name: string, otp: st
   const to = `whatsapp:+${cleanPhone}`;
 
   try {
-    const authHeader = Buffer.from(`${accountSid}:${authToken}`).toString("base64");
+    // 2. Select proper credentials: Use API Key SID + Secret if secret is defined, else Account SID + Auth Token
+    const username = apiSecret ? authToken : accountSid;
+    const password = apiSecret ? apiSecret : authToken;
+    
+    const authHeader = Buffer.from(`${username}:${password}`).toString("base64");
 
     console.log(`[WhatsApp Service] Attempting to dispatch OTP code to ${to}...`);
 
@@ -52,5 +58,6 @@ export const sendWhatsAppOtp = async (phoneNumber: string, name: string, otp: st
     });
   }
 };
+
 
 

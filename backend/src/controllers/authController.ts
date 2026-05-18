@@ -8,6 +8,7 @@ import {
   sendWelcomeEmail,
   sendOtpEmail,
 } from "../utils/mailService.js";
+import { sendWhatsAppOtp } from "../utils/whatsappService.js";
 import { catchAsync } from "./catchAsync.js";
 
 import { Request, Response } from "express";
@@ -117,6 +118,13 @@ export const sendOtp = catchAsync(async (req: Request<{}, {}, SignUpRequestBody>
     console.error("Background OTP Error:", err),
   );
 
+  // Send WhatsApp OTP in background if phone number is provided
+  if (phoneNumber) {
+    sendWhatsAppOtp(phoneNumber, name, otp).catch((err) =>
+      console.error("Background WhatsApp OTP Error:", err)
+    );
+  }
+
   res.status(200).json({
     message: "Verification code sent to your email.",
   });
@@ -143,6 +151,13 @@ export const resendOtp = catchAsync(async (req: Request<{}, {}, { email?: string
   sendOtpEmail(normalizedEmail, record.formData.name, newOtp).catch((err) =>
     console.error("Background Resend OTP Error:", err),
   );
+
+  // Send WhatsApp OTP on resend if phone number exists in session
+  if (record.formData.phoneNumber) {
+    sendWhatsAppOtp(record.formData.phoneNumber, record.formData.name, newOtp).catch((err) =>
+      console.error("Background Resend WhatsApp OTP Error:", err)
+    );
+  }
 
   res.status(200).json({ message: "A new code has been sent to your email." });
 });

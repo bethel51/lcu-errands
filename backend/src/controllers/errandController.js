@@ -52,11 +52,8 @@ export const completeErrand = catchAsync(async (req, res) => {
     return;
   }
 
-  // Security: Only the poster or the assigned errander can complete the errand
-  if (
-    errand.posterId.toString() !== userId &&
-    errand.erranderId?.toString() !== userId
-  ) {
+  // Security: Only the poster can complete the errand
+  if (errand.posterId.toString() !== userId) {
     res
       .status(403)
       .json({ message: "You are not authorized to complete this errand" });

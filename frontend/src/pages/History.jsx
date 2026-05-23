@@ -260,7 +260,7 @@ const History = () => {
                       Cancel
                     </button>
                   )}
-                  {item.type === "accepted" && item.status === "assigned" && (
+                  {item.type === "posted" && item.status === "assigned" && (
                     <button
                       className="btn btn-sm btn-primary"
                       onClick={() => handleCompleteTask(item.id)}

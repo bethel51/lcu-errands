@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { User, Bike, Mail, ChevronRight, ArrowLeft } from "lucide-react";
+import { User, Bike, Mail, ChevronRight, ArrowLeft, BookOpen, Phone, Lock, MapPin } from "lucide-react";
 import api from "../api";
 
 interface SignupFormData {
@@ -50,7 +50,7 @@ const Signup: React.FC = () => {
   };
 
   const validateStep1 = (): string => {
-    if (!formData.name || !formData.email || !formData.password)
+    if (!formData.name || !formData.email || !formData.password || !formData.matricNumber || !formData.phoneNumber)
       return "Please fill all fields";
     if (formData.password !== formData.confirmPassword)
       return "Passwords do not match";
@@ -172,17 +172,7 @@ const Signup: React.FC = () => {
   };
 
   return (
-    <div
-      className="auth-wrapper"
-      style={{
-        minHeight: "100vh",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        background: "#F8FAFC",
-        padding: "24px",
-      }}
-    >
+    <div className="upgraded-auth-wrapper">
       <AnimatePresence>
         {processing && (
           <motion.div
@@ -222,14 +212,15 @@ const Signup: React.FC = () => {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="auth-card"
-            style={{
-              background: "white",
-              padding: "48px 32px",
-              borderRadius: 32,
-              boxShadow: "0 25px 50px -12px rgba(0,0,0,0.08)",
-            }}
+            className="upgraded-auth-card"
           >
+            <div className="upgraded-auth-brand-icon">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                <polyline points="22 4 12 14.01 9 11.01" />
+              </svg>
+            </div>
+
             <div style={{ textAlign: "center", marginBottom: 32 }}>
               <h1 style={{ fontSize: "2rem", fontWeight: 900, color: "#1E293B", letterSpacing: "-0.025em" }}>
                 Get Started
@@ -239,66 +230,20 @@ const Signup: React.FC = () => {
               </p>
             </div>
 
-            <div style={{ display: "flex", gap: 12, marginBottom: 32 }}>
+            <div className="upgraded-auth-role-toggle">
               <button
                 type="button"
                 onClick={() => setRole("sender")}
-                style={{
-                  flex: 1,
-                  padding: "20px 12px",
-                  borderRadius: 20,
-                  border: "2px solid",
-                  borderColor: role === "sender" ? "#2563EB" : "#F1F5F9",
-                  background: role === "sender" ? "#EFF6FF" : "white",
-                  cursor: "pointer",
-                  transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
-                  transform: role === "sender" ? "scale(1.02)" : "scale(1)",
-                }}
+                className={`upgraded-auth-role-btn ${role === "sender" ? "active" : ""}`}
               >
-                <User
-                  size={24}
-                  color={role === "sender" ? "#2563EB" : "#94A3B8"}
-                  style={{ margin: "0 auto 10px", display: "block" }}
-                />
-                <span
-                  style={{
-                    fontWeight: 800,
-                    color: role === "sender" ? "#2563EB" : "#64748B",
-                    fontSize: "0.85rem",
-                  }}
-                >
-                  Sender
-                </span>
+                <User size={18} /> Sender
               </button>
               <button
                 type="button"
                 onClick={() => setRole("messenger")}
-                style={{
-                  flex: 1,
-                  padding: "20px 12px",
-                  borderRadius: 20,
-                  border: "2px solid",
-                  borderColor: role === "messenger" ? "#2563EB" : "#F1F5F9",
-                  background: role === "messenger" ? "#EFF6FF" : "white",
-                  cursor: "pointer",
-                  transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
-                  transform: role === "messenger" ? "scale(1.02)" : "scale(1)",
-                }}
+                className={`upgraded-auth-role-btn ${role === "messenger" ? "active" : ""}`}
               >
-                <Bike
-                  size={24}
-                  color={role === "messenger" ? "#2563EB" : "#94A3B8"}
-                  style={{ margin: "0 auto 10px", display: "block" }}
-                />
-                <span
-                  style={{
-                    fontWeight: 800,
-                    color: role === "messenger" ? "#2563EB" : "#64748B",
-                    fontSize: "0.85rem",
-                  }}
-                >
-                  Messenger
-                </span>
+                <Bike size={18} /> Messenger
               </button>
             </div>
 
@@ -329,97 +274,129 @@ const Signup: React.FC = () => {
                 gap: 16,
               }}
             >
-              <div className="form-group" style={{ gridColumn: "span 2" }}>
+              <div className="form-group" style={{ gridColumn: "span 2", marginBottom: 15 }}>
                 <label className="form-label" style={{ fontSize: "0.8rem", fontWeight: 700, color: "#475569", marginBottom: 6 }}>Full Name</label>
-                <input
-                  className="input-field"
-                  value={formData.name}
-                  onChange={(e) => update("name", e.target.value)}
-                  placeholder="Enter your full name"
-                  style={{ padding: "14px 16px", borderRadius: 14 }}
-                />
+                <div className="upgraded-auth-input-wrapper" style={{ marginBottom: 0 }}>
+                  <input
+                    className="upgraded-auth-input"
+                    value={formData.name}
+                    onChange={(e) => update("name", e.target.value)}
+                    placeholder="Enter your full name"
+                  />
+                  <div className="upgraded-auth-input-icon">
+                    <User size={18} />
+                  </div>
+                </div>
               </div>
-              <div className="form-group" style={{ gridColumn: "span 2" }}>
+
+              <div className="form-group" style={{ gridColumn: "span 2", marginBottom: 15 }}>
                 <label className="form-label" style={{ fontSize: "0.8rem", fontWeight: 700, color: "#475569", marginBottom: 6 }}>Email Address</label>
-                <input
-                  className="input-field"
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => update("email", e.target.value)}
-                  placeholder="student@lcu.edu.ng"
-                  style={{ padding: "14px 16px", borderRadius: 14 }}
-                />
+                <div className="upgraded-auth-input-wrapper" style={{ marginBottom: 0 }}>
+                  <input
+                    className="upgraded-auth-input"
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => update("email", e.target.value)}
+                    placeholder="student@lcu.edu.ng"
+                  />
+                  <div className="upgraded-auth-input-icon">
+                    <Mail size={18} />
+                  </div>
+                </div>
               </div>
-              <div className="form-group">
+
+              <div className="form-group" style={{ marginBottom: 15 }}>
                 <label className="form-label" style={{ fontSize: "0.8rem", fontWeight: 700, color: "#475569", marginBottom: 6 }}>Matric Number</label>
-                <input
-                  className="input-field"
-                  value={formData.matricNumber}
-                  onChange={(e) => update("matricNumber", e.target.value)}
-                  placeholder="LCU/UG/..."
-                  style={{ padding: "14px 16px", borderRadius: 14 }}
-                />
+                <div className="upgraded-auth-input-wrapper" style={{ marginBottom: 0 }}>
+                  <input
+                    className="upgraded-auth-input"
+                    value={formData.matricNumber}
+                    onChange={(e) => update("matricNumber", e.target.value)}
+                    placeholder="LCU/UG/..."
+                    style={{ paddingLeft: 40, paddingRight: 10 }}
+                  />
+                  <div className="upgraded-auth-input-icon" style={{ left: 12 }}>
+                    <BookOpen size={16} />
+                  </div>
+                </div>
               </div>
-              <div className="form-group">
+
+              <div className="form-group" style={{ marginBottom: 15 }}>
                 <label className="form-label" style={{ fontSize: "0.8rem", fontWeight: 700, color: "#475569", marginBottom: 6 }}>Phone Number</label>
-                <input
-                  className="input-field"
-                  value={formData.phoneNumber}
-                  onChange={(e) => update("phoneNumber", e.target.value)}
-                  placeholder="080..."
-                  style={{ padding: "14px 16px", borderRadius: 14 }}
-                />
+                <div className="upgraded-auth-input-wrapper" style={{ marginBottom: 0 }}>
+                  <input
+                    className="upgraded-auth-input"
+                    value={formData.phoneNumber}
+                    onChange={(e) => update("phoneNumber", e.target.value)}
+                    placeholder="080..."
+                    style={{ paddingLeft: 40, paddingRight: 10 }}
+                  />
+                  <div className="upgraded-auth-input-icon" style={{ left: 12 }}>
+                    <Phone size={16} />
+                  </div>
+                </div>
               </div>
-              <div className="form-group">
+
+              <div className="form-group" style={{ marginBottom: 15 }}>
                 <label className="form-label" style={{ fontSize: "0.8rem", fontWeight: 700, color: "#475569", marginBottom: 6 }}>Password</label>
-                <input
-                  className="input-field"
-                  type="password"
-                  value={formData.password}
-                  onChange={(e) => update("password", e.target.value)}
-                  placeholder="••••••••"
-                  style={{ padding: "14px 16px", borderRadius: 14 }}
-                />
+                <div className="upgraded-auth-input-wrapper" style={{ marginBottom: 0 }}>
+                  <input
+                    className="upgraded-auth-input"
+                    type="password"
+                    value={formData.password}
+                    onChange={(e) => update("password", e.target.value)}
+                    placeholder="••••••••"
+                    style={{ paddingLeft: 40, paddingRight: 10 }}
+                  />
+                  <div className="upgraded-auth-input-icon" style={{ left: 12 }}>
+                    <Lock size={16} />
+                  </div>
+                </div>
               </div>
-              <div className="form-group">
+
+              <div className="form-group" style={{ marginBottom: 15 }}>
                 <label className="form-label" style={{ fontSize: "0.8rem", fontWeight: 700, color: "#475569", marginBottom: 6 }}>Confirm Password</label>
-                <input
-                  className="input-field"
-                  type="password"
-                  value={formData.confirmPassword}
-                  onChange={(e) => update("confirmPassword", e.target.value)}
-                  placeholder="••••••••"
-                  style={{ padding: "14px 16px", borderRadius: 14 }}
-                />
+                <div className="upgraded-auth-input-wrapper" style={{ marginBottom: 0 }}>
+                  <input
+                    className="upgraded-auth-input"
+                    type="password"
+                    value={formData.confirmPassword}
+                    onChange={(e) => update("confirmPassword", e.target.value)}
+                    placeholder="••••••••"
+                    style={{ paddingLeft: 40, paddingRight: 10 }}
+                  />
+                  <div className="upgraded-auth-input-icon" style={{ left: 12 }}>
+                    <Lock size={16} />
+                  </div>
+                </div>
               </div>
-              <div className="form-group" style={{ gridColumn: "span 2" }}>
+
+              <div className="form-group" style={{ gridColumn: "span 2", marginBottom: 15 }}>
                 <label className="form-label" style={{ fontSize: "0.8rem", fontWeight: 700, color: "#475569", marginBottom: 6 }}>Hostel / Current Location</label>
-                <input
-                  className="input-field"
-                  value={formData.location}
-                  onChange={(e) => update("location", e.target.value)}
-                  placeholder="e.g. Hostel A, Block B, or Off-campus"
-                  style={{ padding: "14px 16px", borderRadius: 14 }}
-                />
+                <div className="upgraded-auth-input-wrapper" style={{ marginBottom: 0 }}>
+                  <input
+                    className="upgraded-auth-input"
+                    value={formData.location}
+                    onChange={(e) => update("location", e.target.value)}
+                    placeholder="e.g. Hostel A, Block B, or Off-campus"
+                  />
+                  <div className="upgraded-auth-input-icon">
+                    <MapPin size={18} />
+                  </div>
+                </div>
               </div>
             </div>
 
             <button
               onClick={handleNext}
               disabled={processing}
-              className="btn btn-primary"
+              className="upgraded-auth-submit-btn"
               style={{
-                width: "100%",
-                padding: "18px",
-                marginTop: 32,
-                borderRadius: 16,
-                fontSize: "1rem",
-                fontWeight: 800,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
                 gap: 10,
-                boxShadow: "0 10px 15px -3px rgba(37, 99, 235, 0.2)",
+                marginTop: 20,
               }}
             >
               Continue to Verify <ChevronRight size={20} />
@@ -436,14 +413,8 @@ const Signup: React.FC = () => {
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="auth-card"
-            style={{
-              background: "white",
-              padding: "48px 32px",
-              borderRadius: 32,
-              textAlign: "center",
-              boxShadow: "0 25px 50px -12px rgba(0,0,0,0.08)",
-            }}
+            className="upgraded-auth-card"
+            style={{ textAlign: "center" }}
           >
             <div
               style={{
@@ -455,6 +426,7 @@ const Signup: React.FC = () => {
                 alignItems: "center",
                 justifyContent: "center",
                 margin: "0 auto 24px",
+                boxShadow: "0 10px 20px -5px rgba(59, 130, 246, 0.15)",
               }}
             >
               <Mail color="#2563EB" size={32} />
@@ -514,12 +486,12 @@ const Signup: React.FC = () => {
                     fontSize: "1.75rem",
                     fontWeight: 900,
                     borderRadius: 16,
-                    border: `2px solid ${digit ? "#2563EB" : "#E2E8F0"}`,
+                    border: `2px solid ${digit ? "#6366f1" : "#E2E8F0"}`,
                     outline: "none",
                     transition: "all 0.15s ease",
-                    background: digit ? "#EFF6FF" : "white",
+                    background: digit ? "#EFF6FF" : "#F8FAFC",
                     color: "#1E293B",
-                    boxShadow: digit ? "0 0 0 4px rgba(37, 99, 235, 0.1)" : "none",
+                    boxShadow: digit ? "0 0 0 4px rgba(99, 102, 241, 0.12)" : "none",
                   }}
                 />
               ))}
@@ -528,19 +500,11 @@ const Signup: React.FC = () => {
             <button
               onClick={() => autoSubmitOtp(otp)}
               disabled={otp.some(d => !d) || processing}
+              className="upgraded-auth-submit-btn"
               style={{
-                width: "100%",
-                padding: "18px",
-                background: "#2563EB",
-                color: "white",
-                borderRadius: 16,
-                border: "none",
-                fontWeight: 800,
-                fontSize: "1rem",
-                cursor: "pointer",
-                marginBottom: 24,
-                boxShadow: "0 10px 15px -3px rgba(37, 99, 235, 0.2)",
                 opacity: otp.some(d => !d) ? 0.6 : 1,
+                cursor: otp.some(d => !d) ? "not-allowed" : "pointer",
+                marginBottom: 24,
               }}
             >
               Verify & Create Account

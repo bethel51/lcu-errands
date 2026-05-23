@@ -8,10 +8,18 @@ const smtpSecure = process.env.SMTP_SECURE !== undefined
 
 // Manually resolve IPv4 address to forcefully bypass Render's broken IPv6 routing
 const smtpHostName = process.env.SMTP_HOST || "smtp.gmail.com";
-const { address: smtpIpAddress } = await dnsPromises.lookup(smtpHostName, { family: 4 });
+let smtpHostAddress = smtpHostName;
+
+try {
+  const { address } = await dnsPromises.lookup(smtpHostName, { family: 4 });
+  smtpHostAddress = address;
+  console.log(`📡 Resolved SMTP host ${smtpHostName} to IPv4: ${smtpHostAddress}`);
+} catch (lookupError: any) {
+  console.warn(`⚠️ SMTP DNS lookup failed for ${smtpHostName}, falling back to hostname:`, lookupError.message);
+}
 
 const transporter = nodemailer.createTransport({
-  host: smtpIpAddress,
+  host: smtpHostAddress,
   port: smtpPort,
   secure: smtpSecure,
   tls: { servername: smtpHostName },

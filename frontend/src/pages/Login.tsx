@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link, useLocation, Navigate } from "react-router-dom";
-import { Eye, EyeOff, User, Bike, CheckCircle } from "lucide-react";
+import { Eye, EyeOff, User, Bike, CheckCircle, Mail, Lock } from "lucide-react";
 import api from "../api";
 
 type LoginRole = "sender" | "messenger";
@@ -86,17 +86,7 @@ const Login: React.FC = () => {
   };
 
   return (
-    <div
-      className="auth-wrapper"
-      style={{
-        display: "flex",
-        minHeight: "100vh",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: "24px",
-        background: "#F8FAFC",
-      }}
-    >
+    <div className="upgraded-auth-wrapper">
       <AnimatePresence>
         {(processing || redirecting) && (
           <motion.div
@@ -131,16 +121,14 @@ const Login: React.FC = () => {
         )}
       </AnimatePresence>
 
-      <div
-        style={{
-          width: "100%",
-          maxWidth: 440,
-          background: "white",
-          borderRadius: 32,
-          padding: "48px 32px",
-          boxShadow: "0 25px 50px -12px rgba(0,0,0,0.08)",
-        }}
-      >
+      <div className="upgraded-auth-card">
+        <div className="upgraded-auth-brand-icon">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+            <polyline points="22 4 12 14.01 9 11.01" />
+          </svg>
+        </div>
+
         <div style={{ textAlign: "center", marginBottom: 32 }}>
           <h1
             style={{ fontSize: "2rem", fontWeight: 900, color: "#1E293B", letterSpacing: "-0.025em" }}
@@ -202,61 +190,18 @@ const Login: React.FC = () => {
           </motion.div>
         )}
 
-        <div
-          style={{
-            display: "flex",
-            background: "#F3F4F6",
-            padding: 5,
-            borderRadius: 16,
-            marginBottom: 30,
-            gap: 5,
-          }}
-        >
+        <div className="upgraded-auth-role-toggle">
           <button
             type="button"
             onClick={() => setRole("sender")}
-            style={{
-              flex: 1,
-              padding: "12px",
-              borderRadius: 12,
-              border: "none",
-              background: role === "sender" ? "white" : "transparent",
-              color: role === "sender" ? "#2563EB" : "#6B7280",
-              fontWeight: 800,
-              fontSize: "0.9rem",
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 8,
-              boxShadow:
-                role === "sender" ? "0 1px 3px rgba(0,0,0,0.1)" : "none",
-              transition: "0.2s",
-            }}
+            className={`upgraded-auth-role-btn ${role === "sender" ? "active" : ""}`}
           >
             <User size={18} /> Sender
           </button>
           <button
             type="button"
             onClick={() => setRole("messenger")}
-            style={{
-              flex: 1,
-              padding: "12px",
-              borderRadius: 12,
-              border: "none",
-              background: role === "messenger" ? "white" : "transparent",
-              color: role === "messenger" ? "#2563EB" : "#6B7280",
-              fontWeight: 800,
-              fontSize: "0.9rem",
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 8,
-              boxShadow:
-                role === "messenger" ? "0 1px 3px rgba(0,0,0,0.1)" : "none",
-              transition: "0.2s",
-            }}
+            className={`upgraded-auth-role-btn ${role === "messenger" ? "active" : ""}`}
           >
             <Bike size={18} /> Messenger
           </button>
@@ -292,20 +237,19 @@ const Login: React.FC = () => {
             >
               Email Address
             </label>
-            <input
-              type="email"
-              style={{
-                width: "100%",
-                padding: "14px",
-                borderRadius: 12,
-                border: "1px solid #E5E7EB",
-                outline: "none",
-              }}
-              placeholder="name@gmail.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
+            <div className="upgraded-auth-input-wrapper">
+              <input
+                type="email"
+                className="upgraded-auth-input"
+                placeholder="name@gmail.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+              <div className="upgraded-auth-input-icon">
+                <Mail size={18} />
+              </div>
+            </div>
           </div>
 
           <div style={{ marginBottom: 20 }}>
@@ -320,31 +264,31 @@ const Login: React.FC = () => {
             >
               Password
             </label>
-            <div style={{ position: "relative" }}>
+            <div className="upgraded-auth-input-wrapper">
               <input
                 type={showPw ? "text" : "password"}
-                style={{
-                  width: "100%",
-                  padding: "14px",
-                  borderRadius: 12,
-                  border: "1px solid #E5E7EB",
-                  outline: "none",
-                }}
+                className="upgraded-auth-input"
+                placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
               />
+              <div className="upgraded-auth-input-icon">
+                <Lock size={18} />
+              </div>
               <button
                 type="button"
                 onClick={() => setShowPw(!showPw)}
                 style={{
                   position: "absolute",
-                  right: 12,
+                  right: 16,
                   top: "50%",
                   transform: "translateY(-50%)",
                   background: "none",
                   border: "none",
                   cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
                 }}
               >
                 {showPw ? (
@@ -356,21 +300,7 @@ const Login: React.FC = () => {
             </div>
           </div>
 
-          <button
-            type="submit"
-            style={{
-              width: "100%",
-              background: "#2563EB",
-              color: "white",
-              padding: "16px",
-              borderRadius: 12,
-              border: "none",
-              fontWeight: 800,
-              fontSize: "1rem",
-              cursor: "pointer",
-              marginTop: 10,
-            }}
-          >
+          <button type="submit" className="upgraded-auth-submit-btn">
             Log in as {role.charAt(0).toUpperCase() + role.slice(1)}
           </button>
         </form>

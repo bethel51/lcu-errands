@@ -42,7 +42,7 @@ const generateOtp = () =>
 export const sendOtp = catchAsync(async (req: Request<{}, {}, SignUpRequestBody>, res: Response) => {
   const { name, email, password, role, location, phoneNumber, matricNumber } = req.body;
 
-  if (!email || !name || !password || !role || !matricNumber) {
+  if (!email || !name || !password || !role || !matricNumber || !phoneNumber) {
     return res.status(400).json({ message: "All fields are required" });
   }
 

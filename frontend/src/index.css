@@ -1648,3 +1648,183 @@ input, select, textarea {
   background: #FEF2F2;
   color: #B91C1C;
 }
+
+/* ===== UPGRADED PREMIUM AUTH SYSTEM ===== */
+.upgraded-auth-wrapper {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #eef2ff 0%, #f5f3ff 50%, #fbcfe8 100%);
+  padding: 24px;
+  position: relative;
+  overflow: hidden;
+}
+
+.upgraded-auth-wrapper::before {
+  content: '';
+  position: absolute;
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, rgba(99, 102, 241, 0.15) 0%, transparent 70%);
+  top: -200px;
+  left: -200px;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.upgraded-auth-wrapper::after {
+  content: '';
+  position: absolute;
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, rgba(236, 72, 153, 0.15) 0%, transparent 70%);
+  bottom: -200px;
+  right: -200px;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.upgraded-auth-card {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 32px;
+  box-shadow: 0 25px 50px -12px rgba(99, 102, 241, 0.1), 
+              0 0 100px -10px rgba(255, 255, 255, 0.5) inset;
+  padding: 48px 36px;
+  transition: all 0.3s ease;
+}
+
+.upgraded-auth-card:hover {
+  box-shadow: 0 30px 60px -10px rgba(99, 102, 241, 0.15),
+              0 0 100px -10px rgba(255, 255, 255, 0.6) inset;
+  border-color: rgba(255, 255, 255, 0.7);
+}
+
+.upgraded-auth-brand-icon {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 16px;
+  background: linear-gradient(135deg, #3b82f6 0%, #6366f1 100%);
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  box-shadow: 0 10px 20px -5px rgba(99, 102, 241, 0.4);
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.upgraded-auth-brand-icon:hover {
+  transform: scale(1.1) rotate(5deg);
+}
+
+.upgraded-auth-role-toggle {
+  display: flex;
+  background: #f1f5f9;
+  padding: 6px;
+  border-radius: 18px;
+  gap: 6px;
+  margin-bottom: 28px;
+  border: 1px solid #e2e8f0;
+}
+
+.upgraded-auth-role-btn {
+  flex: 1;
+  padding: 12px;
+  border-radius: 14px;
+  border: none;
+  font-weight: 800;
+  font-size: 0.9rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.upgraded-auth-role-btn.active {
+  background: white;
+  color: #4f46e5;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
+}
+
+.upgraded-auth-role-btn:not(.active) {
+  color: #64748b;
+}
+
+.upgraded-auth-role-btn:not(.active):hover {
+  color: #334155;
+  background: rgba(255, 255, 255, 0.4);
+}
+
+.upgraded-auth-input-wrapper {
+  position: relative;
+  margin-bottom: 22px;
+}
+
+.upgraded-auth-input-icon {
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #94a3b8;
+  display: flex;
+  align-items: center;
+  transition: color 0.2s ease;
+}
+
+.upgraded-auth-input {
+  width: 100%;
+  padding: 14px 16px 14px 46px;
+  border-radius: 16px;
+  border: 1.5px solid #e2e8f0;
+  outline: none;
+  font-size: 0.95rem;
+  color: #1e293b;
+  background: #f8fafc;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.upgraded-auth-input:hover {
+  border-color: #cbd5e1;
+}
+
+.upgraded-auth-input:focus {
+  border-color: #6366f1;
+  background: white;
+  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.12);
+}
+
+.upgraded-auth-input:focus ~ .upgraded-auth-input-icon {
+  color: #6366f1;
+}
+
+.upgraded-auth-submit-btn {
+  width: 100%;
+  background: linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%);
+  color: white;
+  padding: 16px;
+  border-radius: 16px;
+  border: none;
+  font-weight: 800;
+  font-size: 1rem;
+  cursor: pointer;
+  box-shadow: 0 8px 24px -6px rgba(79, 70, 229, 0.35);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  margin-top: 12px;
+}
+
+.upgraded-auth-submit-btn:hover {
+  box-shadow: 0 12px 28px -4px rgba(79, 70, 229, 0.45);
+  transform: translateY(-1.5px);
+  filter: brightness(1.05);
+}
+
+.upgraded-auth-submit-btn:active {
+  transform: translateY(0);
+}

@@ -138,34 +138,7 @@ const Login: React.FC = () => {
           <p style={{ color: "#64748B", marginTop: 8, fontSize: "0.95rem" }}>
             Log in to manage your errands
           </p>
-          <div style={{ marginTop: 12, display: "flex", justifyContent: "center" }}>
-            <div
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 6,
-                padding: "4px 10px",
-                borderRadius: "20px",
-                fontSize: "0.75rem",
-                fontWeight: 700,
-                background: backendStatus === "connected" ? "#ECFDF5" : backendStatus === "error" ? "#FEF2F2" : "#F3F4F6",
-                color: backendStatus === "connected" ? "#10B981" : backendStatus === "error" ? "#EF4444" : "#6B7280",
-                border: "1px solid",
-                borderColor: backendStatus === "connected" ? "#D1FAE5" : backendStatus === "error" ? "#FEE2E2" : "#E5E7EB",
-              }}
-            >
-              <div
-                style={{
-                  width: 6,
-                  height: 6,
-                  borderRadius: "50%",
-                  background: backendStatus === "connected" ? "#10B981" : backendStatus === "error" ? "#EF4444" : "#9CA3AF",
-                  boxShadow: backendStatus === "connected" ? "0 0 8px #10B981" : "none",
-                }}
-              />
-              {backendStatus === "connected" ? "BACKEND ONLINE" : backendStatus === "error" ? "BACKEND OFFLINE" : "CHECKING CONNECTION..."}
-            </div>
-          </div>
+
         </div>
 
         {successMsg && (

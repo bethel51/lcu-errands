@@ -72,7 +72,7 @@ const Signup: React.FC = () => {
     try {
       const response = await api.post("/auth/send-otp", { ...formData, role });
       console.log("[Signup] OTP request successful", response.data);
-      
+
       // Capture devOtp if sent by the backend (dev/staging modes)
       if (response.data.devOtp) {
         setDevOtpHint(response.data.devOtp);
@@ -87,6 +87,8 @@ const Signup: React.FC = () => {
       console.error("[Signup] OTP request failed:", err);
       if (err.code === "ERR_NETWORK") {
         setError("Network Error: Cannot reach the server. Please check your internet connection.");
+      } else if (err.response?.status === 500) {
+        setError("Email service is temporarily unavailable. Our team has been notified.");
       } else {
         setError(
           err.response?.data?.message || "Registration failed. Check your data."
@@ -103,7 +105,7 @@ const Signup: React.FC = () => {
     try {
       console.log("[Signup] Resending OTP for:", formData.email);
       const response = await api.post("/auth/resend-otp", { email: formData.email });
-      
+
       if (response.data.devOtp) {
         setDevOtpHint(response.data.devOtp);
       } else {
@@ -147,7 +149,7 @@ const Signup: React.FC = () => {
       document.getElementById(`otp-${index + 1}`)?.focus();
     }
 
-    if (newOtp.every((d) => d !== "") && index === 5) {
+    if (newOtp.every((d) => d !== "")) {
       setTimeout(() => autoSubmitOtp(newOtp), 150);
     }
   };
@@ -193,7 +195,7 @@ const Signup: React.FC = () => {
           </div>
           <span className="upgraded-auth-visual-logo-text">LeadCity <span>Errands</span></span>
         </div>
-        
+
         <div className="upgraded-auth-visual-body">
           <h1 className="upgraded-auth-visual-title">
             Campus Errands, <br /><span>Simplified.</span>
@@ -201,7 +203,7 @@ const Signup: React.FC = () => {
           <p className="upgraded-auth-visual-subtitle">
             Create an account to join the largest community of Senders and Messengers at Lead City University. Fully secured transactions with secure wallet systems.
           </p>
-          
+
           <div className="errand-simulator-widget">
             <div className="errand-simulator-header">
               <span className="errand-simulator-title">Live Errand Stream</span>
@@ -210,9 +212,9 @@ const Signup: React.FC = () => {
                 <span>Active now</span>
               </div>
             </div>
-            
+
             <div className="errand-simulator-items">
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.2 }}
@@ -229,8 +231,8 @@ const Signup: React.FC = () => {
                 </div>
                 <span className="errand-sim-badge active">In Progress</span>
               </motion.div>
-              
-              <motion.div 
+
+              <motion.div
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.4 }}
@@ -247,8 +249,8 @@ const Signup: React.FC = () => {
                 </div>
                 <span className="errand-sim-badge pending">Pending</span>
               </motion.div>
-              
-              <motion.div 
+
+              <motion.div
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.6 }}
@@ -268,7 +270,7 @@ const Signup: React.FC = () => {
             </div>
           </div>
         </div>
-        
+
         <div className="upgraded-auth-visual-footer">
           <div className="upgraded-auth-stat">
             <span className="upgraded-auth-stat-val">1,200+</span>
@@ -352,11 +354,11 @@ const Signup: React.FC = () => {
                   type="button"
                   onClick={() => setRole("sender")}
                   className={`upgraded-auth-role-btn ${role === "sender" ? "active" : ""}`}
-                  style={{ 
-                    zIndex: 2, 
-                    background: "transparent", 
+                  style={{
+                    zIndex: 2,
+                    background: "transparent",
                     boxShadow: "none",
-                    color: role === "sender" ? "#4f46e5" : "#64748b" 
+                    color: role === "sender" ? "#4f46e5" : "#64748b"
                   }}
                 >
                   <User size={18} /> Sender
@@ -365,11 +367,11 @@ const Signup: React.FC = () => {
                   type="button"
                   onClick={() => setRole("messenger")}
                   className={`upgraded-auth-role-btn ${role === "messenger" ? "active" : ""}`}
-                  style={{ 
-                    zIndex: 2, 
-                    background: "transparent", 
+                  style={{
+                    zIndex: 2,
+                    background: "transparent",
                     boxShadow: "none",
-                    color: role === "messenger" ? "#4f46e5" : "#64748b" 
+                    color: role === "messenger" ? "#4f46e5" : "#64748b"
                   }}
                 >
                   <Bike size={18} /> Messenger
@@ -592,12 +594,12 @@ const Signup: React.FC = () => {
 
               {error && (
                 <div
-                  style={{ 
+                  style={{
                     background: "#FEF2F2",
-                    color: "#B91C1C", 
-                    padding: "14px", 
-                    borderRadius: 16, 
-                    marginBottom: 24, 
+                    color: "#B91C1C",
+                    padding: "14px",
+                    borderRadius: 16,
+                    marginBottom: 24,
                     fontWeight: 700,
                     fontSize: "0.85rem",
                     border: "1px solid #FEE2E2"
@@ -726,7 +728,7 @@ const Signup: React.FC = () => {
           )}
         </div>
       </div>
-      
+
       {/* Styled displays for mobile branding toggle */}
       <style>{`
         @media (max-width: 1024px) {

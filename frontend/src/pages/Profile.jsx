@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import imageCompression from "browser-image-compression";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   User,
   Mail,
@@ -45,6 +45,7 @@ const Profile = () => {
     accountName: "",
   });
   const [isBoostModalOpen, setIsBoostModalOpen] = useState(false);
+  const [processing, setProcessing] = useState(false);
 
   useEffect(() => {
     fetchProfile();
@@ -140,6 +141,11 @@ const Profile = () => {
   };
 
   const handleWithdraw = async () => {
+    if (!withdrawData.accountNumber || !withdrawData.bankName || !withdrawData.accountName) {
+      alert("❌ Please fill in all bank details");
+      return;
+    }
+
     if (Number(withdrawData.amount) > (user?.balance || 0)) {
       alert("❌ Insufficient balance");
       return;
@@ -201,6 +207,10 @@ const Profile = () => {
       });
       setUser(res.data);
       localStorage.setItem("user", JSON.stringify(res.data));
+      setFormData((prev) => ({
+        ...prev,
+        profilePicture: res.data.profilePicture,
+      }));
       alert("Profile picture updated!");
     } catch (err) {
       console.error("Image upload failed", err);
@@ -209,8 +219,6 @@ const Profile = () => {
       setLoading(false);
     }
   };
-
-  const [processing, setProcessing] = useState(false);
 
   if (!user) return null;
 
@@ -726,68 +734,68 @@ const Profile = () => {
                   </div>
                 </div>
                 {user.role === "messenger" && (
-                <div
-                  style={{
-                    marginBottom: 32,
-                    background:
-                      user.verificationStatus === "verified"
-                        ? "var(--green-50)"
-                        : "var(--gray-50)",
-                    border: `1px solid ${user.verificationStatus === "verified" ? "var(--green-200)" : "var(--gray-200)"}`,
-                    padding: 24,
-                    borderRadius: 24,
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    marginTop: 16,
-                  }}
-                >
-                  <div>
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 8,
-                        marginBottom: 4,
-                      }}
-                    >
-                      <ShieldCheck
-                        size={18}
-                        color={
-                          user.verificationStatus === "verified"
-                            ? "var(--green-600)"
-                            : "var(--gray-400)"
-                        }
-                      />
-                      <span
+                  <div
+                    style={{
+                      marginBottom: 32,
+                      background:
+                        user.verificationStatus === "verified"
+                          ? "var(--green-50)"
+                          : "var(--gray-50)",
+                      border: `1px solid ${user.verificationStatus === "verified" ? "var(--green-200)" : "var(--gray-200)"}`,
+                      padding: 24,
+                      borderRadius: 24,
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      marginTop: 16,
+                    }}
+                  >
+                    <div>
+                      <div
                         style={{
-                          fontWeight: 800,
-                          color:
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 8,
+                          marginBottom: 4,
+                        }}
+                      >
+                        <ShieldCheck
+                          size={18}
+                          color={
                             user.verificationStatus === "verified"
-                              ? "var(--green-800)"
-                              : "var(--gray-700)",
+                              ? "var(--green-600)"
+                              : "var(--gray-400)"
+                          }
+                        />
+                        <span
+                          style={{
+                            fontWeight: 800,
+                            color:
+                              user.verificationStatus === "verified"
+                                ? "var(--green-800)"
+                                : "var(--gray-700)",
+                          }}
+                        >
+                          {user.verificationStatus === "verified"
+                            ? "Verified Messenger"
+                            : "Account Verification"}
+                        </span>
+                      </div>
+                      <p
+                        style={{
+                          fontSize: "0.8rem",
+                          color: "var(--gray-500)",
+                          margin: 0,
                         }}
                       >
                         {user.verificationStatus === "verified"
-                          ? "Verified Messenger"
-                          : "Account Verification"}
-                      </span>
+                          ? "You are a trusted LCU messenger."
+                          : "Your account is active. Complete errands to build your rating!"}
+                      </p>
                     </div>
-                    <p
-                      style={{
-                        fontSize: "0.8rem",
-                        color: "var(--gray-500)",
-                        margin: 0,
-                      }}
-                    >
-                      {user.verificationStatus === "verified"
-                        ? "You are a trusted LCU messenger."
-                        : "Your account is active. Complete errands to build your rating!"}
-                    </p>
                   </div>
-                </div>
-              )}
-            </div>
+                )}
+              </div>
 
               {/* Transaction History */}
               <div
@@ -874,7 +882,7 @@ const Profile = () => {
             </div>
           </div>
         </motion.div>
-        </div>
+      </div>
 
       {/* Top Up Modal */}
       {isTopUpModalOpen && (

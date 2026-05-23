@@ -1,9 +1,15 @@
 import nodemailer from "nodemailer";
 import dnsPromises from "dns/promises";
+import dns from "dns";
+
+// Globally force Node.js to prefer IPv4 for Render/Production compatibility
+if (dns.setDefaultResultOrder) {
+  dns.setDefaultResultOrder('ipv4first');
+}
 
 const smtpPort = Number(process.env.SMTP_PORT) || 465;
-const smtpSecure = process.env.SMTP_SECURE !== undefined 
-  ? process.env.SMTP_SECURE === "true" 
+const smtpSecure = process.env.SMTP_SECURE !== undefined
+  ? process.env.SMTP_SECURE === "true"
   : smtpPort === 465;
 
 // Manually resolve IPv4 address to forcefully bypass Render's broken IPv6 routing
@@ -14,6 +20,8 @@ const transporter = nodemailer.createTransport({
   host: smtpIpAddress,
   port: smtpPort,
   secure: smtpSecure,
+  family: 4, // Forces IPv4 for the socket connection
+  localAddress: "0.0.0.0", // Explicitly binds to IPv4 stack
   tls: { servername: smtpHostName },
   pool: true,
   maxConnections: 5,

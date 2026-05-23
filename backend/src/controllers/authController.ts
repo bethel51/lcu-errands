@@ -35,7 +35,7 @@ interface VerifyOtpRequestBody {
 
 // Generate a 6-digit OTP
 const generateOtp = () =>
-  Math.floor(100000 + Math.random() * 900000).toString();
+  crypto.randomInt(100000, 999999).toString();
 
 // STEP 1: Send OTP to email before registration
 export const sendOtp = catchAsync(async (req: Request<{}, {}, SignUpRequestBody>, res: Response) => {
@@ -49,13 +49,13 @@ export const sendOtp = catchAsync(async (req: Request<{}, {}, SignUpRequestBody>
   let rawMatric = String(matricNumber || "")
     .trim()
     .toUpperCase()
-    .replace(/[^A-Z0-9]/g, "/"); 
-  
+    .replace(/[^A-Z0-9]/g, "/");
+
   // Supports LCU/UG/24/1234, UG/24/1234, etc.
   const partsRegex = /^(?:LCU\/)?(UG|PG|PRE)\/(\d{2,4})\/(\d{3,10})$/i;
   const match = rawMatric.match(partsRegex);
   let cleanMatric;
-  
+
   if (match && match[1] && match[2] && match[3]) {
     const program = match[1].toUpperCase();
     const year = match[2];
@@ -92,6 +92,9 @@ export const sendOtp = catchAsync(async (req: Request<{}, {}, SignUpRequestBody>
   const otp = generateOtp();
   const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
+  // Hash password before temporary storage for better security
+  const tempHashedPassword = await bcrypt.hash(password, 10);
+
   // Upsert OTP record
   await OTP.findOneAndUpdate(
     { email: normalizedEmail },
@@ -101,18 +104,18 @@ export const sendOtp = catchAsync(async (req: Request<{}, {}, SignUpRequestBody>
       formData: {
         name,
         email: normalizedEmail,
-        password,
+        password: tempHashedPassword,
         role: normalizedRole,
         location,
         phoneNumber,
         matricNumber: cleanMatric,
       },
     },
-    { upsert: true, new: true }
+    { upsert: true, returnDocument: "after" }
   );
 
   console.log(`[DEV OTP] OTP for ${normalizedEmail} is ${otp}`);
-  
+
   // Await dispatch so it completes before response
   const emailSent = await sendOtpEmail(normalizedEmail, name, otp);
 
@@ -132,7 +135,7 @@ export const sendOtp = catchAsync(async (req: Request<{}, {}, SignUpRequestBody>
 export const resendOtp = catchAsync(async (req: Request<{}, {}, { email?: string }>, res: Response) => {
   const emailStr = String(req.body.email || "");
   const normalizedEmail = emailStr.toLowerCase().trim();
-  
+
   const record = await OTP.findOne({ email: normalizedEmail });
   if (!record) {
     return res.status(400).json({
@@ -146,7 +149,7 @@ export const resendOtp = catchAsync(async (req: Request<{}, {}, { email?: string
   await record.save();
 
   console.log(`[DEV OTP RESEND] New OTP for ${normalizedEmail} is ${newOtp}`);
-  
+
   const emailSent = await sendOtpEmail(normalizedEmail, record.formData.name, newOtp);
 
   if (!emailSent) {
@@ -155,7 +158,7 @@ export const resendOtp = catchAsync(async (req: Request<{}, {}, { email?: string
     });
   }
 
-  res.status(200).json({ 
+  res.status(200).json({
     message: "A new code has been sent to your email.",
     ...(process.env.NODE_ENV !== "production" || process.env.EXPOSE_OTP === "true" ? { devOtp: newOtp } : {}),
   });
@@ -182,21 +185,21 @@ export const verifyOtpAndRegister = catchAsync(async (req: Request<{}, {}, Verif
     return res.status(400).json({ message: "Verification session expired. Please start again." });
   }
 
+  // Validates the code
   if (record.otp !== inputOtp && (process.env.NODE_ENV === "production" || inputOtp !== "123456")) {
     return res.status(400).json({
       message: "Invalid verification code. Please check your email and try again.",
     });
   }
 
-  const { name, password, role, location, phoneNumber, matricNumber } = record.formData;
+  // password is already hashed from Step 1 (per the suggestion above)
+  const { name, password: hashedPassword, role, location, phoneNumber, matricNumber } = record.formData;
 
-  const hashedPassword = await bcrypt.hash(password!, 10);
-  
   // Final check for existing user
   const userExists = await User.findOne({
     $or: [{ email: normalizedEmail }, { matricNumber }],
   });
-  
+
   if (userExists) {
     await OTP.deleteOne({ email: normalizedEmail });
     return res.status(400).json({ message: "This account already exists. Please log in." });
@@ -230,7 +233,8 @@ export const register = catchAsync(async (req: Request<{}, {}, SignUpRequestBody
     .trim()
     .toUpperCase()
     .replace(/[^A-Z0-9]/g, "/");
-  const partsRegex = /^(?:LCU\/)?(UG|PG)\/(\d{2,4})\/(\d{3,10})$/i;
+  // Aligned with sendOtp to support PRE programs
+  const partsRegex = /^(?:LCU\/)?(UG|PG|PRE)\/(\d{2,4})\/(\d{3,10})$/i;
   const match = rawMatric.match(partsRegex);
   let cleanMatric;
   if (match && match[1] && match[2] && match[3]) {

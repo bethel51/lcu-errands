@@ -157,19 +157,22 @@ export const sendWelcomeEmail = async (userEmail: string, userName: string) => {
         <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -0.5px;">LCU ERRANDS</h1>
       </div>
       <div style="padding: 40px 30px;">
-        <h2 style="color: #111827; margin: 0 0 16px 0; font-size: 22px; font-weight: 800;">Welcome to the Community!</h2>
-        <p style="color: #4B5563; font-size: 16px; line-height: 1.6; margin-bottom: 24px;">Hi ${userName},</p>
+        <h2 style="color: #111827; margin: 0 0 16px 0; font-size: 22px; font-weight: 800;">Welcome to LCU Errands, ${userName}! 🎉</h2>
+        <p style="color: #4B5563; font-size: 16px; line-height: 1.6; margin-bottom: 24px;">We are thrilled to welcome you to the official errand platform for Lead City University students.</p>
+        
         <div style="background-color: #F9FAFB; padding: 24px; border-radius: 12px; border-left: 4px solid #1E4DB7; margin-bottom: 32px;">
-          <p style="color: #111827; font-size: 16px; line-height: 1.6; margin: 0;">We're excited to have you join the Lead City University errands community. Whether you want to save time or earn extra cash, you're in the right place.</p>
-          <ul style="margin: 16px 0 0 0; padding-left: 20px; color: #4B5563; line-height: 1.6;">
-            <li>Post your first errand from the dashboard.</li>
-            <li>Top up your wallet to pay messengers instantly.</li>
-            <li>Apply for verification to start earning as a messenger.</li>
+          <h3 style="color: #111827; margin: 0 0 12px 0; font-size: 16px; font-weight: 700;">Here are a few things you can do to get started:</h3>
+          <ul style="margin: 0; padding-left: 20px; color: #4B5563; line-height: 1.6;">
+            <li style="margin-bottom: 8px;"><b>Post Errands:</b> Need someone to grab food, buy materials, or deliver files? Post it instantly and select a trusted messenger.</li>
+            <li style="margin-bottom: 8px;"><b>Earn Extra Income:</b> Apply to become a verified messenger and get paid for helping other students.</li>
+            <li style="margin-bottom: 8px;"><b>Secure Wallet:</b> Funds are held safely in escrow and are only released when you confirm successful completion.</li>
           </ul>
         </div>
+
         <div style="text-align: center; margin-bottom: 32px;">
-          <a href="${process.env.FRONTEND_URL}/dashboard" style="background-color: #1E4DB7; color: #ffffff; padding: 16px 32px; border-radius: 12px; text-decoration: none; font-weight: 700; font-size: 16px; display: inline-block; box-shadow: 0 4px 12px rgba(30, 77, 183, 0.2);">Go to Dashboard</a>
+          <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/dashboard" style="background-color: #1E4DB7; color: #ffffff; padding: 16px 32px; border-radius: 12px; text-decoration: none; font-weight: 700; font-size: 16px; display: inline-block; box-shadow: 0 4px 12px rgba(30, 77, 183, 0.2);">Explore Your Dashboard</a>
         </div>
+
         <hr style="border: 0; border-top: 1px solid #F3F4F6; margin-bottom: 24px;" />
         <p style="color: #9CA3AF; font-size: 14px; text-align: center; margin: 0;">This is an automated notification from Lead City University Errands.</p>
       </div>
@@ -324,18 +327,24 @@ export const sendSuspensionEmail = async (userEmail: string, userName: string, i
 };
 
 export const sendOtpEmail = async (userEmail: string, userName: string, otp: string) => {
-  const subject = "LeadCity Errands - Your Verification Code";
+  const subject = "LeadCity Errands - Your Verification Code 🔐";
   const html = `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px;">
-      <h2 style="color: #1E4DB7; margin-bottom: 20px;">Email Verification</h2>
-      <p style="font-size: 16px; color: #333;">Hi ${userName},</p>
-      <p style="font-size: 16px; color: #333;">Please use the following verification code to complete your registration. This code expires in 10 minutes.</p>
-      <div style="background-color: #f5f7fa; padding: 20px; border-radius: 8px; text-align: center; margin: 30px 0;">
-        <span style="font-size: 36px; font-weight: bold; letter-spacing: 8px; color: #1E4DB7;">${otp}</span>
+    <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 0; border: 1px solid #f0f0f0; border-radius: 16px; overflow: hidden; background-color: #ffffff;">
+      <div style="background-color: #1E4DB7; padding: 40px 20px; text-align: center;">
+        <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -0.5px;">LCU ERRANDS</h1>
       </div>
-        <p style="color: #6B7280; font-size: 14px; margin-bottom: 24px;">If you did not request this, please ignore this email. Do not share this code with anyone.</p>
+      <div style="padding: 40px 30px;">
+        <h2 style="color: #111827; margin: 0 0 16px 0; font-size: 22px; font-weight: 800;">Verify Your Email</h2>
+        <p style="color: #4B5563; font-size: 16px; line-height: 1.6; margin-bottom: 24px;">Hi ${userName},</p>
+        <p style="color: #4B5563; font-size: 16px; line-height: 1.6; margin-bottom: 24px;">Please use the verification code below to complete your registration. This code is valid for 10 minutes.</p>
+        
+        <div style="background: linear-gradient(135deg, #F9FAFB 0%, #F3F4F6 100%); padding: 24px; border-radius: 16px; text-align: center; margin: 30px 0; border: 1px solid #E5E7EB;">
+          <span style="font-size: 36px; font-weight: 800; letter-spacing: 6px; color: #1E4DB7; font-family: monospace;">${otp}</span>
+        </div>
+
+        <p style="color: #6B7280; font-size: 14px; margin-bottom: 24px; text-align: center;">Do not share this code with anyone. If you didn't request this code, you can safely ignore this email.</p>
         <hr style="border: 0; border-top: 1px solid #F3F4F6; margin-bottom: 24px;" />
-        <p style="color: #9CA3AF; font-size: 14px; margin: 0;">This is an automated notification from Lead City University Errands.</p>
+        <p style="color: #9CA3AF; font-size: 14px; text-align: center; margin: 0;">This is an automated notification from Lead City University Errands.</p>
       </div>
     </div>
   `;

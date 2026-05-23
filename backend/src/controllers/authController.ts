@@ -8,7 +8,6 @@ import {
   sendWelcomeEmail,
   sendOtpEmail,
 } from "../utils/mailService.js";
-import { sendWhatsAppOtp } from "../utils/whatsappService.js";
 import { catchAsync } from "./catchAsync.js";
 
 import { Request, Response } from "express";
@@ -113,20 +112,19 @@ export const sendOtp = catchAsync(async (req: Request<{}, {}, SignUpRequestBody>
   );
 
   console.log(`[DEV OTP] OTP for ${normalizedEmail} is ${otp}`);
-  // Send email in background
-  sendOtpEmail(normalizedEmail, name, otp).catch((err) =>
-    console.error("Background OTP Error:", err),
-  );
+  
+  // Await dispatch so it completes before response
+  const emailSent = await sendOtpEmail(normalizedEmail, name, otp);
 
-  // Send WhatsApp OTP in background if phone number is provided
-  if (phoneNumber) {
-    sendWhatsAppOtp(phoneNumber, name, otp).catch((err) =>
-      console.error("Background WhatsApp OTP Error:", err)
-    );
+  if (!emailSent) {
+    return res.status(500).json({
+      message: "Unable to send verification code to your email. Please check your credentials or contact support.",
+    });
   }
 
   res.status(200).json({
     message: "Verification code sent to your email.",
+    ...(process.env.NODE_ENV !== "production" || process.env.EXPOSE_OTP === "true" ? { devOtp: otp } : {}),
   });
 });
 
@@ -148,18 +146,19 @@ export const resendOtp = catchAsync(async (req: Request<{}, {}, { email?: string
   await record.save();
 
   console.log(`[DEV OTP RESEND] New OTP for ${normalizedEmail} is ${newOtp}`);
-  sendOtpEmail(normalizedEmail, record.formData.name, newOtp).catch((err) =>
-    console.error("Background Resend OTP Error:", err),
-  );
+  
+  const emailSent = await sendOtpEmail(normalizedEmail, record.formData.name, newOtp);
 
-  // Send WhatsApp OTP on resend if phone number exists in session
-  if (record.formData.phoneNumber) {
-    sendWhatsAppOtp(record.formData.phoneNumber, record.formData.name, newOtp).catch((err) =>
-      console.error("Background Resend WhatsApp OTP Error:", err)
-    );
+  if (!emailSent) {
+    return res.status(500).json({
+      message: "Unable to send verification code to your email. Please check your credentials or contact support.",
+    });
   }
 
-  res.status(200).json({ message: "A new code has been sent to your email." });
+  res.status(200).json({ 
+    message: "A new code has been sent to your email.",
+    ...(process.env.NODE_ENV !== "production" || process.env.EXPOSE_OTP === "true" ? { devOtp: newOtp } : {}),
+  });
 });
 
 // STEP 2: Verify OTP and create account
@@ -379,9 +378,12 @@ export const forgotPassword = catchAsync(async (req: Request<{}, {}, { email?: s
   await user.save();
 
   const resetUrl = `${process.env.FRONTEND_URL}/reset-password/${resetToken}`;
-  sendPasswordResetEmail(user.email, resetUrl).catch((err) =>
-    console.error("Background Reset Email Error:", err),
-  );
+  const emailSent = await sendPasswordResetEmail(user.email, resetUrl);
+  if (!emailSent) {
+    return res.status(500).json({
+      message: "Failed to send password reset email. Please try again later.",
+    });
+  }
 
   res.status(200).json({ message: "Password reset link sent to your email" });
 });

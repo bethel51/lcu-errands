@@ -5,7 +5,6 @@ import { Eye, EyeOff, User, Bike, CheckCircle, Mail, Lock } from "lucide-react";
 import api from "../api";
 
 type LoginRole = "sender" | "messenger";
-type BackendStatus = "checking" | "connected" | "error";
 
 const Login: React.FC = () => {
   const location = useLocation();
@@ -29,21 +28,6 @@ const Login: React.FC = () => {
       ? "Account created! Please log in."
       : state?.message || "",
   );
-  
-  const [backendStatus, setBackendStatus] = useState<BackendStatus>("checking");
-
-  useEffect(() => {
-    const checkConnection = async () => {
-      try {
-        await api.get("/health");
-        setBackendStatus("connected");
-      } catch (err) {
-        console.error("Backend health check failed:", err);
-        setBackendStatus("error");
-      }
-    };
-    checkConnection();
-  }, []);
 
   // Auth check AFTER all hooks (React rules)
   const isAuth = localStorage.getItem("isAuthenticated") === "true";

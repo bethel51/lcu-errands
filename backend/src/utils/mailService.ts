@@ -1,28 +1,17 @@
 import nodemailer from "nodemailer";
-import dnsPromises from "dns/promises";
 
 const smtpPort = Number(process.env.SMTP_PORT) || 465;
 const smtpSecure = process.env.SMTP_SECURE !== undefined 
   ? process.env.SMTP_SECURE === "true" 
   : smtpPort === 465;
 
-// Manually resolve IPv4 address to forcefully bypass Render's broken IPv6 routing
 const smtpHostName = process.env.SMTP_HOST || "smtp.gmail.com";
-let smtpHostAddress = smtpHostName;
-
-try {
-  const { address } = await dnsPromises.lookup(smtpHostName, { family: 4 });
-  smtpHostAddress = address;
-  console.log(`📡 Resolved SMTP host ${smtpHostName} to IPv4: ${smtpHostAddress}`);
-} catch (lookupError: any) {
-  console.warn(`⚠️ SMTP DNS lookup failed for ${smtpHostName}, falling back to hostname:`, lookupError.message);
-}
 
 const transporter = nodemailer.createTransport({
-  host: smtpHostAddress,
+  host: smtpHostName,
   port: smtpPort,
   secure: smtpSecure,
-  tls: { servername: smtpHostName },
+  family: 4, // Forces Node.js to use IPv4 only — cleanly bypasses Render's outward IPv6 routing issues
   pool: true,
   maxConnections: 5,
   maxMessages: 100,
@@ -33,7 +22,7 @@ const transporter = nodemailer.createTransport({
     user: process.env.SMTP_USER || process.env.EMAIL_USER,
     pass: process.env.SMTP_PASS || process.env.EMAIL_PASS,
   },
-});
+} as any);
 
 // Verify SMTP config on startup (non-fatal — just logs result)
 transporter.verify((error) => {

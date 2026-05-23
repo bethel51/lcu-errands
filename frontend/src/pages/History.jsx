@@ -85,6 +85,59 @@ const History = () => {
 
   const filteredItems = historyItems.filter((item) => item.type === filterType);
 
+  const renderEscrowTracker = (status) => {
+    if (status === "cancelled") {
+      return (
+        <div className="escrow-cancelled-banner">
+          <span className="escrow-cancelled-dot" />
+          <strong>Errand Cancelled:</strong> Funds have been refunded to your wallet.
+        </div>
+      );
+    }
+
+    const steps = [
+      { label: "Posted", desc: "Funds in Escrow", active: ["open", "assigned", "completed"].includes(status) },
+      { label: "Assigned", desc: "Task in Progress", active: ["assigned", "completed"].includes(status) },
+      { label: "Completed", desc: "Task Finished", active: ["completed"].includes(status) },
+      { label: "Disbursed", desc: "Released to Wallet", active: ["completed"].includes(status) },
+    ];
+
+    let progressWidth = "0%";
+    if (status === "completed") progressWidth = "100%";
+    else if (status === "assigned") progressWidth = "50%";
+
+    return (
+      <div className="escrow-tracker">
+        <div className="escrow-steps-container">
+          <div className="escrow-progress-line">
+            <div 
+              className="escrow-progress-fill" 
+              style={{ width: progressWidth }} 
+            />
+          </div>
+
+          {steps.map((step, idx) => {
+            let stepClass = "escrow-step";
+            if (step.active) {
+              stepClass += idx === 3 ? " success" : " active";
+            }
+            return (
+              <div key={idx} className={stepClass}>
+                <div className="escrow-step-circle">
+                  {step.active ? "✓" : idx + 1}
+                </div>
+                <div className="escrow-step-text-wrapper">
+                  <span className="escrow-step-label">{step.label}</span>
+                  <span className="escrow-step-desc">{step.desc}</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="container" style={{ paddingTop: 40, paddingBottom: 100 }}>
       <AnimatePresence>
@@ -190,104 +243,102 @@ const History = () => {
               key={item.id}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="card"
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                padding: 24,
-              }}
+              className="history-item-card"
             >
-              <div>
-                <h3
-                  style={{
-                    fontSize: "1.15rem",
-                    fontWeight: 800,
-                    marginBottom: 8,
-                  }}
-                >
-                  {item.title}
-                </h3>
-                <div
-                  style={{
-                    display: "flex",
-                    gap: 15,
-                    color: "var(--gray-500)",
-                    fontSize: "0.85rem",
-                  }}
-                >
-                  <span
-                    style={{ display: "flex", alignItems: "center", gap: 4 }}
+              <div className="history-item-content">
+                <div>
+                  <h3
+                    style={{
+                      fontSize: "1.15rem",
+                      fontWeight: 800,
+                      marginBottom: 8,
+                    }}
                   >
-                    <MapPin size={14} /> {item.location}
-                  </span>
-                  <span
-                    style={{ display: "flex", alignItems: "center", gap: 4 }}
+                    {item.title}
+                  </h3>
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: 15,
+                      color: "var(--gray-500)",
+                      fontSize: "0.85rem",
+                    }}
                   >
-                    <Clock size={14} /> {item.date}
-                  </span>
+                    <span
+                      style={{ display: "flex", alignItems: "center", gap: 4 }}
+                    >
+                      <MapPin size={14} /> {item.location}
+                    </span>
+                    <span
+                      style={{ display: "flex", alignItems: "center", gap: 4 }}
+                    >
+                      <Clock size={14} /> {item.date}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="history-item-right" style={{ textAlign: "right" }}>
+                  <div
+                    style={{
+                      fontSize: "1.25rem",
+                      fontWeight: 900,
+                      marginBottom: 8,
+                    }}
+                  >
+                    ₦{item.fee}
+                  </div>
+                  <div
+                    className={`badge ${item.status === "completed" ? "badge-blue" : "badge-gray"}`}
+                    style={{ textTransform: "uppercase", fontSize: "0.7rem" }}
+                  >
+                    {item.status}
+                  </div>
+
+                  <div style={{ marginTop: 12 }}>
+                    {item.type === "posted" && item.status === "open" && (
+                      <button
+                        className="btn btn-sm"
+                        style={{
+                          background: "#FEE2E2",
+                          color: "#B91C1C",
+                          border: "none",
+                        }}
+                        onClick={() => handleCancelErrand(item.id)}
+                      >
+                        Cancel
+                      </button>
+                    )}
+                    {item.type === "posted" && item.status === "assigned" && (
+                      <button
+                        className="btn btn-sm btn-primary"
+                        onClick={() => handleCompleteTask(item.id)}
+                      >
+                        Complete
+                      </button>
+                    )}
+                    {item.status === "completed" && (
+                      <button
+                        className="btn btn-sm btn-outline"
+                        style={{
+                          color: "var(--amber-600)",
+                          borderColor: "var(--amber-200)",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 4,
+                        }}
+                        onClick={() => {
+                          setSelectedErrandId(item.id);
+                          setIsReviewModalOpen(true);
+                        }}
+                      >
+                        <Star size={12} fill="currentColor" /> Rate
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
 
-              <div style={{ textAlign: "right" }}>
-                <div
-                  style={{
-                    fontSize: "1.25rem",
-                    fontWeight: 900,
-                    marginBottom: 8,
-                  }}
-                >
-                  ₦{item.fee}
-                </div>
-                <div
-                  className={`badge ${item.status === "completed" ? "badge-blue" : "badge-gray"}`}
-                  style={{ textTransform: "uppercase", fontSize: "0.7rem" }}
-                >
-                  {item.status}
-                </div>
-
-                <div style={{ marginTop: 12 }}>
-                  {item.type === "posted" && item.status === "open" && (
-                    <button
-                      className="btn btn-sm"
-                      style={{
-                        background: "#FEE2E2",
-                        color: "#B91C1C",
-                        border: "none",
-                      }}
-                      onClick={() => handleCancelErrand(item.id)}
-                    >
-                      Cancel
-                    </button>
-                  )}
-                  {item.type === "posted" && item.status === "assigned" && (
-                    <button
-                      className="btn btn-sm btn-primary"
-                      onClick={() => handleCompleteTask(item.id)}
-                    >
-                      Complete
-                    </button>
-                  )}
-                  {item.status === "completed" && (
-                    <button
-                      className="btn btn-sm btn-outline"
-                      style={{
-                        color: "var(--amber-600)",
-                        borderColor: "var(--amber-200)",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 4,
-                      }}
-                      onClick={() => {
-                        setSelectedErrandId(item.id);
-                        setIsReviewModalOpen(true);
-                      }}
-                    >
-                      <Star size={12} fill="currentColor" /> Rate
-                    </button>
-                  )}
-                </div>
-              </div>
+              {renderEscrowTracker(item.status)}
             </motion.div>
           ))}
         </div>

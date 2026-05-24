@@ -9,7 +9,7 @@ if (dns.setDefaultResultOrder) {
   dns.setDefaultResultOrder('ipv4first');
 }
 
-const smtpPort = Number(process.env.SMTP_PORT) || 587;
+const smtpPort = Number(process.env.SMTP_PORT) || 465;
 const smtpSecure = process.env.SMTP_SECURE !== undefined
   ? process.env.SMTP_SECURE === "true"
   : smtpPort === 465;

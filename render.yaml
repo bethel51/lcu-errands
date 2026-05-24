@@ -26,6 +26,16 @@ services:
         sync: false
       - key: TWILIO_WHATSAPP_NUMBER
         value: whatsapp:+14155238886
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        sync: false
+      - key: SMTP_SECURE
+        sync: false
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
 
   # 2. Administrative Backend
   - type: web

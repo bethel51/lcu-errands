@@ -34,7 +34,7 @@ router.post("/email", catchAsync(async (req, res) => {
 
   console.log(`[DEBUG] Executing direct SMTP test to: ${email}`);
 
-  const smtpPort = Number(process.env.SMTP_PORT) || 587;
+  const smtpPort = Number(process.env.SMTP_PORT) || 465;
   const smtpSecure = process.env.SMTP_SECURE !== undefined 
     ? process.env.SMTP_SECURE === "true" 
     : smtpPort === 465;

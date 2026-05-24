@@ -264,12 +264,11 @@ const Profile = () => {
         {!isEditing ? (
           <button
             onClick={() => setIsEditing(true)}
-            className="btn"
+            className="btn btn-primary"
             style={{
               display: "flex",
               alignItems: "center",
               gap: 8,
-              background: "var(--gray-900)",
             }}
           >
             <Edit2 size={18} /> Edit Profile
@@ -354,7 +353,7 @@ const Profile = () => {
                   position: "absolute",
                   bottom: 0,
                   right: 0,
-                  background: "var(--gray-900)",
+                  background: "var(--blue-600)",
                   color: "white",
                   width: 36,
                   height: 36,

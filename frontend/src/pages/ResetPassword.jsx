@@ -46,6 +46,14 @@ const ResetPassword = () => {
         className="clean-auth-card"
       >
         <div className="clean-auth-header">
+          <div className="clean-auth-logo">
+            <div className="clean-auth-logo-mark">
+              <span>LC</span>
+            </div>
+            <span className="clean-auth-logo-text">
+              LEADCITY <em>ERRANDS</em>
+            </span>
+          </div>
           <h1>Set New Password</h1>
           <p>Please enter your new password below.</p>
         </div>

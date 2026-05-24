@@ -39,6 +39,14 @@ const ForgotPassword = () => {
         className="clean-auth-card"
       >
         <div className="clean-auth-header">
+          <div className="clean-auth-logo">
+            <div className="clean-auth-logo-mark">
+              <span>LC</span>
+            </div>
+            <span className="clean-auth-logo-text">
+              LEADCITY <em>ERRANDS</em>
+            </span>
+          </div>
           <Link
             to="/login"
             style={{
@@ -47,7 +55,7 @@ const ForgotPassword = () => {
               gap: 6,
               color: "var(--gray-500)",
               fontSize: "0.85rem",
-              marginBottom: 16,
+              marginBottom: 12,
               fontWeight: 500,
               textDecoration: "underline",
             }}
@@ -88,8 +96,7 @@ const ForgotPassword = () => {
             </p>
             <button
               onClick={() => setSubmitted(false)}
-              className="clean-auth-submit-btn"
-              style={{ background: "var(--white)", color: "var(--blue-600)", border: "1.5px solid var(--blue-600)" }}
+              className="clean-auth-outline-btn"
             >
               Try another email
             </button>

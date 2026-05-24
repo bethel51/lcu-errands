@@ -369,7 +369,8 @@ export const login = catchAsync(async (req: Request<{}, {}, LoginRequestBody>, r
 
 export const forgotPassword = catchAsync(async (req: Request<{}, {}, { email?: string }>, res: Response) => {
   const { email } = req.body;
-  const user = await User.findOne({ email });
+  const normalizedEmail = String(email || "").toLowerCase().trim();
+  const user = await User.findOne({ email: normalizedEmail });
 
   if (!user) {
     res.status(404).json({ message: "User with this email does not exist" });

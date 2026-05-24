@@ -111,9 +111,12 @@ const Login: React.FC = () => {
         className="clean-auth-card"
       >
         <div className="clean-auth-header">
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
-            <span style={{ fontWeight: 800, fontSize: "1.2rem", letterSpacing: "-0.03em", color: "var(--blue-900)" }}>
-              LEADCITY <span style={{ fontWeight: 400, color: "var(--blue-600)" }}>ERRANDS</span>
+          <div className="clean-auth-logo">
+            <div className="clean-auth-logo-mark">
+              <span>LC</span>
+            </div>
+            <span className="clean-auth-logo-text">
+              LEADCITY <em>ERRANDS</em>
             </span>
           </div>
           <h1>Welcome back</h1>

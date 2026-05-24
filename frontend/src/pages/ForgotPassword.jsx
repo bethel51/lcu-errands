@@ -45,7 +45,7 @@ const ForgotPassword = () => {
               display: "inline-flex",
               alignItems: "center",
               gap: 6,
-              color: "#71717a",
+              color: "var(--gray-500)",
               fontSize: "0.85rem",
               marginBottom: 16,
               fontWeight: 500,
@@ -62,15 +62,15 @@ const ForgotPassword = () => {
           <div style={{ textAlign: "center" }}>
             <div
               style={{
-                background: "#ECFDF5",
-                color: "#047857",
+                background: "var(--green-100)",
+                color: "var(--green-500)",
                 padding: "12px 14px",
                 borderRadius: 8,
                 marginBottom: 20,
                 display: "flex",
                 alignItems: "center",
                 gap: 8,
-                border: "1px solid #A7F3D0",
+                border: "1px solid var(--green-100)",
               }}
             >
               <CheckCircle size={20} />
@@ -78,7 +78,7 @@ const ForgotPassword = () => {
             </div>
             <p
               style={{
-                color: "#71717a",
+                color: "var(--gray-500)",
                 fontSize: "0.875rem",
                 marginBottom: 24,
                 lineHeight: 1.5,
@@ -89,7 +89,7 @@ const ForgotPassword = () => {
             <button
               onClick={() => setSubmitted(false)}
               className="clean-auth-submit-btn"
-              style={{ background: "#ffffff", color: "#09090b", border: "1px solid #e4e4e7" }}
+              style={{ background: "var(--white)", color: "var(--blue-600)", border: "1.5px solid var(--blue-600)" }}
             >
               Try another email
             </button>

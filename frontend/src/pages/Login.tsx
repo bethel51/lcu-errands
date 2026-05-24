@@ -112,8 +112,8 @@ const Login: React.FC = () => {
       >
         <div className="clean-auth-header">
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
-            <span style={{ fontWeight: 800, fontSize: "1.2rem", letterSpacing: "-0.03em", color: "#09090b" }}>
-              LEADCITY <span style={{ fontWeight: 400, color: "#71717a" }}>ERRANDS</span>
+            <span style={{ fontWeight: 800, fontSize: "1.2rem", letterSpacing: "-0.03em", color: "var(--blue-900)" }}>
+              LEADCITY <span style={{ fontWeight: 400, color: "var(--blue-600)" }}>ERRANDS</span>
             </span>
           </div>
           <h1>Welcome back</h1>
@@ -125,8 +125,8 @@ const Login: React.FC = () => {
             initial={{ opacity: 0, scale: 0.98 }}
             animate={{ opacity: 1, scale: 1 }}
             style={{
-              background: "#ECFDF5",
-              color: "#047857",
+              background: "var(--green-100)",
+              color: "var(--green-500)",
               padding: "12px 14px",
               borderRadius: 8,
               marginBottom: 20,
@@ -135,7 +135,7 @@ const Login: React.FC = () => {
               display: "flex",
               alignItems: "center",
               gap: 8,
-              border: "1px solid #A7F3D0",
+              border: "1px solid var(--green-100)",
             }}
           >
             <CheckCircle size={16} /> {successMsg}
@@ -222,9 +222,9 @@ const Login: React.FC = () => {
                 }}
               >
                 {showPw ? (
-                  <EyeOff size={16} color="#71717a" />
+                  <EyeOff size={16} color="var(--gray-400)" />
                 ) : (
-                  <Eye size={16} color="#71717a" />
+                  <Eye size={16} color="var(--gray-400)" />
                 )}
               </button>
             </div>
@@ -235,8 +235,8 @@ const Login: React.FC = () => {
               to="/forgot-password"
               style={{
                 fontSize: "0.85rem",
-                color: "#09090b",
-                fontWeight: 500,
+                color: "var(--blue-600)",
+                fontWeight: 600,
                 textDecoration: "underline",
               }}
             >
@@ -249,10 +249,10 @@ const Login: React.FC = () => {
           </button>
         </form>
 
-        <div style={{ marginTop: 24, textAlign: "center", borderTop: "1px solid #e5e7eb", paddingTop: 20 }}>
-          <p style={{ color: "#71717a", fontSize: "0.875rem", margin: 0 }}>
+        <div style={{ marginTop: 24, textAlign: "center", borderTop: "1px solid var(--gray-200)", paddingTop: 20 }}>
+          <p style={{ color: "var(--gray-500)", fontSize: "0.875rem", margin: 0 }}>
             Don't have an account?{" "}
-            <Link to="/register" style={{ color: "#09090b", fontWeight: 600, textDecoration: "underline" }}>
+            <Link to="/register" style={{ color: "var(--blue-600)", fontWeight: 700, textDecoration: "underline" }}>
               Create account
             </Link>
           </p>

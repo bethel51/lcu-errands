@@ -231,8 +231,8 @@ const Signup: React.FC = () => {
       >
         <div className="clean-auth-header">
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
-            <span style={{ fontWeight: 800, fontSize: "1.2rem", letterSpacing: "-0.03em", color: "#09090b" }}>
-              LEADCITY <span style={{ fontWeight: 400, color: "#71717a" }}>ERRANDS</span>
+            <span style={{ fontWeight: 800, fontSize: "1.2rem", letterSpacing: "-0.03em", color: "var(--blue-900)" }}>
+              LEADCITY <span style={{ fontWeight: 400, color: "var(--blue-600)" }}>ERRANDS</span>
             </span>
           </div>
           <h1>{step === 1 ? "Create account" : "Verify your email"}</h1>
@@ -397,11 +397,11 @@ const Signup: React.FC = () => {
                     textAlign: "center",
                     fontSize: "1.5rem",
                     fontWeight: 700,
-                    borderRadius: 8,
-                    border: `1px solid ${digit ? "#09090b" : "#d4d4d8"}`,
+                    borderRadius: "var(--radius-sm)",
+                    border: `1.5px solid ${digit ? "var(--blue-600)" : "var(--gray-300)"}`,
                     outline: "none",
-                    background: digit ? "#f9fafb" : "#ffffff",
-                    color: "#09090b",
+                    background: digit ? "var(--blue-50)" : "var(--white)",
+                    color: "var(--blue-900)",
                     fontFamily: "monospace",
                   }}
                 />
@@ -412,14 +412,14 @@ const Signup: React.FC = () => {
             {devOtpHint && (
               <div
                 style={{
-                  background: "#f4f4f5",
-                  color: "#27272a",
+                  background: "var(--blue-50)",
+                  color: "var(--blue-700)",
                   padding: "10px 12px",
                   borderRadius: 8,
                   marginBottom: 20,
                   fontSize: "0.85rem",
                   fontWeight: 600,
-                  border: "1px dashed #d4d4d8",
+                  border: "1px dashed var(--blue-100)",
                   textAlign: "center",
                 }}
               >
@@ -447,7 +447,7 @@ const Signup: React.FC = () => {
                 style={{
                   background: "none",
                   border: "none",
-                  color: resendCooldown > 0 ? "#71717a" : "#09090b",
+                  color: resendCooldown > 0 ? "var(--gray-500)" : "var(--blue-600)",
                   fontWeight: 600,
                   cursor: resendCooldown > 0 ? "default" : "pointer",
                   fontSize: "0.875rem",
@@ -461,13 +461,13 @@ const Signup: React.FC = () => {
               </button>
             </div>
 
-            <div style={{ marginTop: 24, textAlign: "center", borderTop: "1px solid #e5e7eb", paddingTop: 20 }}>
+            <div style={{ marginTop: 24, textAlign: "center", borderTop: "1px solid var(--gray-200)", paddingTop: 20 }}>
               <button
                 onClick={() => setStep(1)}
                 style={{
                   background: "none",
                   border: "none",
-                  color: "#71717a",
+                  color: "var(--gray-500)",
                   fontSize: "0.875rem",
                   fontWeight: 600,
                   cursor: "pointer",
@@ -484,10 +484,10 @@ const Signup: React.FC = () => {
         )}
 
         {step === 1 && (
-          <div style={{ marginTop: 24, textAlign: "center", borderTop: "1px solid #e5e7eb", paddingTop: 20 }}>
-            <p style={{ color: "#71717a", fontSize: "0.875rem", margin: 0 }}>
+          <div style={{ marginTop: 24, textAlign: "center", borderTop: "1px solid var(--gray-200)", paddingTop: 20 }}>
+            <p style={{ color: "var(--gray-500)", fontSize: "0.875rem", margin: 0 }}>
               Already have an account?{" "}
-              <Link to="/login" style={{ color: "#09090b", fontWeight: 600, textDecoration: "underline" }}>
+              <Link to="/login" style={{ color: "var(--blue-600)", fontWeight: 700, textDecoration: "underline" }}>
                 Log In
               </Link>
             </p>

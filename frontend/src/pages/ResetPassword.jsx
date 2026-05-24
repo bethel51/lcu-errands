@@ -54,21 +54,21 @@ const ResetPassword = () => {
           <div style={{ textAlign: "center" }}>
             <div
               style={{
-                background: "#ECFDF5",
-                color: "#047857",
+                background: "var(--green-100)",
+                color: "var(--green-500)",
                 padding: "12px 14px",
                 borderRadius: 8,
                 marginBottom: 20,
                 display: "flex",
                 alignItems: "center",
                 gap: 8,
-                border: "1px solid #A7F3D0",
+                border: "1px solid var(--green-100)",
               }}
             >
               <CheckCircle size={20} />
               <p style={{ fontWeight: 600, fontSize: "0.875rem", margin: 0, textAlign: "left" }}>Password reset successful!</p>
             </div>
-            <p style={{ color: "#71717a", fontSize: "0.875rem" }}>
+            <p style={{ color: "var(--gray-500)", fontSize: "0.875rem" }}>
               Redirecting you to login...
             </p>
           </div>
@@ -121,7 +121,7 @@ const ResetPassword = () => {
                     zIndex: 2,
                   }}
                 >
-                  {showPw ? <EyeOff size={16} color="#71717a" /> : <Eye size={16} color="#71717a" />}
+                  {showPw ? <EyeOff size={16} color="var(--gray-400)" /> : <Eye size={16} color="var(--gray-400)" />}
                 </button>
               </div>
             </div>

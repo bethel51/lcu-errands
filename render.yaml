@@ -32,7 +32,7 @@ services:
       - key: SMTP_PORT
         sync: false
       - key: SMTP_SECURE
-        sync: false
+        value: "true"
       - key: SMTP_USER
         sync: false
       - key: SMTP_PASS

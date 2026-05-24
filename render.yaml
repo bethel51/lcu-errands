@@ -70,7 +70,7 @@ services:
         sync: false
 
   # 3. Admin Portal (Static Frontend)
-  - type: static_site
+  - type: static
     name: leadcity-admin-portal
     rootDir: admin-frontend
     buildCommand: npm install && npm run build
@@ -81,7 +81,7 @@ services:
         destination: /index.html
 
   # 4. Main Platform Frontend (Static Site)
-  - type: static_site
+  - type: static
     name: leadcity-frontend
     rootDir: frontend
     buildCommand: npm install && npm run build

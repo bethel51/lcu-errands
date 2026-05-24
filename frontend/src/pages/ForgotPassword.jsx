@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
-import { Mail, ArrowLeft, CheckCircle } from "lucide-react";
+import { ArrowLeft, CheckCircle } from "lucide-react";
 import api from "../api";
 
 const ForgotPassword = () => {
@@ -32,42 +32,28 @@ const ForgotPassword = () => {
   };
 
   return (
-    <div className="auth-wrapper">
+    <div className="clean-auth-wrapper">
       <motion.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
-        className="auth-card"
+        className="clean-auth-card"
       >
-        <div className="auth-header">
+        <div className="clean-auth-header">
           <Link
             to="/login"
             style={{
               display: "inline-flex",
               alignItems: "center",
               gap: 6,
-              color: "var(--gray-500)",
+              color: "#71717a",
               fontSize: "0.85rem",
-              marginBottom: 24,
-              fontWeight: 600,
+              marginBottom: 16,
+              fontWeight: 500,
+              textDecoration: "underline",
             }}
           >
-            <ArrowLeft size={16} /> Back to Login
+            <ArrowLeft size={14} /> Back to Login
           </Link>
-          <div
-            style={{
-              width: 64,
-              height: 64,
-              background: "var(--blue-50)",
-              color: "var(--blue-600)",
-              borderRadius: "50%",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              margin: "0 auto 20px",
-            }}
-          >
-            <Mail size={32} />
-          </div>
           <h1>Forgot Password?</h1>
           <p>No worries, we'll send you reset instructions.</p>
         </div>
@@ -76,32 +62,34 @@ const ForgotPassword = () => {
           <div style={{ textAlign: "center" }}>
             <div
               style={{
-                background: "#D1FAE5",
-                color: "#065F46",
-                padding: "16px",
-                borderRadius: 12,
-                marginBottom: 24,
+                background: "#ECFDF5",
+                color: "#047857",
+                padding: "12px 14px",
+                borderRadius: 8,
+                marginBottom: 20,
                 display: "flex",
                 alignItems: "center",
-                gap: 12,
+                gap: 8,
+                border: "1px solid #A7F3D0",
               }}
             >
-              <CheckCircle size={24} />
-              <p style={{ fontWeight: 600 }}>{message}</p>
+              <CheckCircle size={20} />
+              <p style={{ fontWeight: 600, fontSize: "0.875rem", margin: 0, textAlign: "left" }}>{message}</p>
             </div>
             <p
               style={{
-                color: "var(--gray-500)",
-                fontSize: "0.9rem",
+                color: "#71717a",
+                fontSize: "0.875rem",
                 marginBottom: 24,
+                lineHeight: 1.5,
               }}
             >
               Didn't receive the email? Check your spam folder or try again.
             </p>
             <button
               onClick={() => setSubmitted(false)}
-              className="btn btn-outline"
-              style={{ width: "100%" }}
+              className="clean-auth-submit-btn"
+              style={{ background: "#ffffff", color: "#09090b", border: "1px solid #e4e4e7" }}
             >
               Try another email
             </button>
@@ -117,16 +105,17 @@ const ForgotPassword = () => {
                   borderRadius: 8,
                   marginBottom: 24,
                   fontSize: "0.9rem",
+                  border: "1px solid #FEE2E2",
                 }}
               >
                 {error}
               </div>
             )}
-            <div className="form-group">
-              <label className="form-label">Email Address</label>
+            <div className="clean-auth-form-group">
+              <label className="clean-auth-label">Email Address</label>
               <input
                 type="email"
-                className="input-field"
+                className="clean-auth-input"
                 placeholder="Enter your email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -135,8 +124,7 @@ const ForgotPassword = () => {
             </div>
             <button
               type="submit"
-              className="btn btn-primary"
-              style={{ width: "100%", padding: "14px" }}
+              className="clean-auth-submit-btn"
               disabled={loading}
             >
               {loading ? "Sending..." : "Send Reset Link"}

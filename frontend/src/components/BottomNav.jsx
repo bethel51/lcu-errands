@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { LayoutDashboard, History, User, MessageSquare } from "lucide-react";
+import { LayoutDashboard, History, User, MessageSquare, Radio } from "lucide-react";
 import { useSocket } from "../context/SocketContext";
 import { PageImports } from "../App";
 import { usePrefetch } from "../hooks/usePrefetch";
@@ -27,6 +27,15 @@ const BottomNav = () => {
       >
         <LayoutDashboard size={22} />
         <span>Market</span>
+      </Link>
+      <Link
+        to="/stream"
+        className={`bottom-nav-item ${isActive("/stream") ? "active" : ""}`}
+        onClick={() => handleNavClick("/stream")}
+        onMouseEnter={() => prefetch(PageImports.ErrandStream)}
+      >
+        <Radio size={22} />
+        <span>Stream</span>
       </Link>
       <Link
         to="/history"

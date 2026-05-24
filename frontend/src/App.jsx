@@ -25,6 +25,7 @@ export const PageImports = {
   History: () => import("./pages/History"),
   Profile: () => import("./pages/Profile"),
   Chats: () => import("./pages/Chats"),
+  ErrandStream: () => import("./pages/ErrandStream"),
 };
 
 // Lazy load pages for performance
@@ -37,6 +38,7 @@ const Dashboard = lazy(PageImports.Dashboard);
 const History = lazy(PageImports.History);
 const Profile = lazy(PageImports.Profile);
 const Chats = lazy(PageImports.Chats);
+const ErrandStream = lazy(PageImports.ErrandStream);
 
 const PageLoader = () => (
   <div className="page-loader">
@@ -110,6 +112,14 @@ const AppLayout = () => {
             element={
               <ProtectedRoute>
                 <Chats />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/stream"
+            element={
+              <ProtectedRoute>
+                <ErrandStream />
               </ProtectedRoute>
             }
           />

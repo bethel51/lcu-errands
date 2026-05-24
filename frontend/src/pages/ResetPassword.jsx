@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { useNavigate, useParams } from "react-router-dom";
-import { Key, Eye, EyeOff, CheckCircle } from "lucide-react";
+import { Eye, EyeOff, CheckCircle } from "lucide-react";
 import api from "../api";
 
 const ResetPassword = () => {
@@ -39,28 +39,13 @@ const ResetPassword = () => {
   };
 
   return (
-    <div className="auth-wrapper">
+    <div className="clean-auth-wrapper">
       <motion.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
-        className="auth-card"
+        className="clean-auth-card"
       >
-        <div className="auth-header">
-          <div
-            style={{
-              width: 64,
-              height: 64,
-              background: "var(--blue-50)",
-              color: "var(--blue-600)",
-              borderRadius: "50%",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              margin: "0 auto 20px",
-            }}
-          >
-            <Key size={32} />
-          </div>
+        <div className="clean-auth-header">
           <h1>Set New Password</h1>
           <p>Please enter your new password below.</p>
         </div>
@@ -69,20 +54,21 @@ const ResetPassword = () => {
           <div style={{ textAlign: "center" }}>
             <div
               style={{
-                background: "#D1FAE5",
-                color: "#065F46",
-                padding: "16px",
-                borderRadius: 12,
-                marginBottom: 24,
+                background: "#ECFDF5",
+                color: "#047857",
+                padding: "12px 14px",
+                borderRadius: 8,
+                marginBottom: 20,
                 display: "flex",
                 alignItems: "center",
-                gap: 12,
+                gap: 8,
+                border: "1px solid #A7F3D0",
               }}
             >
-              <CheckCircle size={24} />
-              <p style={{ fontWeight: 600 }}>Password reset successful!</p>
+              <CheckCircle size={20} />
+              <p style={{ fontWeight: 600, fontSize: "0.875rem", margin: 0, textAlign: "left" }}>Password reset successful!</p>
             </div>
-            <p style={{ color: "var(--gray-500)", fontSize: "0.9rem" }}>
+            <p style={{ color: "#71717a", fontSize: "0.875rem" }}>
               Redirecting you to login...
             </p>
           </div>
@@ -97,23 +83,25 @@ const ResetPassword = () => {
                   borderRadius: 8,
                   marginBottom: 24,
                   fontSize: "0.9rem",
+                  border: "1px solid #FEE2E2",
                 }}
               >
                 {error}
               </div>
             )}
 
-            <div className="form-group">
-              <label className="form-label">New Password</label>
-              <div style={{ position: "relative" }}>
+            <div className="clean-auth-form-group">
+              <label className="clean-auth-label">New Password</label>
+              <div className="clean-auth-input-container">
                 <input
                   type={showPw ? "text" : "password"}
-                  className="input-field"
+                  className="clean-auth-input"
                   placeholder="At least 6 characters"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   minLength={6}
                   required
+                  style={{ paddingRight: 40 }}
                 />
 
                 <button
@@ -124,19 +112,25 @@ const ResetPassword = () => {
                     right: 12,
                     top: "50%",
                     transform: "translateY(-50%)",
-                    color: "var(--gray-400)",
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    padding: 0,
+                    zIndex: 2,
                   }}
                 >
-                  {showPw ? <EyeOff size={18} /> : <Eye size={18} />}
+                  {showPw ? <EyeOff size={16} color="#71717a" /> : <Eye size={16} color="#71717a" />}
                 </button>
               </div>
             </div>
 
-            <div className="form-group">
-              <label className="form-label">Confirm New Password</label>
+            <div className="clean-auth-form-group">
+              <label className="clean-auth-label">Confirm New Password</label>
               <input
                 type={showPw ? "text" : "password"}
-                className="input-field"
+                className="clean-auth-input"
                 placeholder="Repeat password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
@@ -146,8 +140,7 @@ const ResetPassword = () => {
 
             <button
               type="submit"
-              className="btn btn-primary"
-              style={{ width: "100%", padding: "14px" }}
+              className="clean-auth-submit-btn"
               disabled={loading}
             >
               {loading ? "Updating..." : "Reset Password"}

@@ -40,7 +40,15 @@ router.post("/email", catchAsync(async (req, res) => {
     : smtpPort === 465;
 
   const smtpHostName = process.env.SMTP_HOST || "smtp.gmail.com";
-  const { address: smtpIpAddress } = await dnsPromises.lookup(smtpHostName, { family: 4 });
+  let smtpIpAddress = smtpHostName;
+  let dnsError = null;
+
+  try {
+    const lookup = await dnsPromises.lookup(smtpHostName, { family: 4 });
+    smtpIpAddress = lookup.address;
+  } catch (err) {
+    dnsError = err.message || err;
+  }
 
   const transporter = nodemailer.createTransport({
     host: smtpIpAddress,
@@ -48,6 +56,7 @@ router.post("/email", catchAsync(async (req, res) => {
     secure: smtpSecure,
     tls: { servername: smtpHostName },
     auth: { user, pass },
+    connectionTimeout: 5000, // shorten to 5s for debug responsiveness
   });
 
   try {
@@ -89,7 +98,15 @@ router.post("/email", catchAsync(async (req, res) => {
       message: "SMTP Connection or Delivery Failed.",
       error: error.message || error,
       code: error.code,
-      command: error.command
+      command: error.command,
+      debugInfo: {
+        smtpHostName,
+        smtpIpAddress,
+        smtpPort,
+        smtpSecure,
+        user,
+        dnsError,
+      }
     });
   }
 }));

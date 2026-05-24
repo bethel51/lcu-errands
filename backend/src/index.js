@@ -31,7 +31,7 @@ const allowedOrigins = [
   "http://localhost:5173",
   "http://localhost:3000",
   "https://leadcityerrands-frontend.vercel.app",
-  "https://leadcityerrands-frontend.onrender.com",
+  "https://leadcityerrands-wt32.onrender.com",
   "https://bethel123-afk.github.io",
 ].filter(Boolean);
 

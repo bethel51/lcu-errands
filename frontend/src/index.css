@@ -2652,160 +2652,402 @@ input, select, textarea {
   background: var(--blue-50);
 }
 
-/* ===== LIVE ERRAND STREAM PAGE STYLES ===== */
-.stream-container {
-  padding: 30px 20px 100px;
-  max-width: 800px;
-  margin: 0 auto;
+/* ===== LIVE ERRAND STREAM PAGE ===== */
+.errand-stream-page {
   min-height: 100vh;
+  background: #f4f6fb;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  padding-bottom: 100px;
 }
 
-.stream-header {
+/* ── Hero Header ── */
+.stream-hero {
+  background: linear-gradient(135deg, var(--blue-900) 0%, var(--blue-700) 60%, #4f46e5 100%);
+  padding: 28px 20px 0;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  box-shadow: 0 4px 20px rgba(12,30,91,0.2);
+}
+
+.stream-hero-inner {
+  max-width: 760px;
+  margin: 0 auto;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 24px;
-  border-bottom: 1px solid #e5e7eb;
-  padding-bottom: 20px;
+  gap: 12px;
+  margin-bottom: 16px;
 }
 
-.stream-title {
+.stream-hero-left {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 14px;
 }
 
-.stream-title h1 {
-  font-size: 1.75rem;
-  font-weight: 800;
-  color: #111827;
-  margin: 0;
-  letter-spacing: -0.02em;
-}
-
-.stream-status-badge {
+.stream-live-badge {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  background: #ecfdf5;
-  color: #047857;
+  background: rgba(16, 185, 129, 0.18);
+  color: #6ee7b7;
+  border: 1px solid rgba(16, 185, 129, 0.3);
   padding: 4px 10px;
   border-radius: 9999px;
-  font-size: 0.75rem;
-  font-weight: 700;
-  border: 1px solid #a7f3d0;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  flex-shrink: 0;
 }
 
-.stream-status-dot {
-  width: 8px;
-  height: 8px;
+.stream-live-dot {
+  width: 7px;
+  height: 7px;
   background: #10b981;
   border-radius: 50%;
-  animation: pulseGreen 1.5s infinite;
+  animation: pulseGreen 1.4s infinite;
 }
 
 @keyframes pulseGreen {
-  0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
-  70% { box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+  0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.5); }
+  70% { box-shadow: 0 0 0 7px rgba(16, 185, 129, 0); }
   100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
 }
 
-.stream-feed-list {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
+.stream-hero-title {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #ffffff;
+  margin: 0 0 2px 0;
+  letter-spacing: -0.025em;
+  line-height: 1.1;
 }
 
-.stream-errand-card {
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  padding: 20px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
-  transition: all 0.2s ease;
-}
-
-.stream-errand-card:hover {
-  border-color: #d1d5db;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.04);
-}
-
-.stream-errand-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 10px;
-}
-
-.stream-errand-info {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.stream-errand-title {
-  font-size: 1.1rem;
-  font-weight: 700;
-  color: #111827;
+.stream-hero-sub {
+  font-size: 0.82rem;
+  color: rgba(255,255,255,0.65);
   margin: 0;
 }
 
-.stream-errand-meta {
+.stream-refresh-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.2);
+  color: rgba(255,255,255,0.85);
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 0.8rem;
-  color: #6b7280;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
 }
 
-.stream-category-tag {
-  background: #f3f4f6;
-  color: #4b5563;
-  padding: 2px 8px;
-  border-radius: 4px;
-  font-weight: 600;
+.stream-refresh-btn:hover {
+  background: rgba(255,255,255,0.2);
+  color: #fff;
 }
 
-.stream-errand-fee {
-  font-size: 1.25rem;
-  font-weight: 800;
-  color: #111827;
-  background: #f3f4f6;
-  padding: 4px 10px;
-  border-radius: 6px;
+/* ── Search inside hero ── */
+.stream-search-wrap {
+  max-width: 760px;
+  margin: 0 auto;
+  position: relative;
+  padding-bottom: 16px;
 }
 
-.stream-errand-desc {
+.stream-search-icon {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: rgba(255,255,255,0.5);
+  pointer-events: none;
+}
+
+.stream-search-input {
+  width: 100%;
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.18);
+  border-radius: 10px;
+  padding: 11px 14px 11px 40px;
+  color: #fff;
   font-size: 0.9rem;
-  color: #4b5563;
-  line-height: 1.5;
-  margin: 0 0 16px 0;
+  outline: none;
+  transition: all 0.18s ease;
+  box-sizing: border-box;
 }
 
-.stream-errand-footer {
+.stream-search-input::placeholder {
+  color: rgba(255,255,255,0.45);
+}
+
+.stream-search-input:focus {
+  background: rgba(255,255,255,0.15);
+  border-color: rgba(255,255,255,0.35);
+}
+
+/* ── Body ── */
+.stream-body {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 20px 16px;
+}
+
+/* ── Loading ── */
+.stream-loading-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--gray-500);
+  font-size: 0.9rem;
+}
+
+/* ── Empty state ── */
+.stream-empty-state {
+  text-align: center;
+  padding: 60px 24px;
+  background: #fff;
+  border-radius: 16px;
+  border: 1.5px dashed var(--gray-200);
+  color: var(--gray-400);
+}
+
+.stream-empty-state h3 {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--gray-700);
+  margin: 12px 0 6px;
+}
+
+.stream-empty-state p {
+  font-size: 0.88rem;
+  margin: 0;
+  line-height: 1.6;
+}
+
+/* ── Feed list ── */
+.stream-feed-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* ── Errand card ── */
+.stream-card {
+  background: #ffffff;
+  border: 1px solid var(--gray-200);
+  border-radius: 14px;
+  padding: 18px 20px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.02);
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.stream-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--blue-100);
+  box-shadow: 0 4px 16px rgba(30,77,183,0.08), 0 1px 4px rgba(0,0,0,0.04);
+}
+
+/* New-errand highlight */
+.stream-card--new {
+  border-color: #10b981;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.12), 0 4px 16px rgba(16, 185, 129, 0.08);
+}
+
+.stream-card-new-ribbon {
+  position: absolute;
+  top: 12px;
+  right: -1px;
+  background: #10b981;
+  color: #fff;
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  padding: 3px 10px 3px 8px;
+  border-radius: 4px 0 0 4px;
+  box-shadow: 0 2px 6px rgba(16, 185, 129, 0.3);
+}
+
+/* Card top row */
+.stream-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.stream-card-info {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.stream-card-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--gray-900);
+  margin: 0;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 380px;
+}
+
+.stream-card-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 0.78rem;
+  color: var(--gray-500);
+}
+
+.stream-cat-chip {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 2px 9px;
+  border-radius: 9999px;
+  text-transform: capitalize;
+  letter-spacing: 0.01em;
+}
+
+.stream-meta-dot {
+  color: var(--gray-300);
+}
+
+.stream-meta-item {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+/* Fee badge */
+.stream-fee-badge {
+  background: linear-gradient(135deg, var(--blue-600) 0%, var(--blue-500) 100%);
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 800;
+  padding: 6px 14px;
+  border-radius: 9px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(30,77,183,0.25);
+  letter-spacing: -0.02em;
+}
+
+/* Description */
+.stream-card-desc {
+  font-size: 0.875rem;
+  color: var(--gray-600);
+  line-height: 1.55;
+  margin: 0 0 14px 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Footer row */
+.stream-card-footer {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-top: 1px solid #f3f4f6;
+  border-top: 1px solid var(--gray-100);
   padding-top: 12px;
+  gap: 10px;
 }
 
-.stream-errand-loc {
+.stream-card-loc {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   font-size: 0.8rem;
-  color: #6b7280;
+  color: var(--gray-500);
+  min-width: 0;
 }
 
-.stream-empty-state {
-  text-align: center;
-  padding: 60px 20px;
-  background: #ffffff;
+.stream-card-loc span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Accept button */
+.stream-accept-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: linear-gradient(135deg, var(--blue-600) 0%, var(--blue-500) 100%);
+  color: #fff;
+  border: none;
+  border-radius: 9px;
+  padding: 9px 16px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.18s ease;
+  box-shadow: 0 2px 8px rgba(30,77,183,0.25);
+  flex-shrink: 0;
+}
+
+.stream-accept-btn:hover {
+  background: linear-gradient(135deg, var(--blue-700) 0%, var(--blue-600) 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(30,77,183,0.35);
+}
+
+.stream-accept-btn:active {
+  transform: translateY(0);
+}
+
+/* Owner tag */
+.stream-owner-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--gray-400);
+  letter-spacing: 0.02em;
+}
+
+/* ── Toast notification ── */
+.stream-toast {
+  position: fixed;
+  bottom: 90px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 12px 22px;
   border-radius: 12px;
-  border: 1px dashed #d1d5db;
-  color: #6b7280;
+  font-size: 0.875rem;
+  font-weight: 700;
+  z-index: 10000;
+  white-space: nowrap;
+  max-width: calc(100vw - 40px);
+  text-align: center;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+}
+
+.stream-toast--success {
+  background: #10b981;
+  color: #fff;
+}
+
+.stream-toast--info {
+  background: var(--blue-600);
+  color: #fff;
+}
+
+.stream-toast--error {
+  background: #EF4444;
+  color: #fff;
 }
 

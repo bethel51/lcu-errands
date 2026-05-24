@@ -57,7 +57,7 @@ services:
       - key: ADMIN_FRONTEND_URL
         value: https://leadcity-admin-portal.onrender.com
       - key: FRONTEND_URL
-        value: https://leadcity-backend.onrender.com
+        value: https://leadcity-frontend.onrender.com
       - key: CRON_SECRET
         sync: false
       - key: SMTP_HOST
@@ -89,7 +89,7 @@ services:
     publishPath: dist
     envVars:
       - key: VITE_API_URL
-        value: https://leadcity-backend.onrender.com
+        value: https://leadcityerrands-prod.onrender.com
     routes:
       - type: rewrite
         source: /*

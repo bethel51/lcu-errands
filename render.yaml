@@ -37,6 +37,10 @@ services:
         sync: false
       - key: SMTP_PASS
         sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: EMAIL_FROM
+        sync: false
 
   # 2. Administrative Backend
   - type: web
@@ -67,6 +71,10 @@ services:
       - key: SMTP_USER
         sync: false
       - key: SMTP_PASS
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: EMAIL_FROM
         sync: false
 
   # 3. Admin Portal (Static Frontend)

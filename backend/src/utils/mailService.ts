@@ -65,6 +65,45 @@ transporter.verify((error) => {
 });
 
 export const sendEmail = async (to: string, subject: string, text: string, html: string): Promise<boolean> => {
+  const resendApiKey = (process.env.RESEND_API_KEY || "").trim();
+  const emailFrom = process.env.EMAIL_FROM || "onboarding@resend.dev";
+
+  if (resendApiKey) {
+    try {
+      console.log(`📡 [Resend API] Sending email to ${to}...`);
+      const response = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${resendApiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          from: `LCU Errands <${emailFrom}>`,
+          to: [to],
+          subject,
+          text,
+          html: html || text,
+        }),
+      });
+
+      if (response.ok) {
+        const data: any = await response.json();
+        console.log(`📧 Email sent successfully via Resend API to ${to}. Id: ${data.id}`);
+        return true;
+      } else {
+        const errorText = await response.text();
+        console.error("❌ Resend API ERROR: Failed to send email", response.status, errorText);
+        return false;
+      }
+    } catch (error: any) {
+      console.error("❌ Resend API ERROR: Failed to send email");
+      console.error("Target:", to);
+      console.error("Error Message:", error.message);
+      return false;
+    }
+  }
+
+  // Fallback to SMTP
   if (!user || !pass) {
     console.warn("⚠️ Email credentials not set. Skipping email notification.");
     return false;

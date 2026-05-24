@@ -4,6 +4,7 @@ services:
     name: leadcity-backend
     env: node
     plan: free
+    region: frankfurt
     rootDir: .
     dockerfilePath: Dockerfile
     envVars:
@@ -42,6 +43,7 @@ services:
     name: leadcity-admin-service
     env: node
     plan: free
+    region: frankfurt
     rootDir: admin-service
     buildCommand: npm install
     startCommand: node src/index.js

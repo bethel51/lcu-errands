@@ -20,8 +20,8 @@ router.get("/:id", getErrandById);
 // Protected routes
 router.post("/", authMiddleware, createErrand);
 router.post("/inquiry", authMiddleware, createInquiry);
-router.put("/:id/accept", authMiddleware, acceptErrand);
-router.put("/:id/complete", authMiddleware, completeErrand);
+router.patch("/:id/accept", authMiddleware, acceptErrand);
+router.patch("/:id/complete", authMiddleware, completeErrand);
 router.delete("/:id", authMiddleware, deleteErrand);
 
 export default router;

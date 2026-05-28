@@ -427,21 +427,38 @@ export const deleteErrand = catchAsync(async (req, res) => {
     return;
   }
 
-  // Refund the poster
-  const user = await User.findById(userId);
-  if (user) {
-    user.balance += errand.fee;
-    await user.save();
+  const session = await mongoose.startSession();
+  session.startTransaction();
 
-    await Transaction.create({
-      userId: userId,
-      amount: errand.fee,
-      type: "credit",
-      description: `Refund for cancelled errand: ${errand.title}`,
-      errandId: errand._id,
-    });
+  try {
+    // Refund the poster
+    const user = await User.findById(userId).session(session);
+    if (user) {
+      user.balance += errand.fee;
+      await user.save({ session });
+
+      await Transaction.create(
+        [
+          {
+            userId: userId,
+            amount: errand.fee,
+            type: "credit",
+            description: `Refund for cancelled errand: ${errand.title}`,
+            errandId: errand._id,
+          },
+        ],
+        { session }
+      );
+    }
+
+    await Errand.findByIdAndDelete(id).session(session);
+    
+    await session.commitTransaction();
+    res.json({ message: "Errand cancelled and funds refunded successfully" });
+  } catch (error) {
+    await session.abortTransaction();
+    throw error;
+  } finally {
+    session.endSession();
   }
-
-  await Errand.findByIdAndDelete(id);
-  res.json({ message: "Errand cancelled and funds refunded successfully" });
 });

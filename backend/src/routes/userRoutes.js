@@ -10,6 +10,7 @@ import {
   getMessengers,
   boostProfile,
   deleteAccount,
+  verifySelf,
 } from "../controllers/userController.js";
 import { authMiddleware } from "../middleware/authMiddleware.js";
 import { uploadImage } from "../middleware/uploadMiddleware.js";
@@ -22,7 +23,7 @@ router.put("/profile", authMiddleware, updateProfile);
 router.delete("/profile", authMiddleware, deleteAccount);
 router.post("/top-up", authMiddleware, topUp);
 router.post("/boost-profile", authMiddleware, boostProfile);
-// Verification route removed as requested
+router.post("/verify", authMiddleware, verifySelf);
 router.get("/transactions", authMiddleware, getTransactions);
 router.post(
   "/profile-picture",

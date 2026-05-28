@@ -220,6 +220,20 @@ const Profile = () => {
     }
   };
 
+  const handleVerifySelf = async () => {
+    setLoading(true);
+    try {
+      const res = await api.post("/users/verify");
+      setUser(res.data.user);
+      localStorage.setItem("user", JSON.stringify(res.data.user));
+      alert("✅ Account successfully verified!");
+    } catch (err) {
+      alert("❌ Verification failed. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (!user) return null;
 
   return (
@@ -438,6 +452,25 @@ const Profile = () => {
               <span style={{ fontWeight: 600 }}>
                 {user.isVerified ? "Verified Account" : "Unverified Student"}
               </span>
+              {!user.isVerified && (
+                <button
+                  onClick={handleVerifySelf}
+                  disabled={loading}
+                  style={{
+                    marginLeft: "auto",
+                    padding: "6px 14px",
+                    background: "var(--green-500)",
+                    color: "white",
+                    borderRadius: 8,
+                    fontSize: "0.75rem",
+                    fontWeight: 600,
+                    cursor: loading ? "not-allowed" : "pointer",
+                    border: "none",
+                  }}
+                >
+                  {loading ? "..." : "Verify Now"}
+                </button>
+              )}
             </div>
             {!isEditing && (
               <div

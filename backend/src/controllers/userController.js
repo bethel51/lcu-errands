@@ -297,7 +297,24 @@ export const uploadFile = catchAsync(async (req, res) => {
   }
 });
 
-// Verification logic removed as requested
+export const verifySelf = catchAsync(async (req, res) => {
+  const userId = req.user?.id;
+  if (!userId) {
+    res.status(401).json({ message: "Unauthorized" });
+    return;
+  }
+
+  const user = await User.findById(userId);
+  if (!user) {
+    res.status(404).json({ message: "User not found" });
+    return;
+  }
+
+  user.isVerified = true;
+  await user.save();
+
+  res.json({ message: "Account verified successfully", user });
+});
 
 export const deleteAccount = catchAsync(async (req, res) => {
   const userId = req.user?.id;

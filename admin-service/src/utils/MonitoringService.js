@@ -43,23 +43,31 @@ export class MonitoringService {
       }
       if (issues.length > 0) {
         console.log("⚠️ Health Monitor detected issues:", issues);
-        // Log to DB
-        await Log.create({
-          adminId: "SYSTEM",
-          adminName: "Health Monitor",
-          action: "HEALTH_ALERT",
-          targetName: "Infrastructure",
-          details: issues.join(" | "),
-        });
-
         // Email Alert if Critical
         if (issues.some((i) => i.includes("CRITICAL"))) {
-          await sendBroadcastEmail(
-            "admin@lcu.edu.ng",
-            "Admin",
-            "CRITICAL SYSTEM ALERT",
-            `Infrastructure Health Monitor has detected critical issues:\n\n${issues.join("\n")}`,
-          );
+          try {
+            await sendBroadcastEmail(
+              "admin@lcu.edu.ng",
+              "Admin",
+              "CRITICAL SYSTEM ALERT",
+              `Infrastructure Health Monitor has detected critical issues:\n\n${issues.join("\n")}`,
+            );
+          } catch (emailErr) {
+            console.error("Failed to send critical health email", emailErr);
+          }
+        }
+
+        // Log to DB (might fail if DB is the issue)
+        try {
+          await Log.create({
+            adminId: "SYSTEM",
+            adminName: "Health Monitor",
+            action: "HEALTH_ALERT",
+            targetName: "Infrastructure",
+            details: issues.join(" | "),
+          });
+        } catch (dbErr) {
+          console.error("Failed to log health issue to DB", dbErr);
         }
       }
     } catch (error) {

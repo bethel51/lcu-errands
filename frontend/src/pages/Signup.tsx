@@ -35,16 +35,20 @@ const Signup: React.FC = () => {
   const [resendCooldown, setResendCooldown] = useState(0);
   const [devOtpHint, setDevOtpHint] = useState("");
   const isSubmittingOtp = useRef(false);
-
   useEffect(() => {
-    if (resendCooldown > 0) {
-      const timer = setInterval(
-        () => setResendCooldown((prev) => prev - 1),
-        1000,
-      );
-      return () => clearInterval(timer);
-    }
-  }, [resendCooldown]);
+    if (resendCooldown <= 0) return;
+    const timer = setInterval(() => {
+      setResendCooldown((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [resendCooldown > 0]);
+
 
   const update = (field: keyof SignupFormData, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));

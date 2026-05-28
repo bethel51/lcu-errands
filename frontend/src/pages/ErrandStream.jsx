@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Search,
@@ -48,7 +48,6 @@ const ErrandStream = () => {
   const [search, setSearch] = useState("");
   const [processing, setProcessing] = useState(false);
   const [toast, setToast] = useState(null);
-  const [newCount, setNewCount] = useState(0);
 
   const userRole = localStorage.getItem("userRole") || "messenger";
   const cachedUserId = (() => {
@@ -64,7 +63,7 @@ const ErrandStream = () => {
     setTimeout(() => setToast(null), 3500);
   };
 
-  const mapBackendToFrontend = (err) => ({
+  const mapBackendToFrontend = useCallback((err) => ({
     id: err._id,
     title: err.title,
     description: err.description,
@@ -77,9 +76,9 @@ const ErrandStream = () => {
     posterId: err.posterId?._id || err.posterId,
     createdAt: err.createdAt,
     isNew: false,
-  });
+  }), [cachedUserId]);
 
-  const fetchErrands = async () => {
+  const fetchErrands = useCallback(async () => {
     try {
       const res = await api.get("/errands");
       const open = res.data.filter((e) => e.status === "open");
@@ -89,11 +88,11 @@ const ErrandStream = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [mapBackendToFrontend]);
 
   useEffect(() => {
     fetchErrands();
-  }, []);
+  }, [fetchErrands]);
 
   useEffect(() => {
     if (!socket) return;
@@ -102,7 +101,6 @@ const ErrandStream = () => {
       const mapped = { ...mapBackendToFrontend(newErrand), isNew: true };
       if (mapped.status === "open") {
         setErrands((prev) => [mapped, ...prev]);
-        setNewCount((c) => c + 1);
         showToast(`🆕 "${mapped.title}" just landed!`, "info");
         // Clear the "new" highlight after 4 s
         setTimeout(() => {
@@ -121,7 +119,7 @@ const ErrandStream = () => {
       socket.off("new_errand");
       socket.off("notification");
     };
-  }, [socket]);
+  }, [socket, fetchErrands, mapBackendToFrontend]);
 
   const handleAcceptErrand = async (id) => {
     setProcessing(true);
@@ -201,7 +199,6 @@ const ErrandStream = () => {
           <button
             onClick={() => {
               setLoading(true);
-              setNewCount(0);
               fetchErrands();
             }}
             className="stream-refresh-btn"

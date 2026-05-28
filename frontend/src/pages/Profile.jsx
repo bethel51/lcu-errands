@@ -52,7 +52,7 @@ const Profile = () => {
     fetchTransactions();
   }, []);
 
-  const fetchProfile = async () => {
+  async function fetchProfile() {
     try {
       const res = await api.get("/users/profile");
       setUser(res.data);
@@ -65,16 +65,16 @@ const Profile = () => {
     } catch (err) {
       console.error("Failed to fetch profile", err);
     }
-  };
+  }
 
-  const fetchTransactions = async () => {
+  async function fetchTransactions() {
     try {
       const res = await api.get("/users/transactions");
       setTransactions(res.data);
     } catch (err) {
       console.error("Failed to fetch transactions", err);
     }
-  };
+  }
 
   const handleLogout = () => {
     localStorage.clear();

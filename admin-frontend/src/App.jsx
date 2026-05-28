@@ -122,11 +122,15 @@ const AdminPortal = () => {
     if (isLoggedIn) {
       fetchData();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoggedIn]);
+
+  useEffect(() => {
     // Reset search when switching tabs to avoid "ghost" filtering
     setSearchTerm("");
     setRoleFilter("all");
     setStatusFilter("all");
-  }, [isLoggedIn]);
+  }, [activeTab]);
 
   const fetchData = async () => {
     setDataLoading(true);
@@ -201,7 +205,7 @@ const AdminPortal = () => {
       setBroadcastSubject("");
       setBroadcastMessage("");
       fetchData();
-    } catch (err) {
+    } catch (_err) {
       alert("Failed to send broadcast");
     } finally {
       setBroadcastLoading(false);
@@ -212,7 +216,7 @@ const AdminPortal = () => {
     try {
       const res = await adminApi.get(`/management/chat/${errandId}`);
       setSelectedErrandChat(res.data);
-    } catch (err) {
+    } catch (_err) {
       alert("Failed to fetch chat log");
     }
   };
@@ -256,7 +260,7 @@ const AdminPortal = () => {
     try {
       await adminApi.patch(`/management/users/${id}/suspend`);
       fetchData();
-    } catch (err) {
+    } catch (_err) {
       alert("System Error");
     }
   };
@@ -271,7 +275,7 @@ const AdminPortal = () => {
         status,
       });
       fetchData();
-    } catch (err) {
+    } catch (_err) {
       alert("Transaction Error");
     }
   };
@@ -286,7 +290,7 @@ const AdminPortal = () => {
         status,
       });
       fetchData();
-    } catch (err) {
+    } catch (_err) {
       alert("Verification Error");
     }
   };
@@ -309,7 +313,7 @@ const AdminPortal = () => {
       setRejectionModal({ isOpen: false, id: null, type: null, status: null });
       setRejectionReason("");
       fetchData();
-    } catch (err) {
+    } catch (_err) {
       alert("Failed to process rejection");
     } finally {
       setRejectionLoading(false);

@@ -184,9 +184,27 @@ const onlineUsers = new Map(); // socketId -> userId
 io.on("connection", (socket) => {
   console.log("User connected:", socket.id);
 
-  socket.on("join_room", (errandId) => {
-    socket.join(errandId);
-    console.log(`User ${socket.id} joined errand room ${errandId}`);
+  socket.on("join_room", async (errandId) => {
+    const userId = onlineUsers.get(socket.id);
+    if (!userId) return;
+
+    try {
+      const errand = await Errand.findById(errandId);
+      if (!errand) return;
+
+      // Only allow participants to join the room
+      if (
+        errand.posterId.toString() !== userId &&
+        errand.erranderId?.toString() !== userId
+      ) {
+        return;
+      }
+
+      socket.join(errandId);
+      console.log(`User ${userId} joined errand room ${errandId}`);
+    } catch (err) {
+      console.error("Error joining room:", err);
+    }
   });
 
   socket.on("join", async (userId) => {
@@ -204,10 +222,25 @@ io.on("connection", (socket) => {
   });
 
   socket.on("send_message", async (data) => {
+    const userId = onlineUsers.get(socket.id);
+    if (!userId) return; // Unauthenticated
+
     try {
+      // Find errand to check auth and get recipient
+      const errand = await Errand.findById(data.room);
+      if (!errand) return;
+
+      // Check if user is part of the errand
+      if (
+        errand.posterId.toString() !== userId &&
+        errand.erranderId?.toString() !== userId
+      ) {
+        return; 
+      }
+
       const newMessage = new Message({
         errandId: data.room,
-        senderId: data.senderId,
+        senderId: userId, // Use secure session ID, not client provided
         text: data.text,
         imageUrl: data.imageUrl,
       });
@@ -220,13 +253,12 @@ io.on("connection", (socket) => {
       });
 
       // Find the other person in the errand to notify them
-      const errand = await Errand.findById(data.room);
-      if (errand) {
-        const recipientId =
-          errand.posterId.toString() === data.senderId
-            ? errand.erranderId
-            : errand.posterId;
-        if (recipientId) {
+      const recipientId =
+        errand.posterId.toString() === userId
+          ? errand.erranderId
+          : errand.posterId;
+      
+      if (recipientId) {
           const notificationData = {
             userId: recipientId,
             title: "New Message",
@@ -236,7 +268,6 @@ io.on("connection", (socket) => {
           };
           await Notification.create(notificationData);
           io.to(recipientId.toString()).emit("notification", notificationData);
-        }
       }
     } catch (error) {
       console.error("Socket error saving message:", error);

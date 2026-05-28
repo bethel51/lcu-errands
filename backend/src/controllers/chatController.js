@@ -4,6 +4,21 @@ import { catchAsync } from "./catchAsync.js";
 
 export const getMessagesForErrand = catchAsync(async (req, res) => {
   const { errandId } = req.params;
+  const userId = req.user.id;
+
+  const errand = await Errand.findById(errandId);
+  if (!errand) {
+    return res.status(404).json({ message: "Errand not found" });
+  }
+
+  // Security: Only participants can read messages
+  if (
+    errand.posterId.toString() !== userId &&
+    errand.erranderId?.toString() !== userId
+  ) {
+    return res.status(403).json({ message: "You are not authorized to view these messages" });
+  }
+
   const messages = await Message.find({ errandId })
     .sort({ createdAt: 1 })
     .lean();

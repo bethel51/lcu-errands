@@ -1,6 +1,10 @@
 import nodemailer from "nodemailer";
-import dnsPromises from "dns/promises";
 import dns from "dns";
+
+// Force Node.js to prefer IPv4 for DNS lookups to prevent IPv6 ENETUNREACH errors
+if (dns.setDefaultResultOrder) {
+  dns.setDefaultResultOrder('ipv4first');
+}
 
 const transporter = nodemailer.createTransport({
   service: "gmail",

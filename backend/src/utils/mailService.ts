@@ -5,17 +5,17 @@ import dns from "dns";
 const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
-    user: process.env.SMTP_USER || process.env.EMAIL_USER,
-    pass: process.env.SMTP_PASS || process.env.EMAIL_PASS,
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
   },
 });
 
-console.log("[SMTP] Initializing transporter verification...");
+console.log("[EMAIL] Initializing transporter verification...");
 transporter.verify((error) => {
   if (error) {
-    console.error("⚠️ SMTP connection failed:", error.message);
+    console.error("⚠️ Email connection failed:", error.message);
   } else {
-    console.log("✅ SMTP server is ready to send emails.");
+    console.log("✅ Email server is ready to send emails.");
   }
 });
 
@@ -58,11 +58,11 @@ export const sendEmail = async (to: string, subject: string, text: string, html:
     }
   }
 
-  // Fallback to SMTP
-  const smtpUser = (process.env.SMTP_USER || process.env.EMAIL_USER || "").trim();
-  const smtpPass = (process.env.SMTP_PASS || process.env.EMAIL_PASS || "").trim();
+  // Fallback to Nodemailer
+  const emailUser = (process.env.EMAIL_USER || "").trim();
+  const emailPass = (process.env.EMAIL_PASS || "").trim();
 
-  if (!smtpUser || !smtpPass) {
+  if (!emailUser || !emailPass) {
     console.warn("⚠️ Email credentials not set. Logging email content to console instead:");
     console.log(`[MOCK EMAIL] To: ${to} | Subject: ${subject}`);
     console.log(`[MOCK EMAIL CONTENT]: ${text}`);
@@ -70,9 +70,9 @@ export const sendEmail = async (to: string, subject: string, text: string, html:
   }
 
   try {
-    console.log(`📡 [SMTP] Sending email to ${to}...`);
+    console.log(`📡 [EMAIL] Sending email to ${to}...`);
     const info = await transporter.sendMail({
-      from: `"LCU Errands" <${smtpUser}>`,
+      from: `"LCU Errands" <${emailUser}>`,
       to,
       subject,
       text,
@@ -83,18 +83,18 @@ export const sendEmail = async (to: string, subject: string, text: string, html:
     );
     return true;
   } catch (error: any) {
-    console.error("❌ SMTP ERROR: Failed to send email");
+    console.error("❌ EMAIL ERROR: Failed to send email");
     console.error("Target:", to);
     console.error("Error Code:", error.code); // e.g., ETIMEDOUT, EAUTH
     console.error("Error Message:", error.message);
 
     if (error.code === "EAUTH") {
       console.error(
-        "Authentication failed: Check your SMTP_USER and SMTP_PASS (App Password).",
+        "Authentication failed: Check your EMAIL_USER and EMAIL_PASS (App Password).",
       );
     }
     
-    // For development/testing, if SMTP fails, we log it and return true so the user can proceed
+    // For development/testing, if Email fails, we log it and return true so the user can proceed
     console.log(`[MOCK EMAIL FALLBACK] To: ${to} | Subject: ${subject}`);
     console.log(`[MOCK EMAIL CONTENT]: ${text}`);
     return true; 

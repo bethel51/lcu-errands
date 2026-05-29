@@ -114,7 +114,6 @@ export const sendOtp = catchAsync(async (req: Request<{}, {}, SignUpRequestBody>
     { upsert: true, returnDocument: "after" }
   );
 
-  console.log(`[DEV OTP] OTP for ${normalizedEmail} is ${otp}`);
 
   // Await dispatch so it completes before response
   const emailSent = await sendOtpEmail(normalizedEmail, name, otp);
@@ -127,7 +126,6 @@ export const sendOtp = catchAsync(async (req: Request<{}, {}, SignUpRequestBody>
 
   res.status(200).json({
     message: "Verification code sent to your email.",
-    ...(process.env.NODE_ENV !== "production" || process.env.EXPOSE_OTP === "true" ? { devOtp: otp } : {}),
   });
 });
 
@@ -148,7 +146,6 @@ export const resendOtp = catchAsync(async (req: Request<{}, {}, { email?: string
   record.expiresAt = new Date(Date.now() + 10 * 60 * 1000);
   await record.save();
 
-  console.log(`[DEV OTP RESEND] New OTP for ${normalizedEmail} is ${newOtp}`);
 
   const emailSent = await sendOtpEmail(normalizedEmail, record.formData.name, newOtp);
 
@@ -160,7 +157,6 @@ export const resendOtp = catchAsync(async (req: Request<{}, {}, { email?: string
 
   res.status(200).json({
     message: "A new code has been sent to your email.",
-    ...(process.env.NODE_ENV !== "production" || process.env.EXPOSE_OTP === "true" ? { devOtp: newOtp } : {}),
   });
 });
 

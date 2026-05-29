@@ -70,10 +70,8 @@ export const sendEmail = async (to: string, subject: string, text: string, html:
   const emailPass = (process.env.EMAIL_PASS || "").trim();
 
   if (!emailUser || !emailPass) {
-    console.warn("⚠️ Email credentials not set. Logging email content to console instead:");
-    console.log(`[MOCK EMAIL] To: ${to} | Subject: ${subject}`);
-    console.log(`[MOCK EMAIL CONTENT]: ${text}`);
-    return true; // Return true to allow flow to continue without email
+    console.warn("⚠️ Email credentials not set. Email not sent.");
+    return false; // Return false since email actually failed
   }
 
   try {
@@ -101,10 +99,7 @@ export const sendEmail = async (to: string, subject: string, text: string, html:
       );
     }
     
-    // For development/testing, if Email fails, we log it and return true so the user can proceed
-    console.log(`[MOCK EMAIL FALLBACK] To: ${to} | Subject: ${subject}`);
-    console.log(`[MOCK EMAIL CONTENT]: ${text}`);
-    return true; 
+    return false; 
   }
 };
 

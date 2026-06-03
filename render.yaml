@@ -33,9 +33,9 @@ services:
         sync: false
       - key: SMTP_SECURE
         value: "true"
-      - key: SMTP_USER
+      - key: EMAIL_USER
         sync: false
-      - key: SMTP_PASS
+      - key: EMAIL_PASS
         sync: false
       - key: RESEND_API_KEY
         sync: false
@@ -68,9 +68,9 @@ services:
         sync: false
       - key: SMTP_PORT
         sync: false
-      - key: SMTP_USER
+      - key: EMAIL_USER
         sync: false
-      - key: SMTP_PASS
+      - key: EMAIL_PASS
         sync: false
       - key: RESEND_API_KEY
         sync: false

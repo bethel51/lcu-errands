@@ -329,7 +329,36 @@ export const deleteAccount = catchAsync(async (req, res) => {
     return;
   }
 
-  await User.findByIdAndDelete(userId);
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    // 1. Delete the user
+    await User.findByIdAndDelete(userId).session(session);
+
+    // 2. Cascade delete all user-related documents dynamically to avoid circular dependencies
+    const { Errand } = await import("../models/Errand.js");
+    const { Review } = await import("../models/Review.js");
+    const { Notification } = await import("../models/Notification.js");
+    const { Message } = await import("../models/Message.js");
+    const { OTP } = await import("../models/OTP.js");
+    const { WithdrawalRequest } = await import("../models/WithdrawalRequest.js");
+
+    await Errand.deleteMany({ $or: [{ posterId: userId }, { erranderId: userId }] }).session(session);
+    await Transaction.deleteMany({ userId }).session(session);
+    await Notification.deleteMany({ userId }).session(session);
+    await Review.deleteMany({ $or: [{ reviewerId: userId }, { revieweeId: userId }] }).session(session);
+    await Message.deleteMany({ senderId: userId }).session(session);
+    await WithdrawalRequest.deleteMany({ userId }).session(session);
+    await OTP.deleteMany({ email: user.email }).session(session);
+
+    await session.commitTransaction();
+  } catch (error) {
+    await session.abortTransaction();
+    throw error;
+  } finally {
+    session.endSession();
+  }
 
   res.json({ message: "Account deleted permanently" });
 });

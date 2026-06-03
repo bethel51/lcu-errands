@@ -17,14 +17,17 @@ const transporter = nodemailer.createTransport({
   socketTimeout: 5000,
 });
 
-console.log("[EMAIL] Initializing transporter verification...");
-transporter.verify((error) => {
-  if (error) {
-    console.error("⚠️ Email connection failed:", error.message);
-  } else {
-    console.log("✅ Email server is ready to send emails.");
-  }
-});
+// Initialize transporter verification only in development when SMTP credentials are set
+if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
+  console.log("[EMAIL] Initializing transporter verification...");
+  transporter.verify((error) => {
+    if (error) {
+      console.error("⚠️ Email connection failed:", error.message);
+    } else {
+      console.log("✅ Email server is ready to send emails.");
+    }
+  });
+}
 
 export const sendEmail = async (to: string, subject: string, text: string, html: string): Promise<boolean> => {
   const brevoApiKey = (process.env.BREVO_API_KEY || "").trim();

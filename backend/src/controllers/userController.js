@@ -329,12 +329,9 @@ export const deleteAccount = catchAsync(async (req, res) => {
     return;
   }
 
-  const session = await mongoose.startSession();
-  session.startTransaction();
-
   try {
     // 1. Delete the user
-    await User.findByIdAndDelete(userId).session(session);
+    await User.findByIdAndDelete(userId);
 
     // 2. Cascade delete all user-related documents dynamically to avoid circular dependencies
     const { Errand } = await import("../models/Errand.js");
@@ -344,20 +341,16 @@ export const deleteAccount = catchAsync(async (req, res) => {
     const { OTP } = await import("../models/OTP.js");
     const { WithdrawalRequest } = await import("../models/WithdrawalRequest.js");
 
-    await Errand.deleteMany({ $or: [{ posterId: userId }, { erranderId: userId }] }).session(session);
-    await Transaction.deleteMany({ userId }).session(session);
-    await Notification.deleteMany({ userId }).session(session);
-    await Review.deleteMany({ $or: [{ reviewerId: userId }, { revieweeId: userId }] }).session(session);
-    await Message.deleteMany({ senderId: userId }).session(session);
-    await WithdrawalRequest.deleteMany({ userId }).session(session);
-    await OTP.deleteMany({ email: user.email }).session(session);
-
-    await session.commitTransaction();
+    await Errand.deleteMany({ $or: [{ posterId: userId }, { erranderId: userId }] });
+    await Transaction.deleteMany({ userId });
+    await Notification.deleteMany({ userId });
+    await Review.deleteMany({ $or: [{ reviewerId: userId }, { revieweeId: userId }] });
+    await Message.deleteMany({ senderId: userId });
+    await WithdrawalRequest.deleteMany({ userId });
+    await OTP.deleteMany({ email: user.email });
   } catch (error) {
-    await session.abortTransaction();
+    console.error("Error during cascade deletion:", error);
     throw error;
-  } finally {
-    session.endSession();
   }
 
   res.json({ message: "Account deleted permanently" });

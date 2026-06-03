@@ -55,18 +55,7 @@ const BottomNav = () => {
         <div style={{ position: "relative" }}>
           <MessageSquare size={22} />
           {hasNotification && (
-            <div
-              style={{
-                position: "absolute",
-                top: -2,
-                right: -2,
-                width: 8,
-                height: 8,
-                background: "#EF4444",
-                borderRadius: "50%",
-                border: "2px solid white",
-              }}
-            />
+            <div className="bottom-nav-dot" />
           )}
         </div>
         <span>Chats</span>

@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, MapPin, Plus, X, Wallet, ArrowRight } from "lucide-react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { Search, MapPin, Plus, X, Wallet, ArrowRight, Star } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import api from "../api";
 import ReviewModal from "../components/ReviewModal";
 import { useSocket } from "../context/SocketContext";
@@ -16,9 +16,17 @@ const CATEGORIES = [
   "Other",
 ];
 
+const CATEGORY_EMOJI = {
+  Meals: "🍽️",
+  Shopping: "🛒",
+  Academic: "📚",
+  Delivery: "📦",
+  Gates: "🚪",
+  Other: "✨",
+};
+
 const Dashboard = () => {
   const navigate = useNavigate();
-  const location = useLocation();
   const { socket } = useSocket();
   const [errands, setErrands] = useState([]);
   const [activeRequests, setActiveRequests] = useState([]);
@@ -49,7 +57,6 @@ const Dashboard = () => {
   const [newMessage, setNewMessage] = useState("");
 
   const userRole = localStorage.getItem("userRole") || "messenger";
-  // Cache user id once to avoid repeated JSON.parse on every errand mapping
   const cachedUserId = (() => {
     try {
       return JSON.parse(localStorage.getItem("user") || "{}").id || "";
@@ -207,19 +214,6 @@ const Dashboard = () => {
     }
   };
 
-  const handleCompleteErrand = async (id) => {
-    setProcessing(true);
-    try {
-      await api.patch(`/errands/${id}/complete`);
-      showToast("Errand completed!");
-      fetchErrands();
-    } catch (err) {
-      showToast(err.response?.data?.message || "Error.", "info");
-    } finally {
-      setProcessing(false);
-    }
-  };
-
   const filteredErrands = useMemo(() => {
     return errands.filter((e) => {
       const matchesSearch =
@@ -231,21 +225,9 @@ const Dashboard = () => {
     });
   }, [errands, search, activeCategory]);
 
-  const filteredMessengers = useMemo(() => {
-    return messengers.filter((m) =>
-      m.name.toLowerCase().includes(search.toLowerCase()),
-    );
-  }, [messengers, search]);
-
   return (
-    <div
-      style={{
-        padding: "20px 0 100px",
-        maxWidth: 1200,
-        margin: "0 auto",
-        minHeight: "100vh",
-      }}
-    >
+    <div className="dashboard-page">
+      {/* Full-screen processing overlay */}
       <AnimatePresence>
         {processing && (
           <motion.div
@@ -255,82 +237,74 @@ const Dashboard = () => {
             style={{
               position: "fixed",
               inset: 0,
-              background: "rgba(255,255,255,0.8)",
+              background: "rgba(255,255,255,0.85)",
+              backdropFilter: "blur(6px)",
               zIndex: 9999,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               flexDirection: "column",
-              gap: 15,
+              gap: 16,
             }}
           >
-            <div className="loader" style={{ width: 40, height: 40 }} />
+            <div className="loader" style={{ width: 44, height: 44 }} />
             <div
               style={{
                 fontWeight: 800,
                 color: "var(--blue-600)",
-                fontSize: "0.8rem",
+                fontSize: "0.75rem",
+                letterSpacing: "0.15em",
+                textTransform: "uppercase",
               }}
             >
-              PROCESSING...
+              Processing…
             </div>
           </motion.div>
         )}
       </AnimatePresence>
 
       <div className="container">
-        <div className="dashboard-header" style={{ flexWrap: "wrap", gap: 20 }}>
+        {/* ── Header ── */}
+        <div className="dashboard-header">
           <div className="dashboard-title">
-            <h1 style={{ fontSize: "1.75rem", fontWeight: 900 }}>
+            <h1>
               Hello, {user?.name?.split(" ")[0] || "Student"}! 👋
             </h1>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 12,
-                marginTop: 8,
-              }}
-            >
-              <div
-                style={{
-                  background: "var(--blue-50)",
-                  padding: "6px 12px",
-                  borderRadius: 10,
-                  border: "1px solid var(--blue-100)",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                }}
-              >
-                <Wallet size={14} color="var(--blue-600)" />
-                <span style={{ fontWeight: 800, color: "var(--blue-600)" }}>
-                  ₦{user?.balance?.toLocaleString() || 0}
-                </span>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginTop: 10 }}>
+              <div className="dashboard-balance-chip">
+                <Wallet size={14} />
+                ₦{user?.balance?.toLocaleString() || "0"}
               </div>
-              <span
-                className={`badge ${user?.isVerified ? "badge-green" : "badge-blue"}`}
-              >
-                {user?.isVerified ? "VERIFIED" : "UNVERIFIED"}
+              <span className={`badge ${user?.isVerified ? "badge-green" : "badge-blue"}`}>
+                {user?.isVerified ? "✓ Verified" : "Unverified"}
               </span>
+              {user?.rating > 0 && (
+                <span style={{ display: "flex", alignItems: "center", gap: 4, fontSize: "0.8rem", color: "var(--gray-500)", fontWeight: 600 }}>
+                  <Star size={13} fill="var(--amber-500)" color="var(--amber-500)" />
+                  {user.rating.toFixed(1)}
+                </span>
+              )}
             </div>
           </div>
+
           {userRole === "sender" && (
             <button
               className="btn btn-primary"
               onClick={() => setIsPostModalOpen(true)}
-              style={{ boxShadow: "var(--shadow-lg)" }}
+              style={{ flexShrink: 0 }}
             >
               <Plus size={18} /> Post Errand
             </button>
           )}
         </div>
 
-        <div className="search-bar" style={{ marginBottom: 30 }}>
+        {/* ── Search ── */}
+        <div className="search-bar">
           <div className="search-input-wrapper">
             <Search size={18} />
             <input
-              placeholder="Search errands, food, etc..."
+              id="errand-search"
+              placeholder="Search errands, meals, etc…"
               className="input-field"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -338,132 +312,170 @@ const Dashboard = () => {
           </div>
         </div>
 
-        <div
-          className="filter-chips"
-          style={{ overflowX: "auto", paddingBottom: 10 }}
-        >
+        {/* ── Category Filters ── */}
+        <div className="filter-chips">
           {CATEGORIES.map((cat) => (
             <button
               key={cat}
+              id={`filter-${cat.toLowerCase()}`}
               onClick={() => setActiveCategory(cat)}
               className={`chip ${activeCategory === cat ? "active" : ""}`}
             >
+              {CATEGORY_EMOJI[cat] && <span>{CATEGORY_EMOJI[cat]}</span>}
               {cat}
             </button>
           ))}
         </div>
 
-        {/* ERRAND FEED */}
-        {filteredErrands.length === 0 && !loading ? (
-          <div
-            style={{
-              textAlign: "center",
-              padding: "60px 20px",
-              background: "white",
-              borderRadius: 24,
-              border: "1px dashed var(--gray-300)",
-              marginTop: 20,
-            }}
-          >
-            <div
-              style={{
-                width: 80,
-                height: 80,
-                background: "var(--gray-50)",
-                borderRadius: "50%",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                margin: "0 auto 20px",
-                color: "var(--gray-400)",
-              }}
-            >
-              <Search size={40} />
+        {/* ── Errand Feed ── */}
+        {loading ? (
+          <div className="errand-grid">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="skeleton-card">
+                <div className="skeleton skeleton-line short" />
+                <div className="skeleton skeleton-line medium" style={{ height: 22 }} />
+                <div className="skeleton skeleton-line full" />
+                <div className="skeleton skeleton-line medium" />
+              </div>
+            ))}
+          </div>
+        ) : filteredErrands.length === 0 ? (
+          <div className="empty-state">
+            <div className="empty-state-icon">
+              <Search size={36} />
             </div>
-            <h3
-              style={{ fontSize: "1.25rem", fontWeight: 800, marginBottom: 8 }}
-            >
-              No Errands Found
-            </h3>
-            <p
-              style={{
-                color: "var(--gray-500)",
-                maxWidth: 400,
-                margin: "0 auto",
-              }}
-            >
-              There are currently no open errands matching your criteria. Check
-              back later!
+            <h3>No Errands Found</h3>
+            <p>
+              {search || activeCategory !== "All"
+                ? "Try adjusting your search or filters."
+                : "No open errands right now. Check back soon!"}
             </p>
+            {userRole === "sender" && (
+              <button
+                className="btn btn-primary"
+                style={{ marginTop: 24 }}
+                onClick={() => setIsPostModalOpen(true)}
+              >
+                <Plus size={16} /> Post the First Errand
+              </button>
+            )}
           </div>
         ) : (
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))",
-              gap: 20,
-            }}
-          >
+          <div className="errand-grid">
             {filteredErrands.map((errand) => (
               <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="card"
                 key={errand.id}
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.25 }}
+                className="card errand-card"
               >
                 <div className="card-body">
+                  {/* Card top */}
                   <div
                     style={{
                       display: "flex",
                       justifyContent: "space-between",
-                      marginBottom: 15,
+                      alignItems: "flex-start",
+                      marginBottom: 14,
                     }}
                   >
-                    <span className="badge badge-blue">
-                      {errand.category.toUpperCase()}
+                    <span className="badge badge-blue" style={{ fontSize: "0.7rem" }}>
+                      {CATEGORY_EMOJI[errand.category] || "✨"} {errand.category.toUpperCase()}
                     </span>
-                    <span style={{ fontWeight: 900, fontSize: "1.1rem" }}>
-                      ₦{errand.fee}
+                    <span
+                      style={{
+                        fontWeight: 900,
+                        fontSize: "1.15rem",
+                        color: "var(--blue-700)",
+                        letterSpacing: "-0.5px",
+                      }}
+                    >
+                      ₦{errand.fee?.toLocaleString()}
                     </span>
                   </div>
-                  <h3 style={{ fontWeight: 800, marginBottom: 10 }}>
+
+                  {/* Title */}
+                  <h3
+                    style={{
+                      fontWeight: 800,
+                      fontSize: "1rem",
+                      color: "var(--gray-900)",
+                      marginBottom: 8,
+                      lineHeight: 1.35,
+                    }}
+                  >
                     {errand.title}
                   </h3>
+
+                  {/* Description */}
                   <p
                     style={{
                       fontSize: "0.85rem",
                       color: "var(--gray-500)",
-                      marginBottom: 20,
-                      lineBreak: "anywhere",
+                      marginBottom: 18,
+                      lineHeight: 1.55,
+                      display: "-webkit-box",
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: "vertical",
+                      overflow: "hidden",
                     }}
                   >
                     {errand.description}
                   </p>
+
+                  {/* Footer */}
                   <div
                     style={{
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "space-between",
+                      paddingTop: 14,
+                      borderTop: "1px solid var(--gray-100)",
                     }}
                   >
                     <div
                       style={{
                         display: "flex",
                         alignItems: "center",
-                        gap: 8,
+                        gap: 6,
                         fontSize: "0.8rem",
-                        color: "var(--gray-600)",
+                        color: "var(--gray-500)",
+                        fontWeight: 500,
+                        minWidth: 0,
+                        overflow: "hidden",
                       }}
                     >
-                      <MapPin size={14} /> {errand.location}
+                      <MapPin size={13} style={{ flexShrink: 0 }} />
+                      <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {errand.location || "Not specified"}
+                      </span>
                     </div>
-                    {userRole === "messenger" && user?.isVerified && (
+
+                    {userRole === "messenger" && user?.isVerified && errand.posterId !== cachedUserId && (
                       <button
+                        id={`accept-errand-${errand.id}`}
                         onClick={() => handleAcceptErrand(errand.id)}
                         className="btn btn-primary btn-sm"
+                        style={{ flexShrink: 0 }}
                       >
-                        Accept <ArrowRight size={14} />
+                        Accept <ArrowRight size={13} />
                       </button>
+                    )}
+
+                    {errand.posterId === cachedUserId && (
+                      <span
+                        style={{
+                          fontSize: "0.72rem",
+                          fontWeight: 700,
+                          color: "var(--blue-500)",
+                          background: "var(--blue-50)",
+                          padding: "3px 10px",
+                          borderRadius: "var(--radius-full)",
+                        }}
+                      >
+                        Your Post
+                      </span>
                     )}
                   </div>
                 </div>
@@ -473,40 +485,54 @@ const Dashboard = () => {
         )}
       </div>
 
-      {/* POST MODAL */}
+      {/* ── Post Errand Modal ── */}
       <AnimatePresence>
         {isPostModalOpen && (
           <div
             className="modal-overlay"
             onClick={() => setIsPostModalOpen(false)}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
+            style={{ display: "flex", alignItems: "center", justifyContent: "center" }}
           >
             <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              transition={{ type: "spring", stiffness: 400, damping: 28 }}
               className="modal-container"
               onClick={(e) => e.stopPropagation()}
-              style={{ padding: 25, borderRadius: 24, maxWidth: 450 }}
+              style={{ maxWidth: 460 }}
             >
+              {/* Modal header */}
               <div
                 style={{
                   display: "flex",
                   justifyContent: "space-between",
-                  marginBottom: 25,
+                  alignItems: "center",
+                  marginBottom: 24,
+                  paddingBottom: 20,
+                  borderBottom: "1px solid var(--gray-100)",
                 }}
               >
-                <h2 style={{ fontWeight: 900 }}>Post New Errand</h2>
-                <button onClick={() => setIsPostModalOpen(false)}>
-                  <X />
+                <div>
+                  <h2 style={{ fontWeight: 900, fontSize: "1.25rem", color: "var(--gray-900)" }}>
+                    Post New Errand
+                  </h2>
+                  <p style={{ fontSize: "0.85rem", color: "var(--gray-400)", marginTop: 4 }}>
+                    Describe your task and set a reward
+                  </p>
+                </div>
+                <button
+                  onClick={() => setIsPostModalOpen(false)}
+                  className="btn-icon"
+                  style={{ flexShrink: 0 }}
+                >
+                  <X size={18} />
                 </button>
               </div>
+
               <form
                 onSubmit={handlePostErrand}
-                style={{ display: "flex", flexDirection: "column", gap: 15 }}
+                style={{ display: "flex", flexDirection: "column", gap: 16 }}
               >
                 <div>
                   <label className="form-label">Title</label>
@@ -514,43 +540,33 @@ const Dashboard = () => {
                     className="input-field"
                     placeholder="e.g. Buy Lunch at J-One"
                     value={formData.title}
-                    onChange={(e) =>
-                      setFormData({ ...formData, title: e.target.value })
-                    }
+                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                     required
                   />
                 </div>
+
                 <div>
                   <label className="form-label">Drop-off Location</label>
                   <input
                     className="input-field"
                     placeholder="e.g. Block A, Room 202"
                     value={formData.location}
-                    onChange={(e) =>
-                      setFormData({ ...formData, location: e.target.value })
-                    }
+                    onChange={(e) => setFormData({ ...formData, location: e.target.value })}
                     required
                   />
                 </div>
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "1fr 1fr",
-                    gap: 15,
-                  }}
-                >
+
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
                   <div>
                     <label className="form-label">Category</label>
                     <select
                       className="input-field"
                       value={formData.category}
-                      onChange={(e) =>
-                        setFormData({ ...formData, category: e.target.value })
-                      }
+                      onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                     >
                       {CATEGORIES.filter((c) => c !== "All").map((c) => (
                         <option key={c} value={c}>
-                          {c}
+                          {CATEGORY_EMOJI[c]} {c}
                         </option>
                       ))}
                     </select>
@@ -562,32 +578,31 @@ const Dashboard = () => {
                       type="number"
                       placeholder="500"
                       value={formData.fee}
-                      onChange={(e) =>
-                        setFormData({ ...formData, fee: e.target.value })
-                      }
+                      onChange={(e) => setFormData({ ...formData, fee: e.target.value })}
                       required
                     />
                   </div>
                 </div>
+
                 <div>
                   <label className="form-label">Details</label>
                   <textarea
                     className="input-field"
-                    style={{ minHeight: 100 }}
-                    placeholder="Specify items, notes, etc."
+                    style={{ minHeight: 96, resize: "vertical" }}
+                    placeholder="Specify items, quantities, special notes…"
                     value={formData.description}
-                    onChange={(e) =>
-                      setFormData({ ...formData, description: e.target.value })
-                    }
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                     required
                   />
                 </div>
+
                 <button
                   type="submit"
                   className="btn btn-primary"
-                  style={{ width: "100%", padding: 15 }}
+                  style={{ width: "100%", padding: "14px", marginTop: 4, fontSize: "1rem" }}
+                  disabled={processing}
                 >
-                  Publish Task
+                  {processing ? "Publishing…" : "🚀 Publish Errand"}
                 </button>
               </form>
             </motion.div>
@@ -603,26 +618,20 @@ const Dashboard = () => {
         role={userRole}
       />
 
-      {toast && (
-        <div
-          style={{
-            position: "fixed",
-            bottom: 100,
-            left: "50%",
-            transform: "translateX(-50%)",
-            background:
-              toast.type === "success" ? "var(--green-500)" : "var(--blue-500)",
-            color: "white",
-            padding: "12px 24px",
-            borderRadius: 12,
-            fontWeight: 700,
-            zIndex: 10000,
-            boxShadow: "var(--shadow-xl)",
-          }}
-        >
-          {toast.message}
-        </div>
-      )}
+      {/* ── Toast ── */}
+      <AnimatePresence>
+        {toast && (
+          <motion.div
+            key="toast"
+            initial={{ opacity: 0, y: 20, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 10, scale: 0.97 }}
+            className={`toast toast-${toast.type}`}
+          >
+            {toast.message}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

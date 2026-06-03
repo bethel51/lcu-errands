@@ -117,37 +117,9 @@ const Navbar = () => {
           <div style={{ position: "relative" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
               {socket?.connected && (
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 6,
-                    padding: "4px 8px",
-                    background: "var(--green-50)",
-                    borderRadius: 8,
-                    border: "1px solid var(--green-100)",
-                  }}
-                >
-                  <span
-                    style={{
-                      width: 6,
-                      height: 6,
-                      background: "var(--green-500)",
-                      borderRadius: "50%",
-                      display: "inline-block",
-                      boxShadow: "0 0 8px var(--green-400)",
-                    }}
-                  />
-                  <span
-                    style={{
-                      fontSize: "0.65rem",
-                      fontWeight: 800,
-                      color: "var(--green-600)",
-                      textTransform: "uppercase",
-                    }}
-                  >
-                    Live
-                  </span>
+                <div className="nav-live-pill">
+                  <span className="nav-live-dot" />
+                  <span className="nav-live-text">Live</span>
                 </div>
               )}
               <button
@@ -160,35 +132,14 @@ const Navbar = () => {
               >
                 <Bell size={18} />
                 {hasNotification && (
-                  <span
-                    style={{
-                      position: "absolute",
-                      top: 8,
-                      right: 8,
-                      width: 10,
-                      height: 10,
-                      background: "#EF4444",
-                      borderRadius: "50%",
-                      border: "2px solid white",
-                    }}
-                  />
+                  <span className="notification-dot" />
                 )}
               </button>
             </div>
 
             {isDropdownOpen && (
               <>
-                <div
-                  style={{
-                    position: "fixed",
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    zIndex: 1050,
-                  }}
-                  onClick={() => setIsDropdownOpen(false)}
-                />
+                <div className="dropdown-backdrop" onClick={() => setIsDropdownOpen(false)} />
                 <div className="notification-dropdown">
                   <div className="notification-header">
                     <h4 style={{ fontWeight: 800, margin: 0 }}>
@@ -352,20 +303,7 @@ const Navbar = () => {
               <Link
                 to="/profile"
                 onMouseEnter={() => prefetch(PageImports.Profile)}
-                style={{
-                  width: 36,
-                  height: 36,
-                  borderRadius: "50%",
-                  background: "var(--blue-100)",
-                  color: "var(--blue-600)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontWeight: 700,
-                  cursor: "pointer",
-                  border: "2px solid var(--blue-200)",
-                  overflow: "hidden",
-                }}
+                className="nav-profile-avatar"
                 title="My Profile"
               >
                 {JSON.parse(localStorage.getItem("user") || "{}")
@@ -376,11 +314,6 @@ const Navbar = () => {
                         .profilePicture
                     }
                     alt="P"
-                    style={{
-                      width: "100%",
-                      height: "100%",
-                      objectFit: "cover",
-                    }}
                   />
                 ) : (
                   JSON.parse(localStorage.getItem("user") || "{}")

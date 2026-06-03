@@ -58,6 +58,11 @@ const Signup: React.FC = () => {
   const validateStep1 = (): string => {
     if (!formData.name || !formData.email || !formData.password || !formData.matricNumber || !formData.phoneNumber)
       return "Please fill all required fields";
+    
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email))
+      return "Please enter a valid email address";
+
     if (formData.password !== formData.confirmPassword)
       return "Passwords do not match";
     if (formData.password.length < 6)

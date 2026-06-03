@@ -45,6 +45,11 @@ export const sendOtp = catchAsync(async (req: Request<{}, {}, SignUpRequestBody>
     return res.status(400).json({ message: "All fields are required" });
   }
 
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    return res.status(400).json({ message: "Please enter a valid email address" });
+  }
+
   // Enhanced LCU Validation & Normalization
   let rawMatric = String(matricNumber || "")
     .trim()

@@ -6,16 +6,35 @@ if (dns.setDefaultResultOrder) {
   dns.setDefaultResultOrder('ipv4first');
 }
 
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-  connectionTimeout: 5000, // Fail fast after 5 seconds
-  greetingTimeout: 5000,
-  socketTimeout: 5000,
-});
+const smtpHost = process.env.SMTP_HOST || "";
+const smtpPort = parseInt(process.env.SMTP_PORT || "587", 10);
+const smtpSecure = process.env.SMTP_SECURE === "true";
+
+const transporter = nodemailer.createTransport(
+  smtpHost
+    ? {
+        host: smtpHost,
+        port: smtpPort,
+        secure: smtpSecure,
+        auth: {
+          user: process.env.EMAIL_USER,
+          pass: process.env.EMAIL_PASS,
+        },
+        connectionTimeout: 5000,
+        greetingTimeout: 5000,
+        socketTimeout: 5000,
+      }
+    : {
+        service: "gmail",
+        auth: {
+          user: process.env.EMAIL_USER,
+          pass: process.env.EMAIL_PASS,
+        },
+        connectionTimeout: 5000,
+        greetingTimeout: 5000,
+        socketTimeout: 5000,
+      }
+);
 
 // Initialize transporter verification only in development when SMTP credentials are set
 if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {

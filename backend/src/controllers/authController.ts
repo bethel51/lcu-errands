@@ -120,18 +120,17 @@ export const sendOtp = catchAsync(async (req: Request<{}, {}, SignUpRequestBody>
   // developers or operators can still inspect the logs to find the OTP.
   console.log(`[OTP] Generated verification code for ${normalizedEmail}: ${otp}`);
   
-  sendOtpEmail(normalizedEmail, name, otp)
-    .then((sent) => {
-      if (!sent) {
-        console.error(`❌ [OTP] Failed to deliver verification code email to ${normalizedEmail}. Code is: ${otp}`);
-      } else {
-        console.log(`✅ [OTP] Verification code email sent to ${normalizedEmail}`);
-      }
-    })
-    .catch((err) => {
-      console.error(`❌ [OTP] Error sending email to ${normalizedEmail}:`, err);
+  // Send email and wait for result to ensure delivery before responding
+  const emailSent = await sendOtpEmail(normalizedEmail, name, otp);
+  if (!emailSent) {
+    console.error(`❌ [OTP] Failed to deliver verification code email to ${normalizedEmail}. Code is: ${otp}`);
+    return res.status(500).json({
+      message: "Failed to send verification code email. Please try again later.",
     });
+  }
+  console.log(`✅ [OTP] Verification code email sent to ${normalizedEmail}`);
 
+  // Respond only after successful email dispatch
   res.status(200).json({
     message: "Verification code sent to your email.",
   });

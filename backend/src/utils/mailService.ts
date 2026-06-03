@@ -67,7 +67,7 @@ if (!process.env.BREVO_API_KEY && emailUser && emailPass) {
 
 export const sendEmail = async (to: string, subject: string, text: string, html: string): Promise<boolean> => {
   const brevoApiKey = (process.env.BREVO_API_KEY || "").trim();
-  const emailFrom = process.env.EMAIL_FROM || "no-reply@leadcityerrands.com";
+  const emailFrom = process.env.EMAIL_FROM || emailUser || "no-reply@leadcityerrands.com";
   const senderName = process.env.EMAIL_SENDER_NAME || "LCU Errands";
 
   if (brevoApiKey) {

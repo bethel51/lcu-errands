@@ -9,6 +9,8 @@ if (dns.setDefaultResultOrder) {
 const smtpHost = process.env.SMTP_HOST || "";
 const smtpPort = parseInt(process.env.SMTP_PORT || "587", 10);
 const smtpSecure = process.env.SMTP_SECURE === "true";
+const emailUser = (process.env.EMAIL_USER || process.env.SMTP_USER || "").trim();
+const emailPass = (process.env.EMAIL_PASS || process.env.SMTP_PASS || "").trim();
 
 const transporter = nodemailer.createTransport(
   smtpHost
@@ -17,8 +19,8 @@ const transporter = nodemailer.createTransport(
         port: smtpPort,
         secure: smtpSecure,
         auth: {
-          user: process.env.EMAIL_USER,
-          pass: process.env.EMAIL_PASS,
+          user: emailUser,
+          pass: emailPass,
         },
         connectionTimeout: 5000,
         greetingTimeout: 5000,
@@ -27,8 +29,8 @@ const transporter = nodemailer.createTransport(
     : {
         service: "gmail",
         auth: {
-          user: process.env.EMAIL_USER,
-          pass: process.env.EMAIL_PASS,
+          user: emailUser,
+          pass: emailPass,
         },
         connectionTimeout: 5000,
         greetingTimeout: 5000,
@@ -37,7 +39,7 @@ const transporter = nodemailer.createTransport(
 );
 
 // Initialize transporter verification only in development when SMTP credentials are set
-if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
+if (emailUser && emailPass) {
   console.log("[EMAIL] Initializing transporter verification...");
   transporter.verify((error) => {
     if (error) {
@@ -97,8 +99,8 @@ export const sendEmail = async (to: string, subject: string, text: string, html:
   }
 
   // Fallback to Nodemailer
-  const emailUser = (process.env.EMAIL_USER || "").trim();
-  const emailPass = (process.env.EMAIL_PASS || "").trim();
+  const emailUser = (process.env.EMAIL_USER || process.env.SMTP_USER || "").trim();
+  const emailPass = (process.env.EMAIL_PASS || process.env.SMTP_PASS || "").trim();
 
   if (!emailUser || !emailPass) {
     console.warn("⚠️ Email credentials not set. Email not sent.");

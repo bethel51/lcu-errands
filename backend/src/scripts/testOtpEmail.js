@@ -1,6 +1,10 @@
 // src/scripts/testOtpEmail.js
 import { config } from 'dotenv';
-config({ path: '../../.env' });
+import path from 'path';
+import { fileURLToPath } from 'url';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+config({ path: path.join(__dirname, '../../.env') });
 import { sendOtpEmail } from '../utils/mailService.js';
 
 const testEmail = process.env.EMAIL_USER; // using the same address for testing

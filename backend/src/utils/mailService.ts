@@ -53,8 +53,8 @@ const transporter = nodemailer.createTransport(
       }
 );
 
-// Initialize transporter verification only in development when SMTP credentials are set
-if (emailUser && emailPass) {
+// Initialize transporter verification only when SMTP credentials are set and Brevo API is not used
+if (!process.env.BREVO_API_KEY && emailUser && emailPass) {
   console.log("[EMAIL] Initializing transporter verification...");
   transporter.verify((error) => {
     if (error) {

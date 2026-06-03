@@ -97,7 +97,41 @@ export const sendEmail = async (to: string, subject: string, text: string, html:
       console.log("Falling back to SMTP / Mock Email...");
     }
   }
+  const resendApiKey = (process.env.RESEND_API_KEY || "").trim();
+  if (resendApiKey) {
+    try {
+      console.log(`📡 [Resend API] Sending email to ${to}...`);
+      const response = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${resendApiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          from: `${senderName} <${emailFrom}>`,
+          to: [to],
+          subject,
+          text,
+          html: html || text,
+        }),
+      });
 
+      if (response.ok) {
+        const data: any = await response.json();
+        console.log(`📧 Email sent successfully via Resend API to ${to}. Id: ${data.id}`);
+        return true;
+      } else {
+        const errorText = await response.text();
+        console.error("❌ Resend API ERROR: Failed to send email", response.status, errorText);
+        console.log("Falling back to SMTP / Mock Email...");
+      }
+    } catch (error: any) {
+      console.error("❌ Resend API ERROR: Failed to send email");
+      console.error("Target:", to);
+      console.error("Error Message:", error.message);
+      console.log("Falling back to SMTP / Mock Email...");
+    }
+  }
   // Fallback to Nodemailer
   const emailUser = (process.env.EMAIL_USER || process.env.SMTP_USER || "").trim();
   const emailPass = (process.env.EMAIL_PASS || process.env.SMTP_PASS || "").trim();

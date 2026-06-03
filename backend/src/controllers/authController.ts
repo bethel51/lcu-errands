@@ -120,15 +120,10 @@ export const sendOtp = catchAsync(async (req: Request<{}, {}, SignUpRequestBody>
   );
 
 
-  // Send email in background to prevent slow response times and timeout failures.
-  // We log the code to console so that if the mail delivery fails (e.g. Resend sandbox limit or blocked SMTP port in production),
-  // developers or operators can still inspect the logs to find the OTP.
-  console.log(`[OTP] Generated verification code for ${normalizedEmail}: ${otp}`);
-  
   // Send email and wait for result to ensure delivery before responding
   const emailSent = await sendOtpEmail(normalizedEmail, name, otp);
   if (!emailSent) {
-    console.error(`❌ [OTP] Failed to deliver verification code email to ${normalizedEmail}. Code is: ${otp}`);
+    console.error(`❌ [OTP] Failed to deliver verification code email to ${normalizedEmail}.`);
     return res.status(500).json({
       message: "Failed to send verification code email. Please try again later.",
     });
@@ -159,12 +154,10 @@ export const resendOtp = catchAsync(async (req: Request<{}, {}, { email?: string
   await record.save();
 
 
-  console.log(`[OTP] Generated new verification code for ${normalizedEmail}: ${newOtp}`);
-
   sendOtpEmail(normalizedEmail, record.formData.name, newOtp)
     .then((sent) => {
       if (!sent) {
-        console.error(`❌ [OTP] Failed to deliver new verification code email to ${normalizedEmail}. Code is: ${newOtp}`);
+        console.error(`❌ [OTP] Failed to deliver new verification code email to ${normalizedEmail}.`);
       } else {
         console.log(`✅ [OTP] New verification code email sent to ${normalizedEmail}`);
       }

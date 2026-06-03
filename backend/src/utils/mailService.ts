@@ -1,23 +1,38 @@
 import nodemailer from "nodemailer";
 import dns from "dns";
+import dnsPromises from "dns/promises";
 
 // Force Node.js to prefer IPv4 for DNS lookups to prevent IPv6 ENETUNREACH errors
 if (dns.setDefaultResultOrder) {
   dns.setDefaultResultOrder('ipv4first');
 }
 
-const smtpHost = process.env.SMTP_HOST || "";
+const smtpHostName = process.env.SMTP_HOST || "";
 const smtpPort = parseInt(process.env.SMTP_PORT || "587", 10);
 const smtpSecure = process.env.SMTP_SECURE === "true";
 const emailUser = (process.env.EMAIL_USER || process.env.SMTP_USER || "").trim();
 const emailPass = (process.env.EMAIL_PASS || process.env.SMTP_PASS || "").trim();
 
+let smtpIpAddress = smtpHostName;
+if (smtpHostName) {
+  try {
+    const lookup = await dnsPromises.lookup(smtpHostName, { family: 4 });
+    smtpIpAddress = lookup.address;
+    console.log(`[EMAIL] Resolved SMTP host ${smtpHostName} to IPv4: ${smtpIpAddress}`);
+  } catch (err: any) {
+    console.error(`⚠️ DNS resolution failed for SMTP host ${smtpHostName}:`, err.message || err);
+  }
+}
+
 const transporter = nodemailer.createTransport(
-  smtpHost
+  smtpHostName
     ? {
-        host: smtpHost,
+        host: smtpIpAddress,
         port: smtpPort,
         secure: smtpSecure,
+        family: 4, // Forces IPv4 for the socket connection
+        localAddress: "0.0.0.0", // Explicitly binds to IPv4 stack
+        tls: { servername: smtpHostName },
         auth: {
           user: emailUser,
           pass: emailPass,
@@ -97,41 +112,7 @@ export const sendEmail = async (to: string, subject: string, text: string, html:
       console.log("Falling back to SMTP / Mock Email...");
     }
   }
-  const resendApiKey = (process.env.RESEND_API_KEY || "").trim();
-  if (resendApiKey) {
-    try {
-      console.log(`📡 [Resend API] Sending email to ${to}...`);
-      const response = await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${resendApiKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          from: `${senderName} <${emailFrom}>`,
-          to: [to],
-          subject,
-          text,
-          html: html || text,
-        }),
-      });
 
-      if (response.ok) {
-        const data: any = await response.json();
-        console.log(`📧 Email sent successfully via Resend API to ${to}. Id: ${data.id}`);
-        return true;
-      } else {
-        const errorText = await response.text();
-        console.error("❌ Resend API ERROR: Failed to send email", response.status, errorText);
-        console.log("Falling back to SMTP / Mock Email...");
-      }
-    } catch (error: any) {
-      console.error("❌ Resend API ERROR: Failed to send email");
-      console.error("Target:", to);
-      console.error("Error Message:", error.message);
-      console.log("Falling back to SMTP / Mock Email...");
-    }
-  }
   // Fallback to Nodemailer
   const emailUser = (process.env.EMAIL_USER || process.env.SMTP_USER || "").trim();
   const emailPass = (process.env.EMAIL_PASS || process.env.SMTP_PASS || "").trim();

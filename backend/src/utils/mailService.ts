@@ -27,38 +27,47 @@ transporter.verify((error) => {
 });
 
 export const sendEmail = async (to: string, subject: string, text: string, html: string): Promise<boolean> => {
-  const resendApiKey = (process.env.RESEND_API_KEY || "").trim();
-  const emailFrom = process.env.EMAIL_FROM || "onboarding@resend.dev";
+  const brevoApiKey = (process.env.BREVO_API_KEY || "").trim();
+  const emailFrom = process.env.EMAIL_FROM || "no-reply@leadcityerrands.com";
+  const senderName = process.env.EMAIL_SENDER_NAME || "LCU Errands";
 
-  if (resendApiKey) {
+  if (brevoApiKey) {
     try {
-      console.log(`📡 [Resend API] Sending email to ${to}...`);
-      const response = await fetch("https://api.resend.com/emails", {
+      console.log(`📡 [Brevo API] Sending email to ${to}...`);
+      const response = await fetch("https://api.brevo.com/v3/smtp/email", {
         method: "POST",
         headers: {
-          "Authorization": `Bearer ${resendApiKey}`,
-          "Content-Type": "application/json",
+          "accept": "application/json",
+          "api-key": brevoApiKey,
+          "content-type": "application/json",
         },
         body: JSON.stringify({
-          from: `LCU Errands <${emailFrom}>`,
-          to: [to],
+          sender: {
+            name: senderName,
+            email: emailFrom,
+          },
+          to: [
+            {
+              email: to,
+            },
+          ],
           subject,
-          text,
-          html: html || text,
+          htmlContent: html || text,
+          textContent: text,
         }),
       });
 
       if (response.ok) {
         const data: any = await response.json();
-        console.log(`📧 Email sent successfully via Resend API to ${to}. Id: ${data.id}`);
+        console.log(`📧 Email sent successfully via Brevo API to ${to}. MessageId: ${data.messageId}`);
         return true;
       } else {
         const errorText = await response.text();
-        console.error("❌ Resend API ERROR: Failed to send email", response.status, errorText);
+        console.error("❌ Brevo API ERROR: Failed to send email", response.status, errorText);
         console.log("Falling back to SMTP / Mock Email...");
       }
     } catch (error: any) {
-      console.error("❌ Resend API ERROR: Failed to send email");
+      console.error("❌ Brevo API ERROR: Failed to send email");
       console.error("Target:", to);
       console.error("Error Message:", error.message);
       console.log("Falling back to SMTP / Mock Email...");

@@ -37,11 +37,11 @@ async function testEmail() {
   const testRecipient = process.argv[2] || "ifeanyichukwubethel2@gmail.com";
   console.log("--- SMTP Configuration Test ---");
   const host = process.env.SMTP_HOST || "smtp.gmail.com";
-  const user = process.env.SMTP_USER;
-  const pass = process.env.SMTP_PASS;
+  const user = process.env.SMTP_USER || process.env.EMAIL_USER;
+  const pass = process.env.SMTP_PASS || process.env.EMAIL_PASS;
 
   if (!user || !pass) {
-    console.error("SMTP_USER and SMTP_PASS must be configured in .env");
+    console.error("SMTP_USER/EMAIL_USER and SMTP_PASS/EMAIL_PASS must be configured in .env");
     return;
   }
 

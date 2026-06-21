@@ -566,24 +566,26 @@ const AdminPortal = () => {
   return (
     <div
       style={{
-        background: "#F8FAFC",
+        background: "var(--bg-primary)",
         minHeight: "100vh",
         display: "flex",
         flexDirection: "column",
+        transition: "background-color 0.3s ease",
       }}
     >
       {/* Top Nav */}
       <nav
         style={{
-          background: "white",
-          borderBottom: "1px solid #E2E8F0",
-          padding: "16px 20px",
+          background: "var(--bg-secondary)",
+          borderBottom: "1px solid var(--border-color)",
+          padding: "14px 24px",
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
           position: "sticky",
           top: 0,
           zIndex: 100,
+          boxShadow: "var(--shadow-sm)",
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
@@ -595,15 +597,23 @@ const AdminPortal = () => {
               background: "none",
               border: "none",
               padding: 8,
+              color: "var(--text-primary)",
+              cursor: "pointer",
             }}
             className="mobile-only"
           >
             <Menu />
           </button>
-          <Shield size={24} color="#2563EB" />
-          <span style={{ fontWeight: 900, color: "var(--accent-color)" }}>VAULT</span>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <div style={{ background: "var(--accent-light)", padding: 8, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <Shield size={20} color="var(--accent-color)" />
+            </div>
+            <span style={{ fontWeight: 900, fontSize: "1.1rem", letterSpacing: "1px", color: "var(--text-primary)" }}>
+              LCU<span style={{ color: "var(--accent-color)", fontWeight: 800 }}>VAULT</span>
+            </span>
+          </div>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 15 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <button
             onClick={() => setDarkMode(!darkMode)}
             style={{
@@ -616,21 +626,16 @@ const AdminPortal = () => {
               alignItems: "center",
               justifyContent: "center",
               color: "var(--text-primary)",
+              transition: "all 0.2s ease",
             }}
+            title="Toggle theme"
           >
-            {darkMode ? <Sun size={20} /> : <Moon size={20} />}
+            {darkMode ? <Sun size={18} /> : <Moon size={18} />}
           </button>
           <button
             onClick={handleLogout}
-            style={{
-              background: "#FEF2F2",
-              color: "#EF4444",
-              border: "none",
-              padding: "8px 16px",
-              borderRadius: 8,
-              fontWeight: 700,
-              cursor: "pointer",
-            }}
+            className="btn-modern btn-modern-danger"
+            style={{ padding: "8px 16px", borderRadius: 10 }}
           >
             Logout
           </button>
@@ -643,12 +648,15 @@ const AdminPortal = () => {
           className={`sidebar ${sidebarOpen ? "open" : ""}`}
           style={{
             width: 260,
-            background: "white",
-            borderRight: "1px solid #E2E8F0",
+            background: "var(--bg-secondary)",
+            borderRight: "1px solid var(--border-color)",
             padding: 20,
+            display: "flex",
+            flexDirection: "column",
+            gap: 20,
           }}
         >
-          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
             {menuItems.map((item) => (
               <button
                 key={item.id}
@@ -656,20 +664,7 @@ const AdminPortal = () => {
                   setActiveTab(item.id);
                   setSidebarOpen(false);
                 }}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 12,
-                  padding: 12,
-                  borderRadius: 10,
-                  border: "none",
-                  background: activeTab === item.id ? "#EFF6FF" : "transparent",
-                  color: activeTab === item.id ? "#2563EB" : "#64748B",
-                  fontWeight: 700,
-                  cursor: "pointer",
-                  textAlign: "left",
-                  width: "100%",
-                }}
+                className={`sidebar-btn ${activeTab === item.id ? "active" : ""}`}
               >
                 {item.icon} {item.label}
               </button>
@@ -684,7 +679,8 @@ const AdminPortal = () => {
             style={{
               position: "fixed",
               inset: 0,
-              background: "rgba(0,0,0,0.5)",
+              background: "rgba(0,0,0,0.4)",
+              backdropFilter: "blur(4px)",
               zIndex: 90,
             }}
             className="mobile-only"
@@ -695,9 +691,10 @@ const AdminPortal = () => {
         <main
           style={{
             flex: 1,
-            padding: "30px 20px",
+            padding: "32px 24px",
             maxWidth: "100vw",
             overflowX: "hidden",
+            background: "var(--bg-primary)",
           }}
         >
           <div
@@ -710,25 +707,47 @@ const AdminPortal = () => {
               gap: 15,
             }}
           >
-            <h2 style={{ fontSize: "1.5rem", fontWeight: 900 }}>
-              {activeTab.toUpperCase()}
-            </h2>
+            <div>
+              <h2 style={{ fontSize: "1.75rem", fontWeight: 900, margin: 0, textTransform: "capitalize", letterSpacing: "-0.5px", color: "var(--text-primary)" }}>
+                {activeTab === "overview" ? "Dashboard Overview" : activeTab}
+              </h2>
+            </div>
             <button
               onClick={fetchData}
-              style={{
-                background: "white",
-                border: "1px solid #E2E8F0",
-                padding: "10px 20px",
-                borderRadius: 10,
-                fontWeight: 700,
-              }}
+              className="btn-modern btn-modern-secondary"
             >
-              Refresh
+              Refresh Data
             </button>
           </div>
 
           {activeTab === "overview" && (
             <>
+              {/* Premium Greeting Banner */}
+              <div 
+                className="card"
+                style={{
+                  background: "var(--accent-gradient)",
+                  color: "white",
+                  padding: "32px 40px",
+                  borderRadius: "24px",
+                  marginBottom: 30,
+                  position: "relative",
+                  overflow: "hidden",
+                  boxShadow: "var(--shadow-glow)",
+                  border: "none",
+                }}
+              >
+                <div style={{ position: "relative", zIndex: 2 }}>
+                  <h3 style={{ fontSize: "1.75rem", fontWeight: 900, margin: 0, letterSpacing: "-0.5px" }}>
+                    Welcome to LeadCity Management Vault 👋
+                  </h3>
+                  <p style={{ margin: "10px 0 0 0", opacity: 0.85, fontSize: "0.95rem", maxWidth: 520, lineHeight: 1.5 }}>
+                    Monitor transaction streams, execute verification audits, dispatch global system announcements, and approve student withdrawal requests.
+                  </p>
+                </div>
+                <div style={{ position: "absolute", right: -40, top: -40, width: 220, height: 220, borderRadius: "50%", background: "rgba(255,255,255,0.06)", filter: "blur(20px)" }} />
+                <div style={{ position: "absolute", right: 60, bottom: -50, width: 160, height: 160, borderRadius: "50%", background: "rgba(255,255,255,0.04)", filter: "blur(15px)" }} />
+              </div>
               <div
                 style={{
                   display: "grid",
@@ -2017,29 +2036,50 @@ const StatCard = ({ label, value, icon, color }) => (
   <div
     className="card"
     style={{
-      padding: 20,
-      borderRadius: 16,
+      padding: "24px 28px",
+      borderRadius: "20px",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      position: "relative",
+      overflow: "hidden",
+      cursor: "pointer",
+      boxShadow: "var(--shadow-sm)",
+      transition: "all 0.3s cubic-bezier(0.16, 1, 0.3, 1)",
+    }}
+    onMouseEnter={(e) => {
+      e.currentTarget.style.transform = "translateY(-4px)";
+      e.currentTarget.style.boxShadow = `0 12px 24px -6px ${color}22`;
+      e.currentTarget.style.borderColor = `${color}40`;
+    }}
+    onMouseLeave={(e) => {
+      e.currentTarget.style.transform = "translateY(0)";
+      e.currentTarget.style.boxShadow = "var(--shadow-sm)";
+      e.currentTarget.style.borderColor = "var(--border-color)";
     }}
   >
+    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      <span style={{ fontSize: "0.825rem", color: "var(--text-secondary)", fontWeight: 700, letterSpacing: "0.5px", textTransform: "uppercase" }}>
+        {label}
+      </span>
+      <span style={{ fontSize: "1.85rem", fontWeight: 900, color: "var(--text-primary)", letterSpacing: "-0.5px" }}>
+        {value}
+      </span>
+    </div>
     <div
       style={{
         color,
-        background: `${color}15`,
-        width: 36,
-        height: 36,
-        borderRadius: 8,
+        background: `${color}12`,
+        width: 52,
+        height: 52,
+        borderRadius: "16px",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        marginBottom: 12,
       }}
     >
       {icon}
     </div>
-    <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)", fontWeight: 700 }}>
-      {label}
-    </div>
-    <div style={{ fontSize: "1.25rem", fontWeight: 900, color: "var(--text-primary)" }}>{value}</div>
   </div>
 );
 

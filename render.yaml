@@ -85,7 +85,7 @@ services:
     publishPath: dist
     envVars:
       - key: VITE_ADMIN_API_URL
-        value: https://leadcityerrands-admin.onrender.com
+        value: https://leadcity-admin-service.onrender.com
     routes:
       - type: rewrite
         source: /*

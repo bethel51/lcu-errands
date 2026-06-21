@@ -1,6 +1,8 @@
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { ArrowRight, CheckCircle, Users } from "lucide-react";
 import { Link } from "react-router-dom";
+import api from "../api";
 
 const fadeUp = {
   initial: { opacity: 0, y: 24 },
@@ -10,6 +12,27 @@ const fadeUp = {
 
 const Home = () => {
   const isAuth = localStorage.getItem("isAuthenticated") === "true";
+  const [stats, setStats] = useState({
+    activeStudents: "500+",
+    completedErrands: "2,000+",
+    averageRating: "4.9",
+  });
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const response = await api.get("/auth/public-stats");
+        setStats({
+          activeStudents: `${response.data.activeStudents.toLocaleString()}`,
+          completedErrands: `${response.data.completedErrands.toLocaleString()}`,
+          averageRating: `${response.data.averageRating.toFixed(1)}`,
+        });
+      } catch (err) {
+        console.error("Failed to fetch public stats", err);
+      }
+    };
+    fetchStats();
+  }, []);
 
   return (
     <>
@@ -46,15 +69,15 @@ const Home = () => {
               </div>
               <div className="hero-stats">
                 <div className="hero-stat">
-                  <h3>500+</h3>
+                  <h3>{stats.activeStudents}</h3>
                   <p>Active Students</p>
                 </div>
                 <div className="hero-stat">
-                  <h3>2,000+</h3>
+                  <h3>{stats.completedErrands}</h3>
                   <p>Errands Completed</p>
                 </div>
                 <div className="hero-stat">
-                  <h3>4.9★</h3>
+                  <h3>{stats.averageRating}★</h3>
                   <p>Avg. Rating</p>
                 </div>
               </div>

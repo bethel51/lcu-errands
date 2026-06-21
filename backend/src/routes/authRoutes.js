@@ -7,6 +7,7 @@ import {
   verifyOtpAndRegister,
   resendOtp,
   resetPasswordOtp,
+  getPublicStats,
 } from "../controllers/authController.js";
 
 const router = express.Router();
@@ -18,5 +19,6 @@ router.post("/register", register);
 router.post("/login", login);
 router.post("/forgot-password", forgotPassword);
 router.post("/reset-password-otp", resetPasswordOtp);
+router.get("/public-stats", getPublicStats);
 
 export default router;

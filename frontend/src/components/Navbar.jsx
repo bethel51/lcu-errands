@@ -14,6 +14,7 @@ const Navbar = () => {
   const { hasNotification, setHasNotification, socket } = useSocket();
   const [notifications, setNotifications] = useState([]);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
 
   useEffect(() => {
     if (isAuth) {
@@ -127,6 +128,7 @@ const Navbar = () => {
                 aria-label="Notifications"
                 onClick={() => {
                   setIsDropdownOpen(!isDropdownOpen);
+                  setIsProfileDropdownOpen(false);
                   if (!isDropdownOpen) fetchNotifications();
                 }}
               >
@@ -299,40 +301,78 @@ const Navbar = () => {
           </div>
 
           {isAuth ? (
-            <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-              <Link
-                to="/profile"
-                onMouseEnter={() => prefetch(PageImports.Profile)}
+            <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+              <button
+                onClick={() => {
+                  setIsProfileDropdownOpen(!isProfileDropdownOpen);
+                  setIsDropdownOpen(false);
+                }}
                 className="nav-profile-avatar"
-                title="My Profile"
+                style={{ padding: 0, border: "2px solid var(--blue-200)", background: "none" }}
+                title="Account Menu"
               >
-                {JSON.parse(localStorage.getItem("user") || "{}")
-                  .profilePicture ? (
+                {JSON.parse(localStorage.getItem("user") || "{}").profilePicture ? (
                   <img
-                    src={
-                      JSON.parse(localStorage.getItem("user") || "{}")
-                        .profilePicture
-                    }
+                    src={JSON.parse(localStorage.getItem("user") || "{}").profilePicture}
                     alt="P"
                   />
                 ) : (
-                  JSON.parse(localStorage.getItem("user") || "{}")
-                    .name?.charAt(0)
-                    .toUpperCase() || "U"
+                  JSON.parse(localStorage.getItem("user") || "{}").name?.charAt(0).toUpperCase() || "U"
                 )}
-              </Link>
-              <button
-                className="btn btn-ghost btn-sm"
-                onClick={() => {
-                  localStorage.removeItem("isAuthenticated");
-                  localStorage.removeItem("token");
-                  localStorage.removeItem("user");
-                  localStorage.removeItem("userRole");
-                  window.location.href = "/";
-                }}
-              >
-                Log out
               </button>
+
+              {isProfileDropdownOpen && (
+                <>
+                  <div className="dropdown-backdrop" onClick={() => setIsProfileDropdownOpen(false)} />
+                  <div className="profile-dropdown">
+                    <div className="profile-dropdown-header">
+                      <p className="profile-name">
+                        {JSON.parse(localStorage.getItem("user") || "{}").name || "User"}
+                      </p>
+                      <p className="profile-role">
+                        {JSON.parse(localStorage.getItem("user") || "{}").role || "student"}
+                      </p>
+                    </div>
+                    <div className="profile-dropdown-list">
+                      <Link
+                        to="/profile"
+                        onClick={() => setIsProfileDropdownOpen(false)}
+                        className="profile-dropdown-item"
+                      >
+                        My Profile
+                      </Link>
+                      <Link
+                        to="/dashboard"
+                        onClick={() => setIsProfileDropdownOpen(false)}
+                        className="profile-dropdown-item"
+                      >
+                        Marketplace
+                      </Link>
+                      <Link
+                        to="/history"
+                        onClick={() => setIsProfileDropdownOpen(false)}
+                        className="profile-dropdown-item"
+                      >
+                        My Errands
+                      </Link>
+                      <button
+                        onClick={() => {
+                          setIsProfileDropdownOpen(false);
+                          localStorage.removeItem("isAuthenticated");
+                          localStorage.removeItem("token");
+                          localStorage.removeItem("user");
+                          localStorage.removeItem("userRole");
+                          window.location.href = "/";
+                        }}
+                        className="profile-dropdown-item logout"
+                        style={{ width: "100%", textAlign: "left" }}
+                      >
+                        Log out
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           ) : (
             <>

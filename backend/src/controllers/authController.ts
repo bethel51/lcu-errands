@@ -2,6 +2,8 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { User } from "../models/User.js";
 import { OTP } from "../models/OTP.js";
+import { Errand } from "../models/Errand.js";
+import { Review } from "../models/Review.js";
 import crypto from "crypto";
 import {
   sendPasswordResetEmail,
@@ -462,4 +464,22 @@ export const resetPasswordOtp = catchAsync(async (req: Request<{}, {}, { email?:
   await OTP.deleteOne({ email: normalizedEmail });
 
   res.status(200).json({ message: "Password reset successful" });
+});
+
+export const getPublicStats = catchAsync(async (req: Request, res: Response) => {
+  const activeStudents = await User.countDocuments({ role: { $in: ["sender", "messenger"] } });
+  const completedErrands = await Errand.countDocuments({ status: "completed" });
+  
+  const reviews = await Review.find();
+  let averageRating = 4.8;
+  if (reviews.length > 0) {
+    const total = reviews.reduce((sum, r) => sum + r.rating, 0);
+    averageRating = Number((total / reviews.length).toFixed(1));
+  }
+
+  res.status(200).json({
+    activeStudents,
+    completedErrands,
+    averageRating,
+  });
 });

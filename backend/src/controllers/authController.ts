@@ -424,8 +424,22 @@ export const resetPasswordOtp = catchAsync(async (req: Request<{}, {}, { email?:
   const normalizedEmail = String(email || "").toLowerCase().trim();
   const inputOtp = String(otp || "").trim();
 
-  if (!password || password.length < 6) {
-    res.status(400).json({ message: "Password must be at least 6 characters long" });
+  if (!password) {
+    res.status(400).json({ message: "Password is required" });
+    return;
+  }
+
+  const hasMinLength = password.length >= 6;
+  const hasNumber = /\d/.test(password);
+  const hasUppercase = /[A-Z]/.test(password);
+  const hasSpecial = /[^A-Za-z0-9]/.test(password);
+
+  const metCount = [hasMinLength, hasNumber, hasUppercase, hasSpecial].filter(Boolean).length;
+
+  if (metCount < 3) {
+    res.status(400).json({
+      message: "Password is too weak. It must meet at least 3 of the following: 6+ characters, a number, an uppercase letter, and a special character."
+    });
     return;
   }
 

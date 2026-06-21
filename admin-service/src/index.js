@@ -29,7 +29,17 @@ if (process.env.NODE_ENV !== "production") {
 
 app.use(
   cors({
-    origin: allowedOrigins,
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
+      if (
+        origin.includes("localhost") ||
+        origin.includes("onrender.com") ||
+        allowedOrigins.includes(origin)
+      ) {
+        return callback(null, true);
+      }
+      return callback(new Error("Not allowed by CORS"));
+    },
     credentials: true,
   }),
 );

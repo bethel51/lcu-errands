@@ -25,6 +25,15 @@ const CATEGORY_EMOJI = {
   Other: "✨",
 };
 
+const CATEGORY_STYLES = {
+  Meals: { backgroundColor: "var(--amber-50)", color: "var(--amber-600)", border: "1px solid var(--amber-100)" },
+  Shopping: { backgroundColor: "var(--pink-50)", color: "var(--pink-600)", border: "1px solid var(--pink-100)" },
+  Academic: { backgroundColor: "var(--blue-50)", color: "var(--blue-600)", border: "1px solid var(--blue-100)" },
+  Delivery: { backgroundColor: "var(--green-50)", color: "var(--green-600)", border: "1px solid var(--green-100)" },
+  Gates: { backgroundColor: "var(--gray-50)", color: "var(--gray-700)", border: "1px solid var(--gray-200)" },
+  Other: { backgroundColor: "var(--gray-50)", color: "var(--gray-600)", border: "1px solid var(--gray-200)" },
+};
+
 const Dashboard = () => {
   const navigate = useNavigate();
   const { socket } = useSocket();
@@ -383,8 +392,24 @@ const Dashboard = () => {
                       marginBottom: 14,
                     }}
                   >
-                    <span className="badge badge-blue" style={{ fontSize: "0.7rem" }}>
-                      {CATEGORY_EMOJI[errand.category] || "✨"} {errand.category.toUpperCase()}
+                    <span
+                      style={{
+                        fontSize: "0.7rem",
+                        fontWeight: 800,
+                        padding: "4px 10px",
+                        borderRadius: "var(--radius-full)",
+                        textTransform: "uppercase",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 4,
+                        ...(CATEGORY_STYLES[errand.category] || {
+                          backgroundColor: "var(--gray-50)",
+                          color: "var(--gray-600)",
+                          border: "1px solid var(--gray-200)",
+                        })
+                      }}
+                    >
+                      {CATEGORY_EMOJI[errand.category] || "✨"} {errand.category}
                     </span>
                     <span
                       style={{

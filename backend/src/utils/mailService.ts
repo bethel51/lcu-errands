@@ -25,7 +25,7 @@ if (smtpHostName) {
 }
 
 const transporter = nodemailer.createTransport(
-  smtpHostName
+  (smtpHostName
     ? {
         host: smtpIpAddress,
         port: smtpPort,
@@ -50,7 +50,7 @@ const transporter = nodemailer.createTransport(
         connectionTimeout: 5000,
         greetingTimeout: 5000,
         socketTimeout: 5000,
-      }
+      }) as any
 );
 
 // Initialize transporter verification only when SMTP credentials are set and Brevo API is not used
@@ -114,9 +114,6 @@ export const sendEmail = async (to: string, subject: string, text: string, html:
   }
 
   // Fallback to Nodemailer
-  const emailUser = (process.env.EMAIL_USER || process.env.SMTP_USER || "").trim();
-  const emailPass = (process.env.EMAIL_PASS || process.env.SMTP_PASS || "").trim();
-
   if (!emailUser || !emailPass) {
     console.warn(`⚠️ [MOCK EMAIL] Credentials not set. Simulated email to ${to}:`);
     console.warn(`Subject: ${subject}`);

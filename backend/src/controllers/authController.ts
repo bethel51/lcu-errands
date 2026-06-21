@@ -407,9 +407,32 @@ export const forgotPassword = catchAsync(async (req: Request<{}, {}, { email?: s
   res.status(200).json({ message: "Password reset link sent to your email" });
 });
 
+export const verifyResetToken = catchAsync(async (req: Request<{ token: string }>, res: Response) => {
+  const { token } = req.params;
+
+  const user = await User.findOne({
+    resetPasswordToken: token,
+    resetPasswordExpires: { $gt: Date.now() },
+  });
+
+  if (!user) {
+    res
+      .status(400)
+      .json({ message: "Invalid or expired password reset token" });
+    return;
+  }
+
+  res.status(200).json({ message: "Token is valid" });
+});
+
 export const resetPassword = catchAsync(async (req: Request<{ token: string }, {}, { password?: string }>, res: Response) => {
   const { token } = req.params;
   const { password } = req.body;
+
+  if (!password || password.length < 6) {
+    res.status(400).json({ message: "Password must be at least 6 characters long" });
+    return;
+  }
 
   const user = await User.findOne({
     resetPasswordToken: token,

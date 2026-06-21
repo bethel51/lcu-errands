@@ -83,6 +83,9 @@ services:
     rootDir: admin-frontend
     buildCommand: npm install && npm run build
     publishPath: dist
+    envVars:
+      - key: VITE_ADMIN_API_URL
+        value: https://leadcityerrands-admin.onrender.com
     routes:
       - type: rewrite
         source: /*

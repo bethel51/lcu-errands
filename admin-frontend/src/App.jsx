@@ -157,12 +157,12 @@ const AdminPortal = () => {
       ]);
 
       setStats(statsRes.data);
-      setUsers(usersRes.data || []);
-      setErrands(errandsRes.data || []);
-      setWithdrawals(withdrawalsRes.data || []);
-      setPendingVerifications(verificationsRes.data || []);
+      setUsers(Array.isArray(usersRes.data) ? usersRes.data : []);
+      setErrands(Array.isArray(errandsRes.data) ? errandsRes.data : []);
+      setWithdrawals(Array.isArray(withdrawalsRes.data) ? withdrawalsRes.data : []);
+      setPendingVerifications(Array.isArray(verificationsRes.data) ? verificationsRes.data : []);
       setHealth(healthRes.data);
-      setLogs(logsRes.data || []);
+      setLogs(Array.isArray(logsRes.data) ? logsRes.data : []);
     } catch (err) {
       if (err.response?.status === 401) {
         handleLogout();
@@ -215,9 +215,10 @@ const AdminPortal = () => {
   const fetchChat = async (errandId) => {
     try {
       const res = await adminApi.get(`/management/chat/${errandId}`);
-      setSelectedErrandChat(res.data);
+      setSelectedErrandChat(Array.isArray(res.data) ? res.data : []);
     } catch (_err) {
       alert("Failed to fetch chat log");
+      setSelectedErrandChat([]);
     }
   };
 

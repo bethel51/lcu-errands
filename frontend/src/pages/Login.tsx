@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link, useLocation, Navigate } from "react-router-dom";
-import { Eye, EyeOff, CheckCircle } from "lucide-react";
+import { Eye, EyeOff, CheckCircle, ArrowLeft } from "lucide-react";
 import api from "../api";
 
 type LoginRole = "sender" | "messenger";
@@ -252,13 +252,30 @@ const Login: React.FC = () => {
           </button>
         </form>
 
-        <div style={{ marginTop: 24, textAlign: "center", borderTop: "1px solid var(--gray-200)", paddingTop: 20 }}>
+        <div style={{ marginTop: 24, textAlign: "center", borderTop: "1px solid var(--gray-200)", paddingTop: 20, display: "flex", flexDirection: "column", gap: 12 }}>
           <p style={{ color: "var(--gray-500)", fontSize: "0.875rem", margin: 0 }}>
             Don't have an account?{" "}
             <Link to="/register" style={{ color: "var(--blue-600)", fontWeight: 700, textDecoration: "underline" }}>
               Create account
             </Link>
           </p>
+          <div>
+            <Link
+              to="/"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+                color: "var(--gray-500)",
+                fontSize: "0.875rem",
+                fontWeight: 600,
+                textDecoration: "none",
+                transition: "color 0.2s",
+              }}
+            >
+              <ArrowLeft size={16} /> Back to Main Page
+            </Link>
+          </div>
         </div>
       </motion.div>
     </div>

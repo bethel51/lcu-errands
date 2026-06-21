@@ -496,13 +496,30 @@ const Signup: React.FC = () => {
         )}
 
         {step === 1 && (
-          <div style={{ marginTop: 24, textAlign: "center", borderTop: "1px solid var(--gray-200)", paddingTop: 20 }}>
+          <div style={{ marginTop: 24, textAlign: "center", borderTop: "1px solid var(--gray-200)", paddingTop: 20, display: "flex", flexDirection: "column", gap: 12 }}>
             <p style={{ color: "var(--gray-500)", fontSize: "0.875rem", margin: 0 }}>
               Already have an account?{" "}
               <Link to="/login" style={{ color: "var(--blue-600)", fontWeight: 700, textDecoration: "underline" }}>
                 Log In
               </Link>
             </p>
+            <div>
+              <Link
+                to="/"
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 6,
+                  color: "var(--gray-505, var(--gray-500))",
+                  fontSize: "0.875rem",
+                  fontWeight: 600,
+                  textDecoration: "none",
+                  transition: "color 0.2s",
+                }}
+              >
+                <ArrowLeft size={16} /> Back to Main Page
+              </Link>
+            </div>
           </div>
         )}
       </motion.div>

@@ -10,6 +10,7 @@ import adminRoutes from "./routes/adminRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
 import { MonitoringService } from "./utils/MonitoringService.js";
 import { errorHandler } from "./middleware/errorMiddleware.js";
+import { seedDefaultAdmin } from "./utils/seeder.js";
 
 const app = express();
 
@@ -96,8 +97,9 @@ app.listen(PORT, "0.0.0.0", () => {
 
 mongoose
   .connect(MONGODB_URI)
-  .then(() => {
+  .then(async () => {
     console.log("🛡️ Admin Service connected to Database");
+    await seedDefaultAdmin();
     MonitoringService.start();
   })
   .catch((err) => {

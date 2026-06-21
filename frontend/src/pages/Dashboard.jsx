@@ -112,10 +112,12 @@ const Dashboard = () => {
           ]);
 
         if (errandsRes.status === "fulfilled") {
-          setErrands(errandsRes.value.data.map(mapBackendToFrontend));
+          const data = Array.isArray(errandsRes.value.data) ? errandsRes.value.data : [];
+          setErrands(data.map(mapBackendToFrontend));
         }
         if (historyRes.status === "fulfilled") {
-          const active = historyRes.value.data.filter(
+          const data = Array.isArray(historyRes.value.data) ? historyRes.value.data : [];
+          const active = data.filter(
             (e) => e.status !== "completed" && e.status !== "cancelled",
           );
           setActiveRequests(active.map(mapBackendToFrontend));
@@ -126,7 +128,8 @@ const Dashboard = () => {
           localStorage.setItem("user", JSON.stringify(u));
         }
         if (messengersRes.status === "fulfilled") {
-          setMessengers(messengersRes.value.data);
+          const data = Array.isArray(messengersRes.value.data) ? messengersRes.value.data : [];
+          setMessengers(data);
         }
       } catch (err) {
         console.error("Dashboard load failed", err);

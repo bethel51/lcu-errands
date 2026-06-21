@@ -20,9 +20,10 @@ const Chats = () => {
   const fetchConversations = async () => {
     try {
       const res = await api.get("/chat/conversations");
-      setConversations(res.data);
+      setConversations(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
       console.error("Failed to fetch conversations", err);
+      setConversations([]);
     } finally {
       setLoading(false);
     }

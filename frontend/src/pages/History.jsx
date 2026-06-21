@@ -33,7 +33,8 @@ const History = () => {
 
       try {
         const res = await api.get("/errands/history");
-        const formatted = res.data.map((errand) => ({
+        const data = Array.isArray(res.data) ? res.data : [];
+        const formatted = data.map((errand) => ({
           id: errand._id,
           title: errand.title,
           fee: errand.fee,
@@ -46,6 +47,7 @@ const History = () => {
         localStorage.setItem(cacheKey, JSON.stringify(formatted));
       } catch (err) {
         console.error("Failed to fetch history", err);
+        setHistoryItems([]);
       } finally {
         setLoading(false);
       }

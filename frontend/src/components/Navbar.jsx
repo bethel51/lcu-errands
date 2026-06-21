@@ -37,11 +37,13 @@ const Navbar = () => {
   const fetchNotifications = async () => {
     try {
       const res = await api.get("/notifications");
-      setNotifications(res.data);
-      const unread = res.data.some((n) => !n.isRead);
+      const data = Array.isArray(res.data) ? res.data : [];
+      setNotifications(data);
+      const unread = data.some((n) => !n.isRead);
       setHasNotification(unread);
     } catch (err) {
       console.error("Failed to fetch notifications", err);
+      setNotifications([]);
     }
   };
 

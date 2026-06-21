@@ -81,10 +81,12 @@ const ErrandStream = () => {
   const fetchErrands = useCallback(async () => {
     try {
       const res = await api.get("/errands");
-      const open = res.data.filter((e) => e.status === "open");
+      const data = Array.isArray(res.data) ? res.data : [];
+      const open = data.filter((e) => e.status === "open");
       setErrands(open.map(mapBackendToFrontend));
     } catch (err) {
       console.error("Failed to fetch errands for stream", err);
+      setErrands([]);
     } finally {
       setLoading(false);
     }

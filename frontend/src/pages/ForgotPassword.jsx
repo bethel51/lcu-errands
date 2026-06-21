@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link, useNavigate } from "react-router-dom";
-import { ArrowLeft, CheckCircle, AlertCircle, Check, Eye, EyeOff, Key } from "lucide-react";
+import { ArrowLeft, CheckCircle, Eye, EyeOff } from "lucide-react";
 import api from "../api";
 
 const ForgotPassword = () => {
@@ -18,34 +18,6 @@ const ForgotPassword = () => {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const navigate = useNavigate();
-
-  // Password criteria checks
-  const hasMinLength = password.length >= 6;
-  const hasNumber = /\d/.test(password);
-  const hasUppercase = /[A-Z]/.test(password);
-  const hasSpecial = /[^A-Za-z0-9]/.test(password);
-
-  const criteria = [
-    { label: "At least 6 characters", met: hasMinLength },
-    { label: "At least one number", met: hasNumber },
-    { label: "At least one uppercase letter", met: hasUppercase },
-    { label: "At least one special character", met: hasSpecial },
-  ];
-
-  const metCount = criteria.filter((c) => c.met).length;
-
-  const getStrengthLabel = () => {
-    if (!password) return "";
-    if (metCount <= 1) return "Weak";
-    if (metCount <= 3) return "Medium";
-    return "Strong";
-  };
-
-  const getStrengthColor = () => {
-    if (metCount <= 1) return "var(--red-500)";
-    if (metCount <= 3) return "var(--amber-500)";
-    return "var(--green-500)";
-  };
 
   const handleSendOtp = async (e) => {
     e.preventDefault();
@@ -88,11 +60,6 @@ const ForgotPassword = () => {
     e.preventDefault();
     if (password !== confirmPassword) {
       setError("Passwords do not match");
-      return;
-    }
-
-    if (metCount < 3) {
-      setError("Password does not meet the minimum strength requirements.");
       return;
     }
 
@@ -339,7 +306,7 @@ const ForgotPassword = () => {
                   <input
                     type={showPw ? "text" : "password"}
                     className="clean-auth-input"
-                    placeholder="Create a strong password"
+                    placeholder="Enter new password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
@@ -366,51 +333,9 @@ const ForgotPassword = () => {
                     {showPw ? <EyeOff size={16} color="var(--gray-400)" /> : <Eye size={16} color="var(--gray-400)" />}
                   </button>
                 </div>
-
-                {/* Password Strength Meter */}
-                {password && (
-                  <div style={{ marginTop: 12 }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                      <span style={{ fontSize: "0.75rem", color: "var(--gray-500)", fontWeight: 500 }}>
-                        Password strength:
-                      </span>
-                      <span style={{ fontSize: "0.75rem", color: getStrengthColor(), fontWeight: 700 }}>
-                        {getStrengthLabel()}
-                      </span>
-                    </div>
-                    
-                    {/* Strength Bar */}
-                    <div style={{ height: 4, width: "100%", background: "var(--gray-100)", borderRadius: 2, overflow: "hidden" }}>
-                      <div
-                        style={{
-                          height: "100%",
-                          width: `${(metCount / 4) * 100}%`,
-                          backgroundColor: getStrengthColor(),
-                          transition: "width 0.3s ease, background-color 0.3s ease",
-                        }}
-                      />
-                    </div>
-
-                    {/* Requirements Checklist */}
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px 12px", marginTop: 10 }}>
-                      {criteria.map((c, i) => (
-                        <div key={i} style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                          {c.met ? (
-                            <Check size={12} color="var(--green-500)" style={{ strokeWidth: 3 }} />
-                          ) : (
-                            <div style={{ width: 12, height: 12, borderRadius: "50%", border: "1.5px solid var(--gray-300)" }} />
-                          )}
-                          <span style={{ fontSize: "0.7rem", color: c.met ? "var(--gray-700)" : "var(--gray-400)", fontWeight: 500 }}>
-                            {c.label}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
               </div>
 
-              <div className="clean-auth-form-group" style={{ marginTop: password ? 16 : 0 }}>
+              <div className="clean-auth-form-group">
                 <label className="clean-auth-label">Confirm New Password</label>
                 <input
                   type={showPw ? "text" : "password"}
@@ -430,7 +355,7 @@ const ForgotPassword = () => {
               <button
                 type="submit"
                 className="clean-auth-submit-btn"
-                disabled={loading || metCount < 3 || password !== confirmPassword || otp.length !== 6}
+                disabled={loading || password !== confirmPassword || otp.length !== 6}
                 style={{ marginTop: 8 }}
               >
                 {loading ? "Updating..." : "Reset Password"}

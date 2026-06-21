@@ -138,7 +138,9 @@ const Navbar = () => {
                   setIsDropdownOpen(nextState);
                   setIsProfileDropdownOpen(false);
                   if (nextState) {
-                    fetchNotifications(notifications.length > 0);
+                    setTimeout(() => {
+                      fetchNotifications(notifications.length > 0);
+                    }, 250);
                   }
                 }}
               >

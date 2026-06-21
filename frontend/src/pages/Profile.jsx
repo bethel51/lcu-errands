@@ -237,8 +237,9 @@ const Profile = () => {
   if (!user) return null;
 
   return (
-    <div className="container" style={{ paddingTop: 40, paddingBottom: 100 }}>
-      <AnimatePresence>
+    <div className="dashboard-page">
+      <div className="container" style={{ paddingTop: 20, paddingBottom: 100 }}>
+        <AnimatePresence>
         {processing && (
           <motion.div
             initial={{ opacity: 0 }}
@@ -1269,6 +1270,7 @@ const Profile = () => {
           </motion.div>
         </>
       )}
+      </div>
     </div>
   );
 };

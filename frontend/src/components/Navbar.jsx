@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Bell, CheckCircle, MessageSquare, Info } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { useSocket } from "../context/SocketContext";
 import { PageImports } from "../App";
 import { usePrefetch } from "../hooks/usePrefetch";
@@ -15,10 +16,11 @@ const Navbar = () => {
   const [notifications, setNotifications] = useState([]);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
+  const [notificationsLoading, setNotificationsLoading] = useState(false);
 
   useEffect(() => {
     if (isAuth) {
-      fetchNotifications();
+      fetchNotifications(true); // Fetch silently in background on load
     }
   }, [isAuth]);
 
@@ -34,7 +36,8 @@ const Navbar = () => {
     }
   }, [socket]);
 
-  const fetchNotifications = async () => {
+  const fetchNotifications = async (silent = false) => {
+    if (!silent) setNotificationsLoading(true);
     try {
       const res = await api.get("/notifications");
       const data = Array.isArray(res.data) ? res.data : [];
@@ -44,6 +47,8 @@ const Navbar = () => {
     } catch (err) {
       console.error("Failed to fetch notifications", err);
       setNotifications([]);
+    } finally {
+      setNotificationsLoading(false);
     }
   };
 
@@ -129,9 +134,12 @@ const Navbar = () => {
                 className="btn-icon"
                 aria-label="Notifications"
                 onClick={() => {
-                  setIsDropdownOpen(!isDropdownOpen);
+                  const nextState = !isDropdownOpen;
+                  setIsDropdownOpen(nextState);
                   setIsProfileDropdownOpen(false);
-                  if (!isDropdownOpen) fetchNotifications();
+                  if (nextState) {
+                    fetchNotifications(notifications.length > 0);
+                  }
                 }}
               >
                 <Bell size={18} />
@@ -141,165 +149,184 @@ const Navbar = () => {
               </button>
             </div>
 
-            {isDropdownOpen && (
-              <>
-                <div className="dropdown-backdrop" onClick={() => setIsDropdownOpen(false)} />
-                <div className="notification-dropdown">
-                  <div className="notification-header">
-                    <h4 style={{ fontWeight: 800, margin: 0 }}>
-                      Notifications
-                    </h4>
-                    {notifications.some((n) => !n.isRead) && (
-                      <button
-                        onClick={markAllRead}
-                        style={{
-                          fontSize: "0.7rem",
-                          color: "var(--blue-600)",
-                          background: "none",
-                          border: "none",
-                          fontWeight: 700,
-                          cursor: "pointer",
-                        }}
-                      >
-                        Mark all as read
-                      </button>
-                    )}
-                  </div>
-                  <div className="notification-list">
-                    {notifications.length === 0 ? (
-                      <div
-                        style={{
-                          padding: 40,
-                          textAlign: "center",
-                          color: "var(--gray-400)",
-                        }}
-                      >
-                        <Bell
-                          size={32}
-                          style={{ margin: "0 auto 12px", opacity: 0.3 }}
-                        />
-                        <p style={{ fontSize: "0.85rem" }}>
-                          No notifications yet
-                        </p>
-                      </div>
-                    ) : (
-                      notifications.map((n) => (
-                        <div
-                          key={n._id || Math.random()}
-                          onClick={() => {
-                            if (!n.isRead) markRead(n._id);
-                          }}
-                          className={`notification-item ${n.type === "errand_requested" && !n.isRead ? "high-priority" : ""}`}
+            <AnimatePresence>
+              {isDropdownOpen && (
+                <>
+                  <div className="dropdown-backdrop" onClick={() => setIsDropdownOpen(false)} />
+                  <motion.div
+                    className="notification-dropdown"
+                    initial={{ opacity: 0, y: 15, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 15, scale: 0.95 }}
+                    transition={{ type: "spring", duration: 0.25, bounce: 0.1 }}
+                    style={{ originX: 0.9, originY: 0 }}
+                  >
+                    <div className="notification-header">
+                      <h4 style={{ fontWeight: 800, margin: 0 }}>
+                        Notifications
+                      </h4>
+                      {notifications.some((n) => !n.isRead) && (
+                        <button
+                          onClick={markAllRead}
                           style={{
-                            background:
-                              n.type === "errand_requested" && !n.isRead
-                                ? "var(--amber-50)"
-                                : n.isRead
-                                  ? "white"
-                                  : "var(--blue-50)",
-                            borderLeft:
-                              n.type === "errand_requested" && !n.isRead
-                                ? "4px solid var(--amber-500)"
-                                : "none",
+                            fontSize: "0.7rem",
+                            color: "var(--blue-600)",
+                            background: "none",
+                            border: "none",
+                            fontWeight: 700,
+                            cursor: "pointer",
                           }}
                         >
+                          Mark all as read
+                        </button>
+                      )}
+                    </div>
+                    <div className="notification-list">
+                      {notificationsLoading && notifications.length === 0 ? (
+                        <div style={{ padding: "16px", display: "flex", flexDirection: "column", gap: "12px" }}>
+                          {[1, 2, 3].map((i) => (
+                            <div key={i} className="skeleton-card" style={{ padding: "12px", borderRadius: "var(--radius-md)", border: "1px solid var(--gray-100)" }}>
+                              <div className="skeleton skeleton-line medium" style={{ height: "16px", marginBottom: "8px" }} />
+                              <div className="skeleton skeleton-line full" style={{ height: "12px", marginBottom: "6px" }} />
+                              <div className="skeleton skeleton-line short" style={{ height: "10px" }} />
+                            </div>
+                          ))}
+                        </div>
+                      ) : notifications.length === 0 ? (
+                        <div
+                          style={{
+                            padding: 40,
+                            textAlign: "center",
+                            color: "var(--gray-400)",
+                          }}
+                        >
+                          <Bell
+                            size={32}
+                            style={{ margin: "0 auto 12px", opacity: 0.3 }}
+                          />
+                          <p style={{ fontSize: "0.85rem" }}>
+                            No notifications yet
+                          </p>
+                        </div>
+                      ) : (
+                        notifications.map((n) => (
                           <div
-                            className="notification-icon"
+                            key={n._id || Math.random()}
+                            onClick={() => {
+                              if (!n.isRead) markRead(n._id);
+                            }}
+                            className={`notification-item ${n.type === "errand_requested" && !n.isRead ? "high-priority" : ""}`}
                             style={{
                               background:
-                                n.type === "message_received"
-                                  ? "var(--blue-100)"
-                                  : n.type === "errand_completed"
-                                    ? "var(--green-100)"
-                                    : n.type === "errand_requested"
-                                      ? "var(--amber-100)"
-                                      : "var(--pink-100)",
-                              color:
-                                n.type === "message_received"
-                                  ? "var(--blue-600)"
-                                  : n.type === "errand_completed"
-                                    ? "var(--green-600)"
-                                    : n.type === "errand_requested"
-                                      ? "var(--amber-600)"
-                                      : "var(--pink-600)",
+                                n.type === "errand_requested" && !n.isRead
+                                  ? "var(--amber-50)"
+                                  : n.isRead
+                                    ? "white"
+                                    : "var(--blue-50)",
+                              borderLeft:
+                                n.type === "errand_requested" && !n.isRead
+                                  ? "4px solid var(--amber-500)"
+                                  : "none",
                             }}
                           >
-                            {n.type === "message_received" ? (
-                              <MessageSquare size={18} />
-                            ) : n.type === "errand_completed" ? (
-                              <CheckCircle size={18} />
-                            ) : (
-                              <Info size={18} />
-                            )}
-                          </div>
-                          <div>
                             <div
+                              className="notification-icon"
                               style={{
-                                fontWeight: 700,
-                                fontSize: "0.85rem",
-                                color: "var(--gray-900)",
-                                marginBottom: 2,
+                                background:
+                                  n.type === "message_received"
+                                    ? "var(--blue-100)"
+                                    : n.type === "errand_completed"
+                                      ? "var(--green-100)"
+                                      : n.type === "errand_requested"
+                                        ? "var(--amber-100)"
+                                        : "var(--pink-100)",
+                                color:
+                                  n.type === "message_received"
+                                    ? "var(--blue-600)"
+                                    : n.type === "errand_completed"
+                                      ? "var(--green-600)"
+                                      : n.type === "errand_requested"
+                                        ? "var(--amber-600)"
+                                        : "var(--pink-600)",
                               }}
                             >
-                              {n.type === "errand_requested" && (
-                                <span
-                                  style={{
-                                    color: "var(--amber-600)",
-                                    fontSize: "0.65rem",
-                                    fontWeight: 900,
-                                    display: "block",
-                                    textTransform: "uppercase",
-                                    marginBottom: 2,
-                                  }}
-                                >
-                                  ⚠️ Action Required
-                                </span>
+                              {n.type === "message_received" ? (
+                                <MessageSquare size={18} />
+                              ) : n.type === "errand_completed" ? (
+                                <CheckCircle size={18} />
+                              ) : (
+                                <Info size={18} />
                               )}
-                              {n.title}
                             </div>
-                            <div
-                              style={{
-                                fontSize: "0.75rem",
-                                color: "var(--gray-500)",
-                                lineHeight: 1.4,
-                              }}
-                            >
-                              {n.message}
-                            </div>
-                            <div
-                              style={{
-                                fontSize: "0.65rem",
-                                color: "var(--gray-400)",
-                                marginTop: 6,
-                              }}
-                            >
-                              {new Date(n.createdAt).toLocaleDateString()}
+                            <div>
+                              <div
+                                style={{
+                                  fontWeight: 700,
+                                  fontSize: "0.85rem",
+                                  color: "var(--gray-900)",
+                                  marginBottom: 2,
+                                }}
+                              >
+                                {n.type === "errand_requested" && (
+                                  <span
+                                    style={{
+                                      color: "var(--amber-600)",
+                                      fontSize: "0.65rem",
+                                      fontWeight: 900,
+                                      display: "block",
+                                      textTransform: "uppercase",
+                                      marginBottom: 2,
+                                    }}
+                                  >
+                                    ⚠️ Action Required
+                                  </span>
+                                )}
+                                {n.title}
+                              </div>
+                              <div
+                                style={{
+                                  fontSize: "0.75rem",
+                                  color: "var(--gray-500)",
+                                  lineHeight: 1.4,
+                                }}
+                              >
+                                {n.message}
+                              </div>
+                              <div
+                                style={{
+                                  fontSize: "0.65rem",
+                                  color: "var(--gray-400)",
+                                  marginTop: 6,
+                                }}
+                              >
+                                {new Date(n.createdAt).toLocaleDateString()}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                  <Link
-                    to="/history"
-                    onClick={() => setIsDropdownOpen(false)}
-                    onMouseEnter={() => prefetch(PageImports.History)}
-                    style={{
-                      display: "block",
-                      padding: 16,
-                      textAlign: "center",
-                      fontSize: "0.85rem",
-                      fontWeight: 800,
-                      color: "var(--gray-500)",
-                      borderTop: "1px solid var(--gray-100)",
-                      background: "var(--gray-50)",
-                    }}
-                  >
-                    View All Activity
-                  </Link>
-                </div>
-              </>
-            )}
+                        ))
+                      )}
+                    </div>
+                    <Link
+                      to="/history"
+                      onClick={() => setIsDropdownOpen(false)}
+                      onMouseEnter={() => prefetch(PageImports.History)}
+                      style={{
+                        display: "block",
+                        padding: 16,
+                        textAlign: "center",
+                        fontSize: "0.85rem",
+                        fontWeight: 800,
+                        color: "var(--gray-500)",
+                        borderTop: "1px solid var(--gray-100)",
+                        background: "var(--gray-50)",
+                      }}
+                    >
+                      View All Activity
+                    </Link>
+                  </motion.div>
+                </>
+              )}
+            </AnimatePresence>
           </div>
 
           {isAuth ? (

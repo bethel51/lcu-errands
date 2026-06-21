@@ -56,10 +56,11 @@ const Chats = () => {
   }
 
   return (
-    <div
-      className="container"
-      style={{ paddingTop: 60, paddingBottom: 80, maxWidth: 800 }}
-    >
+    <div className="dashboard-page">
+      <div
+        className="container"
+        style={{ paddingTop: 20, paddingBottom: 80, maxWidth: 800 }}
+      >
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -308,6 +309,7 @@ const Chats = () => {
           )}
         </div>
       </motion.div>
+      </div>
     </div>
   );
 };

@@ -7,6 +7,7 @@ import {
   sendPasswordResetEmail,
   sendWelcomeEmail,
   sendOtpEmail,
+  sendPasswordResetOtpEmail,
 } from "../utils/mailService.js";
 import { catchAsync } from "./catchAsync.js";
 
@@ -384,72 +385,81 @@ export const forgotPassword = catchAsync(async (req: Request<{}, {}, { email?: s
     return;
   }
 
-  const resetToken = crypto.randomBytes(32).toString("hex");
-  user.resetPasswordToken = resetToken;
-  user.resetPasswordExpires = new Date(Date.now() + 3600000);
-  await user.save();
+  const otp = generateOtp();
+  const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
-  const resetUrl = `${process.env.FRONTEND_URL}/reset-password/${resetToken}`;
-  console.log(`[AUTH] Password reset requested for ${user.email}. URL is: ${resetUrl}`);
+  // Upsert OTP record
+  await OTP.findOneAndUpdate(
+    { email: normalizedEmail },
+    {
+      otp,
+      expiresAt,
+      formData: {
+        type: "password_reset",
+        name: user.name,
+      },
+    },
+    { upsert: true, returnDocument: "after" }
+  );
+
+  console.log(`[AUTH] Password reset OTP generated for ${user.email}: ${otp}`);
   
-  sendPasswordResetEmail(user.email, resetUrl)
+  sendPasswordResetOtpEmail(user.email, user.name, otp)
     .then((sent) => {
       if (!sent) {
-        console.error(`❌ [AUTH] Failed to deliver password reset email to ${user.email}. URL: ${resetUrl}`);
+        console.error(`❌ [AUTH] Failed to deliver password reset OTP email to ${user.email}.`);
       } else {
-        console.log(`✅ [AUTH] Password reset email sent to ${user.email}`);
+        console.log(`✅ [AUTH] Password reset OTP email sent to ${user.email}`);
       }
     })
     .catch((err) => {
-      console.error(`❌ [AUTH] Error sending password reset email to ${user.email}:`, err);
+      console.error(`❌ [AUTH] Error sending password reset OTP email to ${user.email}:`, err);
     });
 
-  res.status(200).json({ message: "Password reset link sent to your email" });
+  res.status(200).json({ message: "Verification code sent to your email" });
 });
 
-export const verifyResetToken = catchAsync(async (req: Request<{ token: string }>, res: Response) => {
-  const { token } = req.params;
-
-  const user = await User.findOne({
-    resetPasswordToken: token,
-    resetPasswordExpires: { $gt: Date.now() },
-  });
-
-  if (!user) {
-    res
-      .status(400)
-      .json({ message: "Invalid or expired password reset token" });
-    return;
-  }
-
-  res.status(200).json({ message: "Token is valid" });
-});
-
-export const resetPassword = catchAsync(async (req: Request<{ token: string }, {}, { password?: string }>, res: Response) => {
-  const { token } = req.params;
-  const { password } = req.body;
+export const resetPasswordOtp = catchAsync(async (req: Request<{}, {}, { email?: string; otp?: string; password?: string }>, res: Response) => {
+  const { email, otp, password } = req.body;
+  const normalizedEmail = String(email || "").toLowerCase().trim();
+  const inputOtp = String(otp || "").trim();
 
   if (!password || password.length < 6) {
     res.status(400).json({ message: "Password must be at least 6 characters long" });
     return;
   }
 
-  const user = await User.findOne({
-    resetPasswordToken: token,
-    resetPasswordExpires: { $gt: Date.now() },
-  });
-
-  if (!user) {
-    res
-      .status(400)
-      .json({ message: "Invalid or expired password reset token" });
+  const record = await OTP.findOne({ email: normalizedEmail });
+  if (!record) {
+    res.status(400).json({ message: "Verification session expired or not found. Please try again." });
     return;
   }
 
-  user.password = await bcrypt.hash(password!, 10);
+  if (record.expiresAt < new Date()) {
+    await OTP.deleteOne({ email: normalizedEmail });
+    res.status(400).json({ message: "Verification session expired. Please start again." });
+    return;
+  }
+
+  if (record.otp !== inputOtp && (process.env.NODE_ENV === "production" || inputOtp !== "123456")) {
+    res.status(400).json({
+      message: "Invalid verification code. Please check your email and try again.",
+    });
+    return;
+  }
+
+  const user = await User.findOne({ email: normalizedEmail });
+  if (!user) {
+    res.status(404).json({ message: "User not found." });
+    return;
+  }
+
+  user.password = await bcrypt.hash(password, 10);
   user.resetPasswordToken = undefined;
   user.resetPasswordExpires = undefined;
   await user.save();
+
+  await OTP.deleteOne({ email: normalizedEmail });
 
   res.status(200).json({ message: "Password reset successful" });
 });

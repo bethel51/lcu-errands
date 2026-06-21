@@ -20,7 +20,6 @@ export const PageImports = {
   Login: () => import("./pages/Login"),
   Signup: () => import("./pages/Signup"),
   ForgotPassword: () => import("./pages/ForgotPassword"),
-  ResetPassword: () => import("./pages/ResetPassword"),
   Dashboard: () => import("./pages/Dashboard"),
   History: () => import("./pages/History"),
   Profile: () => import("./pages/Profile"),
@@ -33,7 +32,6 @@ const Home = lazy(PageImports.Home);
 const Login = lazy(PageImports.Login);
 const Signup = lazy(PageImports.Signup);
 const ForgotPassword = lazy(PageImports.ForgotPassword);
-const ResetPassword = lazy(PageImports.ResetPassword);
 const Dashboard = lazy(PageImports.Dashboard);
 const History = lazy(PageImports.History);
 const Profile = lazy(PageImports.Profile);
@@ -61,9 +59,7 @@ const AppLayout = () => {
     setIsAuth(localStorage.getItem("isAuthenticated") === "true");
   }, [location.pathname]);
 
-  const isAuthPage =
-    AUTH_PATHS.includes(location.pathname) ||
-    location.pathname.startsWith("/reset-password");
+  const isAuthPage = AUTH_PATHS.includes(location.pathname);
 
   return (
     <>
@@ -80,7 +76,6 @@ const AppLayout = () => {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Signup />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
-          <Route path="/reset-password/:token" element={<ResetPassword />} />
 
           {/* Protected pages */}
           <Route

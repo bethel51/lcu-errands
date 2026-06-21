@@ -225,6 +225,31 @@ export const sendPasswordResetEmail = async (userEmail: string, resetUrl: string
   return await sendEmail(userEmail, subject, "Password Reset Request", html);
 };
 
+export const sendPasswordResetOtpEmail = async (userEmail: string, userName: string, otp: string): Promise<boolean> => {
+  const subject = "Password Reset Verification Code - LCU Errands 🔐";
+  const html = `
+    <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 0; border: 1px solid #f0f0f0; border-radius: 16px; overflow: hidden; background-color: #ffffff;">
+      <div style="background-color: #1E4DB7; padding: 40px 20px; text-align: center;">
+        <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -0.5px;">LCU ERRANDS</h1>
+      </div>
+      <div style="padding: 40px 30px;">
+        <h2 style="color: #111827; margin: 0 0 16px 0; font-size: 22px; font-weight: 800;">Verify Your Password Reset</h2>
+        <p style="color: #4B5563; font-size: 16px; line-height: 1.6; margin-bottom: 24px;">Hi ${userName},</p>
+        <p style="color: #4B5563; font-size: 16px; line-height: 1.6; margin-bottom: 24px;">You requested to reset your password. Use the verification code below to complete the reset. This code is valid for 10 minutes.</p>
+        
+        <div style="background: linear-gradient(135deg, #F9FAFB 0%, #F3F4F6 100%); padding: 24px; border-radius: 16px; text-align: center; margin: 30px 0; border: 1px solid #E5E7EB;">
+          <span style="font-size: 36px; font-weight: 800; letter-spacing: 6px; color: #1E4DB7; font-family: monospace;">${otp}</span>
+        </div>
+
+        <p style="color: #6B7280; font-size: 14px; margin-bottom: 24px; text-align: center;">Do not share this code with anyone. If you didn't request this code, you can safely ignore this email.</p>
+        <hr style="border: 0; border-top: 1px solid #F3F4F6; margin-bottom: 24px;" />
+        <p style="color: #9CA3AF; font-size: 14px; text-align: center; margin: 0;">This is an automated notification from Lead City University Errands.</p>
+      </div>
+    </div>
+  `;
+  return await sendEmail(userEmail, subject, `Your OTP code is: ${otp}`, html);
+};
+
 export const sendWelcomeEmail = async (userEmail: string, userName: string): Promise<boolean> => {
   const subject = "Welcome to LCU Errands! 🎓";
   const html = `

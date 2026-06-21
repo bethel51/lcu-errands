@@ -48,6 +48,10 @@ app.use(compression());
 app.use(express.json());
 app.use(morgan("dev"));
 
+app.get("/", (req, res) => {
+  res.json({ status: "operational", message: "LeadCity Errands Admin Service API is active." });
+});
+
 // HEALTH CHECK
 app.get("/health", (req, res) => {
   res.json({ status: "operational", service: "leadcity-admin" });

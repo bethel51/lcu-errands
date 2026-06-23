@@ -12,6 +12,7 @@ import {
   getAllLogs,
   sendBroadcast,
   getChatHistory,
+  getUserWithdrawalEvidence,
 } from "../controllers/adminController.js";
 import { adminAuthMiddleware } from "../middleware/adminAuthMiddleware.js";
 
@@ -32,5 +33,6 @@ router.get("/health", getHealthStatus);
 router.get("/logs", getAllLogs);
 router.post("/broadcast", sendBroadcast);
 router.get("/chat/:errandId", getChatHistory);
+router.get("/withdrawal-evidence/:userId", getUserWithdrawalEvidence);
 
 export default router;

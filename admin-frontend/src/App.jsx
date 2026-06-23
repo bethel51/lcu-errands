@@ -92,6 +92,12 @@ const AdminPortal = () => {
   const [rejectionReason, setRejectionReason] = useState("");
   const [rejectionLoading, setRejectionLoading] = useState(false);
 
+  // Withdrawal Evidence States
+  const [withdrawalEvidence, setWithdrawalEvidence] = useState(null);
+  const [selectedWithdrawalUser, setSelectedWithdrawalUser] = useState(null);
+  const [evidenceLoading, setEvidenceLoading] = useState(false);
+  const [expandedErrandIdx, setExpandedErrandIdx] = useState(null);
+
   const handleInitialSetup = async (e) => {
     e.preventDefault();
     setAuthLoading(true);
@@ -219,6 +225,20 @@ const AdminPortal = () => {
     } catch (_err) {
       alert("Failed to fetch chat log");
       setSelectedErrandChat([]);
+    }
+  };
+
+  const fetchEvidence = async (userId, userName) => {
+    setEvidenceLoading(true);
+    setSelectedWithdrawalUser(userName);
+    try {
+      const res = await adminApi.get(`/management/withdrawal-evidence/${userId}`);
+      setWithdrawalEvidence(Array.isArray(res.data) ? res.data : []);
+    } catch (_err) {
+      alert("Failed to fetch evidence");
+      setWithdrawalEvidence([]);
+    } finally {
+      setEvidenceLoading(false);
     }
   };
 
@@ -1227,7 +1247,7 @@ const AdminPortal = () => {
                   style={{
                     width: "100%",
                     borderCollapse: "collapse",
-                    minWidth: 600,
+                    minWidth: 700,
                   }}
                 >
                   <thead style={{ background: "#F8FAFC", textAlign: "left" }}>
@@ -1235,6 +1255,7 @@ const AdminPortal = () => {
                       <th style={{ padding: 15 }}>USER</th>
                       <th style={{ padding: 15 }}>DESTINATION</th>
                       <th style={{ padding: 15 }}>AMOUNT</th>
+                      <th style={{ padding: 15 }}>EVIDENCE</th>
                       <th style={{ padding: 15 }}>ACTION</th>
                     </tr>
                   </thead>
@@ -1250,10 +1271,16 @@ const AdminPortal = () => {
                             <div style={{ fontWeight: 700 }}>
                               {w.userId?.name}
                             </div>
+                            <div style={{ fontSize: "0.7rem", color: "#94A3B8" }}>
+                              {w.userId?.email}
+                            </div>
                           </td>
                           <td style={{ padding: 15 }}>
                             <div style={{ fontSize: "0.8rem" }}>
                               {w.bankName} - {w.accountNumber}
+                            </div>
+                            <div style={{ fontSize: "0.7rem", color: "#94A3B8", marginTop: 2 }}>
+                              {w.accountName}
                             </div>
                           </td>
                           <td
@@ -1263,7 +1290,27 @@ const AdminPortal = () => {
                               color: "#10B981",
                             }}
                           >
-                            ₦{w.amount}
+                            ₦{w.amount?.toLocaleString()}
+                          </td>
+                          <td style={{ padding: 15 }}>
+                            <button
+                              onClick={() => fetchEvidence(w.userId?._id, w.userId?.name)}
+                              style={{
+                                background: "#EFF6FF",
+                                color: "#2563EB",
+                                padding: "6px 14px",
+                                borderRadius: 8,
+                                border: "1px solid #BFDBFE",
+                                fontSize: "0.75rem",
+                                fontWeight: 800,
+                                cursor: "pointer",
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 5,
+                              }}
+                            >
+                              <MessageSquare size={13} /> VIEW EVIDENCE
+                            </button>
                           </td>
                           <td style={{ padding: 15, display: "flex", gap: 10 }}>
                             <button
@@ -1277,6 +1324,7 @@ const AdminPortal = () => {
                                 borderRadius: 8,
                                 border: "none",
                                 fontSize: "0.75rem",
+                                cursor: "pointer",
                               }}
                             >
                               APPROVE
@@ -1292,6 +1340,7 @@ const AdminPortal = () => {
                                 borderRadius: 8,
                                 border: "none",
                                 fontSize: "0.75rem",
+                                cursor: "pointer",
                               }}
                             >
                               REJECT
@@ -1299,6 +1348,13 @@ const AdminPortal = () => {
                           </td>
                         </tr>
                       ))}
+                    {withdrawals.filter((w) => w.status === "pending").length === 0 && (
+                      <tr>
+                        <td colSpan={5} style={{ padding: 40, textAlign: "center", color: "#94A3B8" }}>
+                          No pending withdrawal requests.
+                        </td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -1830,6 +1886,267 @@ const AdminPortal = () => {
                     <p style={{ fontSize: "0.9rem", fontWeight: 600 }}>
                       No digital footprint found for this errand.
                     </p>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Withdrawal Evidence Modal */}
+      <AnimatePresence>
+        {withdrawalEvidence && (
+          <div
+            style={{
+              position: "fixed",
+              inset: 0,
+              background: "rgba(0,0,0,0.6)",
+              backdropFilter: "blur(6px)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              zIndex: 1000,
+              padding: 20,
+            }}
+            onClick={() => { setWithdrawalEvidence(null); setExpandedErrandIdx(null); }}
+          >
+            <motion.div
+              initial={{ y: 50, opacity: 0, scale: 0.95 }}
+              animate={{ y: 0, opacity: 1, scale: 1 }}
+              exit={{ y: 50, opacity: 0, scale: 0.95 }}
+              transition={{ type: "spring", duration: 0.3, bounce: 0.15 }}
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                background: "white",
+                width: "100%",
+                maxWidth: 620,
+                borderRadius: 24,
+                padding: 0,
+                maxHeight: "85vh",
+                display: "flex",
+                flexDirection: "column",
+                overflow: "hidden",
+                boxShadow: "0 25px 50px -12px rgba(0,0,0,0.25)",
+              }}
+            >
+              {/* Header */}
+              <div
+                style={{
+                  padding: "20px 25px",
+                  borderBottom: "1px solid #E2E8F0",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  background: "linear-gradient(135deg, #EFF6FF, #F0FDF4)",
+                }}
+              >
+                <div>
+                  <h3 style={{ fontWeight: 900, margin: 0, fontSize: "1.1rem" }}>
+                    🔍 Withdrawal Evidence
+                  </h3>
+                  <p style={{ margin: "4px 0 0", fontSize: "0.8rem", color: "#64748B" }}>
+                    Digital footprint for <strong>{selectedWithdrawalUser}</strong>
+                  </p>
+                </div>
+                <button
+                  onClick={() => { setWithdrawalEvidence(null); setExpandedErrandIdx(null); }}
+                  style={{ background: "none", border: "none", cursor: "pointer", padding: 8 }}
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              {/* Content */}
+              <div style={{ flex: 1, overflow: "auto", padding: 20 }}>
+                {evidenceLoading ? (
+                  <div style={{ textAlign: "center", padding: 40 }}>
+                    <div className="loader-sm" style={{ width: 32, height: 32, margin: "0 auto 15px" }} />
+                    <p style={{ fontSize: "0.85rem", color: "#64748B" }}>Loading evidence...</p>
+                  </div>
+                ) : withdrawalEvidence.length === 0 ? (
+                  <div style={{ textAlign: "center", padding: "50px 20px", color: "#94A3B8" }}>
+                    <AlertTriangle size={40} style={{ opacity: 0.3, marginBottom: 15 }} />
+                    <p style={{ fontWeight: 700, fontSize: "1rem", color: "#EF4444" }}>
+                      ⚠️ No completed errands found
+                    </p>
+                    <p style={{ fontSize: "0.8rem", marginTop: 8 }}>
+                      This user has no completed errands. Exercise caution before approving.
+                    </p>
+                  </div>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                    {/* Summary Bar */}
+                    <div style={{
+                      display: "flex", gap: 12, flexWrap: "wrap",
+                      padding: "12px 16px", background: "#F8FAFC",
+                      borderRadius: 14, border: "1px solid #E2E8F0",
+                    }}>
+                      <div style={{ flex: 1, minWidth: 80 }}>
+                        <div style={{ fontSize: "0.6rem", fontWeight: 800, color: "#94A3B8", textTransform: "uppercase" }}>Completed</div>
+                        <div style={{ fontSize: "1.25rem", fontWeight: 900, color: "#10B981" }}>{withdrawalEvidence.length}</div>
+                      </div>
+                      <div style={{ flex: 1, minWidth: 80 }}>
+                        <div style={{ fontSize: "0.6rem", fontWeight: 800, color: "#94A3B8", textTransform: "uppercase" }}>With Chat</div>
+                        <div style={{ fontSize: "1.25rem", fontWeight: 900, color: "#2563EB" }}>{withdrawalEvidence.filter(e => e.messageCount > 0).length}</div>
+                      </div>
+                      <div style={{ flex: 1, minWidth: 80 }}>
+                        <div style={{ fontSize: "0.6rem", fontWeight: 800, color: "#94A3B8", textTransform: "uppercase" }}>With Proof</div>
+                        <div style={{ fontSize: "1.25rem", fontWeight: 900, color: "#8B5CF6" }}>{withdrawalEvidence.filter(e => e.hasProof).length}</div>
+                      </div>
+                    </div>
+
+                    {/* Errand List */}
+                    {withdrawalEvidence.map((ev, idx) => (
+                      <div
+                        key={ev.errand._id}
+                        style={{
+                          border: "1px solid #E2E8F0",
+                          borderRadius: 16,
+                          overflow: "hidden",
+                          background: expandedErrandIdx === idx ? "#FAFBFF" : "white",
+                          transition: "all 0.2s",
+                        }}
+                      >
+                        {/* Errand Header - clickable */}
+                        <div
+                          onClick={() => setExpandedErrandIdx(expandedErrandIdx === idx ? null : idx)}
+                          style={{
+                            padding: "14px 18px",
+                            cursor: "pointer",
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                            borderBottom: expandedErrandIdx === idx ? "1px solid #E2E8F0" : "none",
+                          }}
+                        >
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontWeight: 800, fontSize: "0.9rem", color: "#1E293B", marginBottom: 4 }}>
+                              {ev.errand.title}
+                            </div>
+                            <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                              <span style={{
+                                fontSize: "0.65rem", fontWeight: 800,
+                                padding: "2px 8px", borderRadius: 6,
+                                background: "#ECFDF5", color: "#10B981",
+                              }}>
+                                ₦{ev.errand.fee?.toLocaleString()}
+                              </span>
+                              <span style={{
+                                fontSize: "0.65rem", fontWeight: 700,
+                                padding: "2px 8px", borderRadius: 6,
+                                background: ev.messageCount > 0 ? "#EFF6FF" : "#FEF2F2",
+                                color: ev.messageCount > 0 ? "#2563EB" : "#EF4444",
+                              }}>
+                                {ev.messageCount > 0 ? `💬 ${ev.messageCount} messages` : "❌ No chat"}
+                              </span>
+                              {ev.hasProof && (
+                                <span style={{
+                                  fontSize: "0.65rem", fontWeight: 700,
+                                  padding: "2px 8px", borderRadius: 6,
+                                  background: "#F3E8FF", color: "#7C3AED",
+                                }}>
+                                  📸 Proof
+                                </span>
+                              )}
+                              <span style={{ fontSize: "0.6rem", color: "#94A3B8" }}>
+                                {new Date(ev.errand.createdAt).toLocaleDateString()}
+                              </span>
+                            </div>
+                          </div>
+                          <span style={{ color: "#94A3B8", transform: expandedErrandIdx === idx ? "rotate(180deg)" : "rotate(0)", transition: "transform 0.2s", fontSize: "0.8rem" }}>
+                            ▼
+                          </span>
+                        </div>
+
+                        {/* Expanded content */}
+                        {expandedErrandIdx === idx && (
+                          <div style={{ padding: "14px 18px" }}>
+                            {/* Errand details */}
+                            <div style={{ marginBottom: 14, fontSize: "0.8rem", color: "#64748B", lineHeight: 1.5 }}>
+                              <strong>Description:</strong> {ev.errand.description}
+                            </div>
+                            <div style={{ display: "flex", gap: 16, marginBottom: 14, fontSize: "0.75rem", color: "#64748B" }}>
+                              <div><strong>Poster:</strong> {ev.errand.posterId?.name || "N/A"}</div>
+                              <div><strong>Errander:</strong> {ev.errand.erranderId?.name || "N/A"}</div>
+                            </div>
+
+                            {/* Completion Proof */}
+                            {ev.hasProof && (
+                              <div style={{ marginBottom: 14 }}>
+                                <div style={{ fontSize: "0.7rem", fontWeight: 800, color: "#7C3AED", marginBottom: 8, textTransform: "uppercase" }}>
+                                  📸 Completion Proof
+                                </div>
+                                <img
+                                  src={ev.errand.completionProof}
+                                  alt="Completion proof"
+                                  style={{
+                                    maxWidth: "100%", maxHeight: 200,
+                                    borderRadius: 12, objectFit: "cover",
+                                    border: "1px solid #E2E8F0", cursor: "pointer",
+                                  }}
+                                  onClick={() => window.open(ev.errand.completionProof, "_blank")}
+                                />
+                              </div>
+                            )}
+
+                            {/* Chat Messages */}
+                            <div style={{ fontSize: "0.7rem", fontWeight: 800, color: "#2563EB", marginBottom: 10, textTransform: "uppercase" }}>
+                              💬 Communication Log ({ev.messageCount} messages)
+                            </div>
+                            {ev.messages.length === 0 ? (
+                              <div style={{
+                                textAlign: "center", padding: "20px",
+                                background: "#FEF2F2", borderRadius: 12,
+                                color: "#EF4444", fontSize: "0.8rem", fontWeight: 600,
+                              }}>
+                                ⚠️ No communication found for this errand
+                              </div>
+                            ) : (
+                              <div style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: 300, overflow: "auto" }}>
+                                {ev.messages.map((m, mi) => (
+                                  <div
+                                    key={mi}
+                                    style={{
+                                      background: "#F8FAFC",
+                                      padding: "10px 14px",
+                                      borderRadius: 12,
+                                      border: "1px solid #E2E8F0",
+                                    }}
+                                  >
+                                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                                      <span style={{ fontSize: "0.7rem", fontWeight: 800, color: "#2563EB" }}>
+                                        {m.senderId?.name || "System"}
+                                      </span>
+                                      <span style={{ fontSize: "0.6rem", color: "#94A3B8" }}>
+                                        {new Date(m.createdAt).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                                      </span>
+                                    </div>
+                                    {m.text && (
+                                      <div style={{ fontSize: "0.85rem", color: "#1E293B", lineHeight: 1.4 }}>
+                                        {m.text}
+                                      </div>
+                                    )}
+                                    {m.imageUrl && (
+                                      <img
+                                        src={m.imageUrl}
+                                        alt="Chat image"
+                                        style={{
+                                          marginTop: 8, borderRadius: 8,
+                                          maxWidth: "100%", maxHeight: 150,
+                                          objectFit: "cover", cursor: "pointer",
+                                        }}
+                                        onClick={() => window.open(m.imageUrl, "_blank")}
+                                      />
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>

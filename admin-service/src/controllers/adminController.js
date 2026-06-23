@@ -314,6 +314,40 @@ export const getChatHistory = catchAsync(async (req, res) => {
   res.json(messages);
 });
 
+export const getUserWithdrawalEvidence = catchAsync(async (req, res) => {
+  const { userId } = req.params;
+
+  // Find all completed errands where this user was the errander (earned money)
+  const completedErrands = await Errand.find({
+    erranderId: userId,
+    status: "completed",
+  })
+    .populate("posterId", "name email")
+    .populate("erranderId", "name email")
+    .sort({ createdAt: -1 })
+    .limit(20)
+    .lean();
+
+  // For each errand, fetch the chat messages (digital footprint)
+  const evidence = await Promise.all(
+    completedErrands.map(async (errand) => {
+      const messages = await Message.find({ errandId: errand._id })
+        .populate("senderId", "name email")
+        .sort({ createdAt: 1 })
+        .lean();
+
+      return {
+        errand,
+        messages,
+        hasProof: !!errand.completionProof,
+        messageCount: messages.length,
+      };
+    }),
+  );
+
+  res.json(evidence);
+});
+
 export const sendBroadcast = catchAsync(async (req, res) => {
   const { subject, message } = req.body;
   const users = await User.find({ isSuspended: false }).select("email name");

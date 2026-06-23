@@ -11,6 +11,7 @@ const userSchema = new mongoose.Schema(
       default: "sender",
     },
     location: { type: String }, // e.g., 'Hostel A', 'Block B'
+    department: { type: String },
     phoneNumber: { type: String, required: true },
     matricNumber: { type: String, unique: true },
     balance: { type: Number, default: 0 },

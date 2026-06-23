@@ -5,6 +5,7 @@ import { Transaction } from "../models/Transaction.js";
 import { sendErrandNotification } from "../utils/mailService.js";
 import { Notification } from "../models/Notification.js";
 import { catchAsync } from "./catchAsync.js";
+import { DigitalFootprint } from "../models/DigitalFootprint.js";
 
 export const createInquiry = catchAsync(async (req, res) => {
   const { messengerId } = req.body;
@@ -75,11 +76,12 @@ export const completeErrand = catchAsync(async (req, res) => {
   session.startTransaction();
 
   try {
+    const previousBalance = errander.balance;
     errander.balance += errand.fee;
     await errander.save({ session });
 
     // Log earnings transaction
-    await Transaction.create(
+    const [tx] = await Transaction.create(
       [
         {
           userId: errander._id,
@@ -95,6 +97,44 @@ export const completeErrand = catchAsync(async (req, res) => {
     errand.status = "completed";
     if (proof) errand.completionProof = proof;
     await errand.save({ session });
+
+    // Capture user IP & Device info
+    const ipAddress = req.ip || req.headers["x-forwarded-for"] || req.socket.remoteAddress || "127.0.0.1";
+    const deviceInfo = req.headers["user-agent"] || "Unknown Device";
+    const txRef = `TX-${tx._id}`;
+
+    await DigitalFootprint.findOneAndUpdate(
+      { errandId: errand._id },
+      {
+        $set: {
+          timeConfirmed: new Date(),
+          "deviceInfo.confirmed": deviceInfo,
+          "ipAddress.confirmed": ipAddress,
+          "locationData.confirmed": errand.dropoffLocation || "Campus",
+          transactionReference: txRef,
+          status: "released",
+        },
+        $push: {
+          walletMovementLogs: {
+            timestamp: new Date(),
+            userId: errander._id,
+            action: "CREDIT_WALLET",
+            amount: errand.fee,
+            previousBalance: previousBalance,
+            newBalance: errander.balance,
+          },
+          auditTrail: {
+            action: "CONFIRMED",
+            timestamp: new Date(),
+            userId: req.user.id,
+            ipAddress,
+            deviceInfo,
+            details: `Errand confirmation. Funds ₦${errand.fee} released to messenger wallet.`,
+          },
+        },
+      },
+      { session }
+    );
 
     await session.commitTransaction();
 
@@ -220,6 +260,44 @@ export const createErrand = catchAsync(async (req, res) => {
           type: "debit",
           description: `Payment for errand: ${title}`,
           errandId: newErrand._id,
+        },
+      ],
+      { session },
+    );
+
+    const ipAddress = req.ip || req.headers["x-forwarded-for"] || req.socket.remoteAddress || "127.0.0.1";
+    const deviceInfo = req.headers["user-agent"] || "Unknown Device";
+
+    await DigitalFootprint.create(
+      [
+        {
+          errandId: newErrand._id,
+          senderId: posterId,
+          timePosted: new Date(),
+          deviceInfo: { posted: deviceInfo },
+          ipAddress: { posted: ipAddress },
+          locationData: { posted: dropoffLocation || "Campus" },
+          status: "held",
+          walletMovementLogs: [
+            {
+              timestamp: new Date(),
+              userId: posterId,
+              action: "DEBIT_ESCROW",
+              amount: fee,
+              previousBalance: user.balance + fee,
+              newBalance: user.balance,
+            },
+          ],
+          auditTrail: [
+            {
+              action: "POSTED",
+              timestamp: new Date(),
+              userId: posterId,
+              ipAddress,
+              deviceInfo,
+              details: `Errand posted. ₦${fee} moved to Escrow.`,
+            },
+          ],
         },
       ],
       { session },
@@ -363,8 +441,36 @@ export const acceptErrand = catchAsync(async (req, res) => {
   }
 
   errand.erranderId = new mongoose.Types.ObjectId(erranderId);
-  errand.status = "assigned";
+  errand.status = "in_progress";
   await errand.save();
+
+  // Capture user IP & Device info
+  const ipAddress = req.ip || req.headers["x-forwarded-for"] || req.socket.remoteAddress || "127.0.0.1";
+  const deviceInfo = req.headers["user-agent"] || "Unknown Device";
+
+  await DigitalFootprint.findOneAndUpdate(
+    { errandId: errand._id },
+    {
+      $set: {
+        messengerId: erranderId,
+        timeAccepted: new Date(),
+        "deviceInfo.accepted": deviceInfo,
+        "ipAddress.accepted": ipAddress,
+        "locationData.accepted": errand.pickupLocation || "Campus",
+      },
+      $push: {
+        auditTrail: {
+          action: "ACCEPTED",
+          timestamp: new Date(),
+          userId: erranderId,
+          ipAddress,
+          deviceInfo,
+          details: "Errand accepted by messenger.",
+        },
+      },
+    },
+    { new: true, upsert: true }
+  ).catch(console.error);
 
   // Fire background email notification
   const triggerAcceptedNotification = async () => {
@@ -452,6 +558,22 @@ export const deleteErrand = catchAsync(async (req, res) => {
       );
     }
 
+    await DigitalFootprint.findOneAndUpdate(
+      { errandId: id },
+      {
+        $set: { status: "rejected" },
+        $push: {
+          auditTrail: {
+            action: "REJECTED",
+            timestamp: new Date(),
+            userId: userId,
+            details: "Errand cancelled and funds refunded to user.",
+          },
+        },
+      },
+      { session }
+    ).catch(console.error);
+
     await Errand.findByIdAndDelete(id).session(session);
     
     await session.commitTransaction();
@@ -480,13 +602,41 @@ export const requestCompletion = catchAsync(async (req, res) => {
     return;
   }
 
-  if (errand.status !== "assigned") {
-    res.status(400).json({ message: "Errand must be in assigned status to request completion" });
+  if (errand.status !== "in_progress" && errand.status !== "assigned") {
+    res.status(400).json({ message: "Errand must be in progress status to request completion" });
     return;
   }
 
   errand.completionRequested = true;
+  errand.status = "pending_confirmation";
   await errand.save();
+
+  // Capture user IP & Device info
+  const ipAddress = req.ip || req.headers["x-forwarded-for"] || req.socket.remoteAddress || "127.0.0.1";
+  const deviceInfo = req.headers["user-agent"] || "Unknown Device";
+
+  await DigitalFootprint.findOneAndUpdate(
+    { errandId: errand._id },
+    {
+      $set: {
+        timeCompleted: new Date(),
+        "deviceInfo.completed": deviceInfo,
+        "ipAddress.completed": ipAddress,
+        "locationData.completed": errand.dropoffLocation || "Campus",
+      },
+      $push: {
+        auditTrail: {
+          action: "COMPLETED",
+          timestamp: new Date(),
+          userId: userId,
+          ipAddress,
+          deviceInfo,
+          details: "Errand marked completed by messenger.",
+        },
+      },
+    },
+    { new: true, upsert: true }
+  ).catch(console.error);
 
   // Notify the poster
   const notificationData = {

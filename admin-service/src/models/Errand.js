@@ -9,7 +9,7 @@ const errandSchema = new mongoose.Schema({
   fee: { type: Number, required: true },
   status: {
     type: String,
-    enum: ["open", "assigned", "completed", "cancelled"],
+    enum: ["open", "assigned", "in_progress", "pending_confirmation", "completed", "cancelled"],
     default: "open",
   },
   posterId: {

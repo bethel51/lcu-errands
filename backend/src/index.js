@@ -357,6 +357,22 @@ mongoose
   })
   .then(() => {
     console.log("✅ Connected to MongoDB");
+
+    // Cross-service real-time notification sync via MongoDB Change Streams
+    try {
+      const notificationChangeStream = mongoose.connection.collection("notifications").watch();
+      notificationChangeStream.on("change", async (change) => {
+        if (change.operationType === "insert") {
+          const fullDocument = change.fullDocument;
+          if (fullDocument && fullDocument.userId) {
+            io.to(fullDocument.userId.toString()).emit("notification", fullDocument);
+          }
+        }
+      });
+      console.log("📡 Cross-service real-time notifications via Change Stream active");
+    } catch (err) {
+      console.error("❌ Failed to start Change Stream listener:", err);
+    }
   })
   .catch((err) => {
     console.error("❌ MongoDB connection error:", err);

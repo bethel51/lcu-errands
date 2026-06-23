@@ -21,6 +21,7 @@ const notificationSchema = new mongoose.Schema({
       "errand_accepted",
       "errand_requested",
       "errand_completed",
+      "errand_delivered",
       "message_received",
       "wallet_topup",
       "account_update",

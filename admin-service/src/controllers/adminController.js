@@ -4,6 +4,7 @@ import { Errand } from "../models/Errand.js";
 import { WithdrawalRequest } from "../models/WithdrawalRequest.js";
 import { Notification } from "../models/Notification.js";
 import { Message } from "../models/Message.js";
+import { DigitalFootprint } from "../models/DigitalFootprint.js";
 import {
   sendPayoutNotification,
   sendVerificationEmail,
@@ -18,6 +19,18 @@ export const getStats = catchAsync(async (req, res) => {
   const totalUsers = await User.countDocuments();
   const totalErrands = await Errand.countDocuments();
   const completedErrands = await Errand.countDocuments({ status: "completed" });
+  const totalActiveErrands = await Errand.countDocuments({
+    status: { $in: ["open", "assigned", "in_progress", "pending_confirmation"] },
+  });
+  const pendingConfirmations = await Errand.countDocuments({ status: "pending_confirmation" });
+  const flaggedErrands = await DigitalFootprint.countDocuments({ isSuspicious: true });
+
+  // Total funds held in escrow (open/in-progress errands)
+  const pendingPaymentsResult = await Errand.aggregate([
+    { $match: { status: { $in: ["assigned", "in_progress", "pending_confirmation"] } } },
+    { $group: { _id: null, total: { $sum: "$fee" } } },
+  ]);
+  const pendingPayments = pendingPaymentsResult[0]?.total || 0;
 
   const totalFees = await Errand.aggregate([
     { $group: { _id: null, total: { $sum: "$fee" } } },
@@ -38,7 +51,6 @@ export const getStats = catchAsync(async (req, res) => {
     { $sort: { _id: 1 } },
   ]);
 
-  // Calculate 7-day errand volume trend
   const errandTrends = await Errand.aggregate([
     { $match: { createdAt: { $gte: sevenDaysAgo } } },
     {
@@ -50,7 +62,6 @@ export const getStats = catchAsync(async (req, res) => {
     { $sort: { _id: 1 } },
   ]);
 
-  // Calculate user growth
   const userGrowth = await User.aggregate([
     { $match: { createdAt: { $gte: sevenDaysAgo } } },
     {
@@ -66,6 +77,10 @@ export const getStats = catchAsync(async (req, res) => {
     totalUsers,
     totalErrands,
     completedErrands,
+    totalActiveErrands,
+    pendingConfirmations,
+    pendingPayments,
+    flaggedErrands,
     totalFees: totalFees[0]?.total || 0,
     revenueTrends,
     errandTrends,
@@ -80,10 +95,228 @@ export const getAllUsers = catchAsync(async (req, res) => {
 
 export const getAllErrands = catchAsync(async (req, res) => {
   const errands = await Errand.find()
-    .populate("posterId", "name email")
+    .populate("posterId", "name email department location")
     .populate("erranderId", "name email")
     .sort({ createdAt: -1 });
   res.json(errands);
+});
+
+export const getErrandIntel = catchAsync(async (req, res) => {
+  const { errandId } = req.params;
+
+  const errand = await Errand.findById(errandId)
+    .populate("posterId", "name email profilePicture department location rating phoneNumber")
+    .populate("erranderId", "name email profilePicture rating location phoneNumber")
+    .lean();
+
+  if (!errand) {
+    res.status(404).json({ message: "Errand not found" });
+    return;
+  }
+
+  const messages = await Message.find({ errandId })
+    .populate("senderId", "name profilePicture")
+    .sort({ createdAt: 1 })
+    .lean();
+
+  let footprint = await DigitalFootprint.findOne({ errandId }).lean();
+  if (!footprint) {
+    footprint = await DigitalFootprint.create({
+      errandId: errand._id,
+      senderId: errand.posterId?._id || errand.posterId,
+      messengerId: errand.erranderId?._id || errand.erranderId,
+      timePosted: errand.createdAt || new Date(),
+      timeAccepted: ["in_progress", "pending_confirmation", "completed"].includes(errand.status)
+        ? errand.updatedAt || errand.createdAt
+        : undefined,
+      timeCompleted: ["pending_confirmation", "completed"].includes(errand.status)
+        ? errand.updatedAt || errand.createdAt
+        : undefined,
+      timeConfirmed: errand.status === "completed" ? errand.updatedAt || errand.createdAt : undefined,
+      locationData: {
+        posted: errand.dropoffLocation || "Campus",
+        accepted: errand.pickupLocation || "Campus",
+        completed: errand.dropoffLocation || "Campus",
+        confirmed: errand.dropoffLocation || "Campus",
+      },
+      status: errand.status === "completed" ? "released" : "held",
+      auditTrail: [
+        {
+          action: "POSTED",
+          timestamp: errand.createdAt || new Date(),
+          userId: errand.posterId?._id || errand.posterId,
+          details: "Digital footprint backfilled from the errand record for admin review.",
+        },
+      ],
+    }).then((doc) => doc.toObject());
+  }
+
+  res.json({ errand, messages, footprint });
+});
+
+export const approveErrandTransaction = catchAsync(async (req, res) => {
+  const { errandId } = req.params;
+
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    const errand = await Errand.findById(errandId).session(session);
+    if (!errand) {
+      await session.abortTransaction();
+      res.status(404).json({ message: "Errand not found" });
+      return;
+    }
+
+    if (errand.status === "completed") {
+      await session.abortTransaction();
+      res.status(400).json({ message: "Errand is already completed" });
+      return;
+    }
+
+    const messenger = await User.findById(errand.erranderId).session(session);
+    if (!messenger) {
+      await session.abortTransaction();
+      res.status(404).json({ message: "Messenger not found" });
+      return;
+    }
+
+    const previousBalance = messenger.balance;
+    messenger.balance += errand.fee;
+    await messenger.save({ session });
+
+    await Transaction.create(
+      [{ userId: messenger._id, amount: errand.fee, type: "credit", description: `Admin-approved: Earnings from Errand: ${errand.title}`, errandId: errand._id }],
+      { session }
+    );
+
+    errand.status = "completed";
+    await errand.save({ session });
+
+    const txRef = `ADMIN-TX-${Date.now()}`;
+    await DigitalFootprint.findOneAndUpdate(
+      { errandId: errand._id },
+      {
+        $set: { status: "released", transactionReference: txRef, timeConfirmed: new Date() },
+        $push: {
+          walletMovementLogs: { timestamp: new Date(), userId: messenger._id, action: "RELEASE_FUNDS", amount: errand.fee, previousBalance, newBalance: messenger.balance },
+          auditTrail: { action: "APPROVED", timestamp: new Date(), userId: req.admin.id, details: `Admin approved and released ₦${errand.fee} to messenger wallet.` },
+        },
+      },
+      { session }
+    );
+
+    await Notification.create(
+      [
+        { userId: errand.posterId, title: "Payment Released ✅", message: `Admin has confirmed and released payment for "${errand.title}".`, type: "payment_released", relatedId: errand._id },
+        { userId: errand.erranderId, title: "Wallet Credited 💰", message: `₦${errand.fee} has been credited to your wallet for "${errand.title}".`, type: "wallet_credited", relatedId: errand._id },
+      ],
+      { session }
+    );
+
+    await Log.create([{ adminId: req.admin.id, adminName: req.admin.name || "Admin", action: "APPROVE_ERRAND_TRANSACTION", targetId: errand._id.toString(), targetName: errand.title, details: `Transaction approved. ₦${errand.fee} released to messenger.` }], { session });
+
+    await session.commitTransaction();
+    res.json({ message: "Transaction approved and funds released successfully" });
+  } catch (error) {
+    await session.abortTransaction();
+    throw error;
+  } finally {
+    session.endSession();
+  }
+});
+
+export const rejectErrandTransaction = catchAsync(async (req, res) => {
+  const { errandId } = req.params;
+  const { reason } = req.body;
+
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    const errand = await Errand.findById(errandId).session(session);
+    if (!errand) {
+      await session.abortTransaction();
+      res.status(404).json({ message: "Errand not found" });
+      return;
+    }
+
+    const poster = await User.findById(errand.posterId).session(session);
+    if (poster) {
+      poster.balance += errand.fee;
+      await poster.save({ session });
+      await Transaction.create(
+        [{ userId: poster._id, amount: errand.fee, type: "credit", description: `Admin refund for rejected errand: ${errand.title}`, errandId: errand._id }],
+        { session }
+      );
+    }
+
+    errand.status = "cancelled";
+    await errand.save({ session });
+
+    await DigitalFootprint.findOneAndUpdate(
+      { errandId: errand._id },
+      {
+        $set: { status: "rejected" },
+        $push: { auditTrail: { action: "REJECTED", timestamp: new Date(), userId: req.admin.id, details: reason || "Admin rejected transaction. Funds refunded to sender." } },
+      },
+      { session }
+    );
+
+    await Notification.create(
+      [
+        { userId: errand.posterId, title: "Transaction Rejected ❌", message: `Admin rejected the transaction for "${errand.title}". Your funds have been refunded.`, type: "payment_released", relatedId: errand._id },
+      ],
+      { session }
+    );
+
+    await Log.create([{ adminId: req.admin.id, adminName: req.admin.name || "Admin", action: "REJECT_ERRAND_TRANSACTION", targetId: errand._id.toString(), targetName: errand.title, details: `Transaction rejected. Reason: ${reason || "N/A"}` }], { session });
+
+    await session.commitTransaction();
+    res.json({ message: "Transaction rejected and funds refunded to sender" });
+  } catch (error) {
+    await session.abortTransaction();
+    throw error;
+  } finally {
+    session.endSession();
+  }
+});
+
+export const toggleErrandSuspicious = catchAsync(async (req, res) => {
+  const { errandId } = req.params;
+  const footprint = await DigitalFootprint.findOne({ errandId });
+  if (!footprint) {
+    res.status(404).json({ message: "Digital footprint not found for this errand" });
+    return;
+  }
+  footprint.isSuspicious = !footprint.isSuspicious;
+  footprint.auditTrail.push({ action: "FLAGGED", timestamp: new Date(), userId: req.admin.id, details: `Admin ${footprint.isSuspicious ? "flagged" : "unflagged"} this errand as suspicious.` });
+  await footprint.save();
+
+  await Log.create({ adminId: req.admin.id, adminName: req.admin.name || "Admin", action: footprint.isSuspicious ? "FLAG_ERRAND" : "UNFLAG_ERRAND", targetId: errandId, details: `Errand ${footprint.isSuspicious ? "flagged" : "unflagged"} as suspicious.` });
+
+  res.json({ message: `Errand ${footprint.isSuspicious ? "flagged" : "unflagged"} successfully`, isSuspicious: footprint.isSuspicious });
+});
+
+export const freezeErrandFunds = catchAsync(async (req, res) => {
+  const { errandId } = req.params;
+  const footprint = await DigitalFootprint.findOneAndUpdate(
+    { errandId },
+    {
+      $set: { status: "frozen", isSuspicious: true },
+      $push: { auditTrail: { action: "FROZEN", timestamp: new Date(), userId: req.admin.id, details: "Admin froze funds pending investigation." } },
+    },
+    { new: true }
+  );
+
+  if (!footprint) {
+    res.status(404).json({ message: "Digital footprint not found for this errand" });
+    return;
+  }
+
+  await Log.create({ adminId: req.admin.id, adminName: req.admin.name || "Admin", action: "FREEZE_FUNDS", targetId: errandId, details: "Errand funds frozen by admin." });
+
+  res.json({ message: "Funds frozen successfully" });
 });
 
 export const toggleSuspendUser = catchAsync(async (req, res) => {
@@ -105,7 +338,6 @@ export const toggleSuspendUser = catchAsync(async (req, res) => {
     relatedId: user._id,
   });
 
-  // Background email notification
   sendSuspensionEmail(user.email, user.name, user.isSuspended).catch((err) =>
     console.error("Suspension Email Error:", err),
   );
@@ -143,9 +375,7 @@ export const verifyUser = catchAsync(async (req, res) => {
 
   await Notification.create({
     userId: user._id,
-    title: isVerified
-      ? "Verification Approved! 🛡️"
-      : "Verification Rejected ⚠️",
+    title: isVerified ? "Verification Approved! 🛡️" : "Verification Rejected ⚠️",
     message: isVerified
       ? "Congratulations! You are now a verified LCU messenger."
       : `Your verification was rejected. Reason: ${reason || "No reason provided."}`,
@@ -153,7 +383,6 @@ export const verifyUser = catchAsync(async (req, res) => {
     relatedId: user._id,
   });
 
-  // Background email update
   sendVerificationEmail(user.email, user.name, status, reason).catch((err) =>
     console.error("Verification Email Error:", err),
   );
@@ -210,21 +439,11 @@ export const processWithdrawal = catchAsync(async (req, res) => {
       return;
     }
 
-    // CRITICAL: If rejected, refund the user's balance
     if (status === "rejected") {
       user.balance += withdrawal.amount;
       await user.save({ session });
-
-      // Create refund transaction
       await Transaction.create(
-        [
-          {
-            userId: user._id,
-            amount: withdrawal.amount,
-            type: "credit",
-            description: `Refund: Withdrawal Rejected (${reason || "No reason provided"})`,
-          },
-        ],
+        [{ userId: user._id, amount: withdrawal.amount, type: "credit", description: `Refund: Withdrawal Rejected (${reason || "No reason provided"})` }],
         { session },
       );
     }
@@ -233,15 +452,11 @@ export const processWithdrawal = catchAsync(async (req, res) => {
       [
         {
           userId: withdrawal.userId,
-          title:
-            status === "approved"
-              ? "Withdrawal Processed! 💸"
-              : "Withdrawal Rejected ❌",
-          message:
-            status === "approved"
-              ? `Your withdrawal of ₦${withdrawal.amount} has been processed and sent to your account.`
-              : `Your withdrawal of ₦${withdrawal.amount} was rejected. Reason: ${reason}`,
-          type: "withdrawal_update",
+          title: status === "approved" ? "Withdrawal Processed! 💸" : "Withdrawal Rejected ❌",
+          message: status === "approved"
+            ? `Your withdrawal of ₦${withdrawal.amount} has been processed and sent to your account.`
+            : `Your withdrawal of ₦${withdrawal.amount} was rejected. Reason: ${reason}`,
+          type: status === "approved" ? "withdrawal_approved" : "withdrawal_rejected",
           relatedId: withdrawal._id,
         },
       ],
@@ -249,28 +464,13 @@ export const processWithdrawal = catchAsync(async (req, res) => {
     );
 
     await Log.create(
-      [
-        {
-          adminId: req.admin.id,
-          adminName: req.admin.name || "Admin",
-          action: "PROCESS_WITHDRAWAL",
-          targetId: withdrawal._id.toString(),
-          targetName: user?.name || "Unknown User",
-          details: `Withdrawal ${status} for ₦${withdrawal.amount}${reason ? ": " + reason : ""}`,
-        },
-      ],
+      [{ adminId: req.admin.id, adminName: req.admin.name || "Admin", action: "PROCESS_WITHDRAWAL", targetId: withdrawal._id.toString(), targetName: user?.name || "Unknown User", details: `Withdrawal ${status} for ₦${withdrawal.amount}${reason ? ": " + reason : ""}` }],
       { session },
     );
 
     await session.commitTransaction();
 
-    // Background payouts notification (non-critical)
-    sendPayoutNotification(
-      user.email,
-      user.name,
-      status,
-      withdrawal.amount,
-    ).catch((err) => console.error("Payout Email Error:", err));
+    sendPayoutNotification(user.email, user.name, status, withdrawal.amount).catch((err) => console.error("Payout Email Error:", err));
 
     res.json({ message: `Withdrawal ${status} successfully`, withdrawal });
   } catch (error) {
@@ -281,7 +481,6 @@ export const processWithdrawal = catchAsync(async (req, res) => {
   }
 });
 
-
 export const getPendingVerifications = catchAsync(async (req, res) => {
   const users = await User.find({ verificationStatus: "pending" });
   res.json(users);
@@ -290,15 +489,7 @@ export const getPendingVerifications = catchAsync(async (req, res) => {
 export const getHealthStatus = catchAsync(async (req, res) => {
   const dbStatus = User.db?.readyState === 1 ? "connected" : "disconnected";
   const dbName = User.db?.db?.databaseName || "unknown";
-
-  res.json({
-    database: dbStatus,
-    databaseName: dbName,
-    server: "online",
-    uptime: process.uptime(),
-    memoryUsage: `${(process.memoryUsage().heapUsed / 1024 / 1024).toFixed(2)} MB`,
-    environment: process.env.NODE_ENV || "production-isolated",
-  });
+  res.json({ database: dbStatus, databaseName: dbName, server: "online", uptime: process.uptime(), memoryUsage: `${(process.memoryUsage().heapUsed / 1024 / 1024).toFixed(2)} MB`, environment: process.env.NODE_ENV || "production-isolated" });
 });
 
 export const getAllLogs = catchAsync(async (req, res) => {
@@ -309,68 +500,46 @@ export const getAllLogs = catchAsync(async (req, res) => {
 export const getChatHistory = catchAsync(async (req, res) => {
   const { errandId } = req.params;
   const messages = await Message.find({ errandId })
-    .populate("senderId", "name email")
+    .populate("senderId", "name email profilePicture")
     .sort({ createdAt: 1 });
   res.json(messages);
 });
 
 export const getUserWithdrawalEvidence = catchAsync(async (req, res) => {
   const { userId } = req.params;
-
-  // Find all completed errands where this user was the errander (earned money)
-  const completedErrands = await Errand.find({
-    erranderId: userId,
-    status: "completed",
-  })
+  const completedErrands = await Errand.find({ erranderId: userId, status: "completed" })
     .populate("posterId", "name email")
     .populate("erranderId", "name email")
     .sort({ createdAt: -1 })
     .limit(20)
     .lean();
 
-  // For each errand, fetch the chat messages (digital footprint)
   const evidence = await Promise.all(
     completedErrands.map(async (errand) => {
       const messages = await Message.find({ errandId: errand._id })
         .populate("senderId", "name email")
         .sort({ createdAt: 1 })
         .lean();
-
-      return {
-        errand,
-        messages,
-        hasProof: !!errand.completionProof,
-        messageCount: messages.length,
-      };
+      return { errand, messages, hasProof: !!errand.completionProof, messageCount: messages.length };
     }),
   );
-
   res.json(evidence);
 });
 
 export const sendBroadcast = catchAsync(async (req, res) => {
   const { subject, message } = req.body;
   const users = await User.find({ isSuspended: false }).select("email name");
-
-  // Fire-and-forget to prevent UI timeout
   res.json({ message: `Broadcast initiated for ${users.length} users` });
 
   (async () => {
     for (const user of users) {
       try {
         await sendBroadcastEmail(user.email, user.name, subject, message);
-        await new Promise((r) => setTimeout(r, 500)); // Rate limit protection
+        await new Promise((r) => setTimeout(r, 500));
       } catch (err) {
         console.error(`Broadcast error for ${user.email}`);
       }
     }
-
-    await Log.create({
-      adminId: req.admin.id,
-      adminName: req.admin.name || "Admin",
-      action: "BROADCAST_SENT",
-      targetName: "Global",
-      details: `Mass campaign "${subject}" complete.`,
-    });
+    await Log.create({ adminId: req.admin.id, adminName: req.admin.name || "Admin", action: "BROADCAST_SENT", targetName: "Global", details: `Mass campaign "${subject}" complete.` });
   })();
 });

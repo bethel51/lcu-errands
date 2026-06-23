@@ -17,6 +17,7 @@ const Navbar = () => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   const [notificationsLoading, setNotificationsLoading] = useState(false);
+  const unreadCount = notifications.filter((n) => !n.isRead).length;
 
   useEffect(() => {
     if (isAuth) {
@@ -55,9 +56,11 @@ const Navbar = () => {
   const markRead = async (id) => {
     try {
       await api.patch(`/notifications/${id}/read`);
-      setNotifications((prev) =>
-        prev.map((n) => (n._id === id ? { ...n, isRead: true } : n)),
-      );
+      setNotifications((prev) => {
+        const next = prev.map((n) => (n._id === id ? { ...n, isRead: true } : n));
+        setHasNotification(next.some((n) => !n.isRead));
+        return next;
+      });
     } catch (err) {
       console.error(err);
     }
@@ -145,8 +148,23 @@ const Navbar = () => {
                 }}
               >
                 <Bell size={18} />
-                {hasNotification && (
-                  <span className="notification-dot" />
+                {hasNotification && unreadCount > 0 && (
+                  <span
+                    className="notification-dot"
+                    style={{
+                      width: unreadCount > 9 ? 22 : 18,
+                      height: 18,
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: "0.62rem",
+                      fontWeight: 900,
+                      color: "white",
+                      lineHeight: 1,
+                    }}
+                  >
+                    {unreadCount > 99 ? "99+" : unreadCount}
+                  </span>
                 )}
               </button>
             </div>

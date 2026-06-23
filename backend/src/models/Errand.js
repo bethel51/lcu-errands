@@ -22,7 +22,16 @@ const errandSchema = new mongoose.Schema({
   isReviewedByErrander: { type: Boolean, default: false },
   completionProof: { type: String }, // Image URL
   completionRequested: { type: Boolean, default: false },
+  trackingId: { type: String, unique: true, sparse: true },
   createdAt: { type: Date, default: Date.now },
+});
+
+errandSchema.pre("save", function (next) {
+  if (!this.trackingId) {
+    const random = Math.floor(100000 + Math.random() * 900000);
+    this.trackingId = `ERR-${random}`;
+  }
+  next();
 });
 
 errandSchema.index({ status: 1 });

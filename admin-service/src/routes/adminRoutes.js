@@ -3,6 +3,11 @@ import {
   getStats,
   getAllUsers,
   getAllErrands,
+  getErrandIntel,
+  approveErrandTransaction,
+  rejectErrandTransaction,
+  toggleErrandSuspicious,
+  freezeErrandFunds,
   toggleSuspendUser,
   verifyUser,
   getAllWithdrawals,
@@ -18,7 +23,7 @@ import { adminAuthMiddleware } from "../middleware/adminAuthMiddleware.js";
 
 const router = Router();
 
-// Protect all management routes with the NEW admin-only auth
+// Protect all management routes with admin-only auth
 router.use(adminAuthMiddleware);
 
 router.get("/stats", getStats);
@@ -34,5 +39,12 @@ router.get("/logs", getAllLogs);
 router.post("/broadcast", sendBroadcast);
 router.get("/chat/:errandId", getChatHistory);
 router.get("/withdrawal-evidence/:userId", getUserWithdrawalEvidence);
+
+// Errand intelligence & transaction management
+router.get("/errands/:errandId/intel", getErrandIntel);
+router.patch("/errands/:errandId/approve", approveErrandTransaction);
+router.patch("/errands/:errandId/reject", rejectErrandTransaction);
+router.patch("/errands/:errandId/flag", toggleErrandSuspicious);
+router.patch("/errands/:errandId/freeze", freezeErrandFunds);
 
 export default router;

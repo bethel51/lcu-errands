@@ -256,8 +256,13 @@ io.on("connection", (socket) => {
       await newMessage.save();
 
       io.to(data.room).emit("receive_message", {
-        ...data,
+        _id: newMessage._id,
+        room: data.room,
+        errandId: data.room,
+        senderId: userId,
+        text: data.text,
         imageUrl: data.imageUrl,
+        isRead: false,
         createdAt: newMessage.createdAt,
       });
 
@@ -280,6 +285,21 @@ io.on("connection", (socket) => {
       }
     } catch (error) {
       console.error("Socket error saving message:", error);
+    }
+  });
+
+  // Read receipt: mark messages as read in a room
+  socket.on("read_receipt", async (data) => {
+    const userId = onlineUsers.get(socket.id);
+    if (!userId || !data?.errandId) return;
+    try {
+      await Message.updateMany(
+        { errandId: data.errandId, senderId: { $ne: userId }, isRead: false },
+        { $set: { isRead: true } }
+      );
+      io.to(data.errandId).emit("messages_read", { errandId: data.errandId, readBy: userId });
+    } catch (err) {
+      console.error("[Socket] read_receipt error:", err);
     }
   });
 
@@ -368,6 +388,12 @@ mongoose
             io.to(fullDocument.userId.toString()).emit("notification", fullDocument);
           }
         }
+      });
+      notificationChangeStream.on("error", (err) => {
+        console.error("❌ Change Stream error:", err);
+      });
+      notificationChangeStream.on("close", () => {
+        console.warn("⚠️ Change Stream closed.");
       });
       console.log("📡 Cross-service real-time notifications via Change Stream active");
     } catch (err) {

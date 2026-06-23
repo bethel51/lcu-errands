@@ -1,7 +1,19 @@
 import { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, MapPin, Plus, X, Wallet, ArrowRight, Star } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import {
+  Search,
+  MapPin,
+  Plus,
+  X,
+  Wallet,
+  ArrowRight,
+  Star,
+  MessageSquare,
+  Send,
+  ImagePlus,
+  CheckCheck,
+} from "lucide-react";
+import { useLocation, useNavigate } from "react-router-dom";
 import api from "../api";
 import ReviewModal from "../components/ReviewModal";
 import { useSocket } from "../context/SocketContext";
@@ -36,6 +48,7 @@ const CATEGORY_STYLES = {
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { socket } = useSocket();
   const [errands, setErrands] = useState([]);
   const [activeRequests, setActiveRequests] = useState([]);
@@ -64,6 +77,8 @@ const Dashboard = () => {
   const [activeChat, setActiveChat] = useState(null);
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState("");
+  const [chatImageUrl, setChatImageUrl] = useState("");
+  const [chatImageUploading, setChatImageUploading] = useState(false);
 
   const userRole = localStorage.getItem("userRole") || "messenger";
   const cachedUserId = (() => {
@@ -90,6 +105,9 @@ const Dashboard = () => {
         err.posterId?._id === cachedUserId
           ? "You"
           : err.posterId?.name || "User",
+      posterPicture: err.posterId?.profilePicture || "",
+      posterDepartment: err.posterId?.department || "",
+      posterLocation: err.posterId?.location || "",
       posterRating: err.posterId?.rating || 0,
       posterId: err.posterId?._id || err.posterId,
       erranderId: err.erranderId?._id || err.erranderId,
@@ -151,10 +169,28 @@ const Dashboard = () => {
 
   useEffect(() => {
     if (activeChat) {
-      api.get(`/chat/${activeChat._id}`).then((res) => setMessages(res.data));
+      api.get(`/chat/${activeChat._id}`).then((res) => {
+        setMessages(res.data);
+        socket?.emit("read_receipt", { errandId: activeChat._id });
+      });
       socket?.emit("join_room", activeChat._id);
     }
   }, [activeChat, socket]);
+
+  useEffect(() => {
+    const openChatId = location.state?.openChatId;
+    if (!openChatId || activeChat) return;
+
+    const match = activeRequests.find((errand) => {
+      const errandId = errand._id || errand.id;
+      return errandId === openChatId;
+    });
+
+    if (match) {
+      setActiveChat({ ...match, _id: match._id || match.id });
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state, activeRequests, activeChat]);
 
   useEffect(() => {
     if (!socket) return;
@@ -173,14 +209,79 @@ const Dashboard = () => {
         setMessages((prev) =>
           data.senderId === (user?._id || user?.id) ? prev : [...prev, data],
         );
+        socket.emit("read_receipt", { errandId: data.errandId || data.room });
       }
+    });
+    socket.on("messages_read", ({ readBy }) => {
+      if (readBy === (user?._id || user?.id)) return;
+      setMessages((prev) =>
+        prev.map((message) =>
+          message.senderId === (user?._id || user?.id)
+            ? { ...message, isRead: true }
+            : message,
+        ),
+      );
     });
     return () => {
       socket.off("new_errand");
       socket.off("notification");
       socket.off("receive_message");
+      socket.off("messages_read");
     };
   }, [socket, activeChat, user]);
+
+  const handleOpenChat = (errand) => {
+    setActiveChat({ ...errand, _id: errand._id || errand.id });
+    setNewMessage("");
+    setChatImageUrl("");
+  };
+
+  const handleUploadChatImage = async (file) => {
+    if (!file) return;
+    setChatImageUploading(true);
+    try {
+      const data = new FormData();
+      data.append("image", file);
+      const res = await api.post("/users/upload", data, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      setChatImageUrl(res.data.url);
+    } catch (err) {
+      showToast(err.response?.data?.message || "Image upload failed.", "error");
+    } finally {
+      setChatImageUploading(false);
+    }
+  };
+
+  const handleSendMessage = (e) => {
+    e.preventDefault();
+    if (!socket || !activeChat) return;
+
+    const text = newMessage.trim();
+    if (!text && !chatImageUrl) return;
+
+    const payload = {
+      room: activeChat._id,
+      text,
+      imageUrl: chatImageUrl || undefined,
+    };
+
+    socket.emit("send_message", payload);
+    setMessages((prev) => [
+      ...prev,
+      {
+        _id: `local-${Date.now()}`,
+        errandId: activeChat._id,
+        senderId: user?._id || user?.id,
+        text,
+        imageUrl: chatImageUrl,
+        isRead: false,
+        createdAt: new Date().toISOString(),
+      },
+    ]);
+    setNewMessage("");
+    setChatImageUrl("");
+  };
 
   const handlePostErrand = async (e) => {
     e.preventDefault();
@@ -339,6 +440,70 @@ const Dashboard = () => {
           ))}
         </div>
 
+        {activeRequests.length > 0 && (
+          <div style={{ marginBottom: 28 }}>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                marginBottom: 12,
+              }}
+            >
+              <h2 style={{ fontSize: "1rem", fontWeight: 900, color: "var(--gray-900)" }}>
+                Active Errands
+              </h2>
+              <span style={{ fontSize: "0.75rem", color: "var(--gray-400)", fontWeight: 700 }}>
+                {activeRequests.length} open conversation{activeRequests.length === 1 ? "" : "s"}
+              </span>
+            </div>
+            <div style={{ display: "grid", gap: 12 }}>
+              {activeRequests.slice(0, 4).map((errand) => (
+                <div
+                  key={errand.id}
+                  className="card"
+                  style={{
+                    padding: 14,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: 12,
+                  }}
+                >
+                  <div style={{ minWidth: 0 }}>
+                    <div
+                      style={{
+                        fontWeight: 800,
+                        color: "var(--gray-900)",
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                      }}
+                    >
+                      {errand.title}
+                    </div>
+                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 5 }}>
+                      <span style={{ fontSize: "0.75rem", color: "var(--gray-500)", fontWeight: 700 }}>
+                        {errand.status?.replace("_", " ")}
+                      </span>
+                      <span style={{ fontSize: "0.75rem", color: "var(--blue-600)", fontWeight: 800 }}>
+                        ₦{errand.fee?.toLocaleString()}
+                      </span>
+                    </div>
+                  </div>
+                  <button
+                    className="btn btn-outline btn-sm"
+                    style={{ flexShrink: 0 }}
+                    onClick={() => handleOpenChat(errand)}
+                  >
+                    <MessageSquare size={14} /> Chat
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* ── Errand Feed ── */}
         {loading ? (
           <div className="errand-grid">
@@ -420,6 +585,61 @@ const Dashboard = () => {
                       }}
                     >
                       ₦{errand.fee?.toLocaleString()}
+                    </span>
+                  </div>
+
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 10,
+                      marginBottom: 12,
+                      minWidth: 0,
+                    }}
+                  >
+                    {errand.posterPicture ? (
+                      <img
+                        src={errand.posterPicture}
+                        alt={errand.posterName}
+                        style={{ width: 38, height: 38, borderRadius: 12, objectFit: "cover", flexShrink: 0 }}
+                      />
+                    ) : (
+                      <div
+                        style={{
+                          width: 38,
+                          height: 38,
+                          borderRadius: 12,
+                          background: "var(--blue-50)",
+                          color: "var(--blue-600)",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          fontWeight: 900,
+                          flexShrink: 0,
+                        }}
+                      >
+                        {(errand.posterName || "U").charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                      <div style={{ fontSize: "0.86rem", fontWeight: 900, color: "var(--gray-900)" }}>
+                        {errand.posterName}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: "0.72rem",
+                          color: "var(--gray-500)",
+                          fontWeight: 600,
+                          whiteSpace: "nowrap",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                        }}
+                      >
+                        {[errand.posterDepartment, errand.posterLocation].filter(Boolean).join(" • ") || "Student"}
+                      </div>
+                    </div>
+                    <span style={{ fontSize: "0.68rem", color: "var(--gray-400)", fontWeight: 700, flexShrink: 0 }}>
+                      {new Date(errand.createdAt).toLocaleDateString()}
                     </span>
                   </div>
 
@@ -512,6 +732,185 @@ const Dashboard = () => {
           </div>
         )}
       </div>
+
+      {/* ── Chat Modal ── */}
+      <AnimatePresence>
+        {activeChat && (
+          <div
+            className="modal-overlay"
+            onClick={() => setActiveChat(null)}
+            style={{ display: "flex", alignItems: "center", justifyContent: "center" }}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              className="modal-container"
+              onClick={(e) => e.stopPropagation()}
+              style={{ maxWidth: 520, height: "min(720px, 86vh)", display: "flex", flexDirection: "column" }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  paddingBottom: 16,
+                  borderBottom: "1px solid var(--gray-100)",
+                  marginBottom: 16,
+                }}
+              >
+                <div style={{ minWidth: 0 }}>
+                  <h2
+                    style={{
+                      fontWeight: 900,
+                      fontSize: "1.05rem",
+                      color: "var(--gray-900)",
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                    }}
+                  >
+                    {activeChat.title}
+                  </h2>
+                  <p style={{ fontSize: "0.78rem", color: "var(--gray-400)", marginTop: 4 }}>
+                    Linked to errand ID {activeChat._id}
+                  </p>
+                </div>
+                <button className="btn-icon" onClick={() => setActiveChat(null)}>
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div
+                style={{
+                  flex: 1,
+                  overflowY: "auto",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 10,
+                  paddingRight: 4,
+                }}
+              >
+                {messages.length === 0 ? (
+                  <div style={{ textAlign: "center", color: "var(--gray-400)", padding: "48px 16px" }}>
+                    <MessageSquare size={36} style={{ opacity: 0.35, marginBottom: 10 }} />
+                    <p style={{ fontWeight: 700 }}>No messages yet</p>
+                  </div>
+                ) : (
+                  messages.map((message) => {
+                    const senderId =
+                      typeof message.senderId === "object"
+                        ? message.senderId?._id
+                        : message.senderId;
+                    const isMine = senderId === (user?._id || user?.id);
+                    return (
+                      <div
+                        key={message._id}
+                        style={{
+                          alignSelf: isMine ? "flex-end" : "flex-start",
+                          maxWidth: "82%",
+                          background: isMine ? "var(--blue-600)" : "var(--gray-50)",
+                          color: isMine ? "white" : "var(--gray-800)",
+                          borderRadius: 14,
+                          padding: "10px 12px",
+                        }}
+                      >
+                        {message.text && (
+                          <div style={{ fontSize: "0.9rem", lineHeight: 1.45 }}>{message.text}</div>
+                        )}
+                        {message.imageUrl && (
+                          <img
+                            src={message.imageUrl}
+                            alt="Chat attachment"
+                            style={{
+                              marginTop: message.text ? 8 : 0,
+                              maxWidth: "100%",
+                              maxHeight: 220,
+                              borderRadius: 10,
+                              objectFit: "cover",
+                              display: "block",
+                            }}
+                            onClick={() => window.open(message.imageUrl, "_blank")}
+                          />
+                        )}
+                        <div
+                          style={{
+                            marginTop: 6,
+                            display: "flex",
+                            justifyContent: "flex-end",
+                            gap: 5,
+                            alignItems: "center",
+                            fontSize: "0.66rem",
+                            opacity: 0.75,
+                          }}
+                        >
+                          {new Date(message.createdAt).toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                          {isMine && <CheckCheck size={12} color={message.isRead ? "#A7F3D0" : "currentColor"} />}
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+
+              {chatImageUrl && (
+                <div
+                  style={{
+                    marginTop: 12,
+                    padding: 8,
+                    border: "1px solid var(--gray-100)",
+                    borderRadius: 12,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: 10,
+                  }}
+                >
+                  <img src={chatImageUrl} alt="Pending attachment" style={{ width: 54, height: 54, borderRadius: 10, objectFit: "cover" }} />
+                  <span style={{ flex: 1, fontSize: "0.78rem", color: "var(--gray-500)", fontWeight: 700 }}>
+                    Image ready to send
+                  </span>
+                  <button className="btn-icon" onClick={() => setChatImageUrl("")}>
+                    <X size={15} />
+                  </button>
+                </div>
+              )}
+
+              <form onSubmit={handleSendMessage} style={{ display: "flex", gap: 8, marginTop: 14 }}>
+                <label className="btn btn-outline btn-sm" style={{ cursor: chatImageUploading ? "wait" : "pointer", flexShrink: 0 }}>
+                  <ImagePlus size={16} />
+                  <input
+                    type="file"
+                    accept="image/*"
+                    disabled={chatImageUploading}
+                    onChange={(e) => handleUploadChatImage(e.target.files?.[0])}
+                    style={{ display: "none" }}
+                  />
+                </label>
+                <input
+                  className="input-field"
+                  value={newMessage}
+                  onChange={(e) => setNewMessage(e.target.value)}
+                  placeholder={chatImageUploading ? "Uploading image..." : "Type a message"}
+                  disabled={chatImageUploading}
+                  style={{ minWidth: 0 }}
+                />
+                <button
+                  className="btn btn-primary btn-sm"
+                  type="submit"
+                  disabled={chatImageUploading || (!newMessage.trim() && !chatImageUrl)}
+                  style={{ flexShrink: 0 }}
+                >
+                  <Send size={15} />
+                </button>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* ── Post Errand Modal ── */}
       <AnimatePresence>

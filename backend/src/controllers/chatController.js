@@ -19,6 +19,12 @@ export const getMessagesForErrand = catchAsync(async (req, res) => {
     return res.status(403).json({ message: "You are not authorized to view these messages" });
   }
 
+  // Mark all unread messages from the other party as read
+  await Message.updateMany(
+    { errandId, senderId: { $ne: userId }, isRead: false },
+    { $set: { isRead: true } }
+  );
+
   const messages = await Message.find({ errandId })
     .sort({ createdAt: 1 })
     .lean();
@@ -46,7 +52,7 @@ export const getUserConversations = catchAsync(async (req, res) => {
     .populate("erranderId", "name profilePicture")
     .lean();
 
-  // For each errand, get the last message
+  // For each errand, get the last message and unread count
   const conversations = await Promise.all(
     errands.map(async (errand) => {
       const lastMessage = await Message.findOne({ errandId: errand._id })
@@ -55,9 +61,16 @@ export const getUserConversations = catchAsync(async (req, res) => {
 
       if (!lastMessage) return null; // Only show errands with at least one message
 
+      const unreadCount = await Message.countDocuments({
+        errandId: errand._id,
+        senderId: { $ne: userId },
+        isRead: false,
+      });
+
       return {
         errand,
         lastMessage,
+        unreadCount,
       };
     }),
   );

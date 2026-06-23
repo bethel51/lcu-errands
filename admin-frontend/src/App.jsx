@@ -21,6 +21,17 @@ import {
   Menu,
   Moon,
   Sun,
+  Eye,
+  ThumbsUp,
+  ThumbsDown,
+  Flag,
+  Lock,
+  User,
+  MapPin,
+  Calendar,
+  Hash,
+  Wallet,
+  ChevronRight,
 } from "lucide-react";
 import {
   AreaChart,
@@ -97,6 +108,13 @@ const AdminPortal = () => {
   const [selectedWithdrawalUser, setSelectedWithdrawalUser] = useState(null);
   const [evidenceLoading, setEvidenceLoading] = useState(false);
   const [expandedErrandIdx, setExpandedErrandIdx] = useState(null);
+
+  // Errand Intel States
+  const [errandIntelModal, setErrandIntelModal] = useState(null); // { errand, messages, footprint }
+  const [errandIntelLoading, setErrandIntelLoading] = useState(false);
+  const [intelActionLoading, setIntelActionLoading] = useState(""); // "approve" | "reject" | "flag" | "freeze"
+  const [intelActionReason, setIntelActionReason] = useState("");
+  const [showRejectInput, setShowRejectInput] = useState(false);
 
   const handleInitialSetup = async (e) => {
     e.preventDefault();
@@ -215,6 +233,42 @@ const AdminPortal = () => {
       alert("Failed to send broadcast");
     } finally {
       setBroadcastLoading(false);
+    }
+  };
+
+  const fetchErrandIntel = async (errandId) => {
+    setErrandIntelLoading(true);
+    setErrandIntelModal(null);
+    setShowRejectInput(false);
+    setIntelActionReason("");
+    try {
+      const res = await adminApi.get(`/management/errands/${errandId}/intel`);
+      setErrandIntelModal(res.data);
+    } catch (_err) {
+      alert("Failed to fetch errand intel");
+    } finally {
+      setErrandIntelLoading(false);
+    }
+  };
+
+  const handleErrandAction = async (errandId, action, reason = "") => {
+    setIntelActionLoading(action);
+    try {
+      if (action === "approve") {
+        await adminApi.patch(`/management/errands/${errandId}/approve`);
+      } else if (action === "reject") {
+        await adminApi.patch(`/management/errands/${errandId}/reject`, { reason });
+      } else if (action === "flag") {
+        await adminApi.patch(`/management/errands/${errandId}/flag`);
+      } else if (action === "freeze") {
+        await adminApi.patch(`/management/errands/${errandId}/freeze`);
+      }
+      setErrandIntelModal(null);
+      fetchData();
+    } catch (err) {
+      alert(err.response?.data?.message || `Failed to ${action} errand`);
+    } finally {
+      setIntelActionLoading("");
     }
   };
 
@@ -364,6 +418,29 @@ const AdminPortal = () => {
         return matchesSearch;
       })
     : [];
+
+  const formatDateTime = (value) => {
+    if (!value) return "Not recorded";
+    return new Date(value).toLocaleString();
+  };
+
+  const renderIntelField = (label, value) => (
+    <div
+      style={{
+        background: "#F8FAFC",
+        border: "1px solid #E2E8F0",
+        borderRadius: 10,
+        padding: "10px 12px",
+      }}
+    >
+      <div style={{ fontSize: "0.62rem", color: "#64748B", fontWeight: 900, textTransform: "uppercase", marginBottom: 4 }}>
+        {label}
+      </div>
+      <div style={{ fontSize: "0.86rem", color: "#0F172A", fontWeight: 700, overflowWrap: "anywhere" }}>
+        {value || "Not recorded"}
+      </div>
+    </div>
+  );
 
   if (renderError) {
     return (
@@ -1116,7 +1193,9 @@ const AdminPortal = () => {
                   <thead style={{ background: "#F8FAFC", textAlign: "left" }}>
                     <tr>
                       <th style={{ padding: 15 }}>IDENTIFIER</th>
-                      <th style={{ padding: 15 }}>STATUS / VAL</th>
+                      <th style={{ padding: 15 }}>AMOUNT</th>
+                      {activeTab === "errands" && <th style={{ padding: 15 }}>STATUS</th>}
+                      {activeTab === "users" && <th style={{ padding: 15 }}>STATUS / VAL</th>}
                       <th style={{ padding: 15 }}>ACTION</th>
                     </tr>
                   </thead>
@@ -1184,7 +1263,7 @@ const AdminPortal = () => {
                       : filteredErrands.map((e) => (
                           <tr
                             key={e._id}
-                            style={{ borderTop: "1px solid #F1F5F9" }}
+                            style={{ borderTop: "1px solid #F1F5F9", cursor: "pointer" }}
                           >
                             <td style={{ padding: 15 }}>
                               <div
@@ -1209,20 +1288,36 @@ const AdminPortal = () => {
                               </span>
                             </td>
                             <td style={{ padding: 15 }}>
+                              <span style={{
+                                display: "inline-block",
+                                padding: "3px 10px",
+                                borderRadius: 6,
+                                fontSize: "0.7rem",
+                                fontWeight: 800,
+                                background: e.status === "completed" ? "#ECFDF5" : e.status === "pending_confirmation" ? "#FFF7ED" : e.status === "open" ? "#EFF6FF" : "#F3F4F6",
+                                color: e.status === "completed" ? "#065F46" : e.status === "pending_confirmation" ? "#92400E" : e.status === "open" ? "#1D4ED8" : "#374151",
+                              }}>
+                                {e.status?.toUpperCase()}
+                              </span>
+                            </td>
+                            <td style={{ padding: 15 }}>
                               <button
-                                onClick={() => fetchChat(e._id)}
+                                onClick={() => fetchErrandIntel(e._id)}
                                 style={{
+                                  background: "#EFF6FF",
                                   color: "#2563EB",
-                                  background: "none",
-                                  border: "none",
+                                  padding: "7px 14px",
+                                  border: "1px solid #BFDBFE",
+                                  borderRadius: 8,
                                   fontWeight: 800,
                                   display: "flex",
                                   alignItems: "center",
-                                  gap: 4,
-                                  fontSize: "0.8rem",
+                                  gap: 5,
+                                  fontSize: "0.75rem",
+                                  cursor: "pointer",
                                 }}
                               >
-                                <MessageSquare size={14} /> MONITOR
+                                <Eye size={13} /> INTEL
                               </button>
                             </td>
                           </tr>
@@ -1749,6 +1844,275 @@ const AdminPortal = () => {
         )}
       </AnimatePresence>
 
+      {/* Errand Intelligence Modal */}
+      <AnimatePresence>
+        {errandIntelModal &&
+          (() => {
+            const { errand, messages = [], footprint } = errandIntelModal;
+            const sender = errand?.posterId || {};
+            const messenger = errand?.erranderId || {};
+            const timeline = [
+              ["Posted", footprint?.timePosted || errand?.createdAt],
+              ["Accepted", footprint?.timeAccepted],
+              ["Completed", footprint?.timeCompleted],
+              ["Confirmed", footprint?.timeConfirmed],
+            ];
+
+            return (
+              <div
+                style={{
+                  position: "fixed",
+                  inset: 0,
+                  background: "rgba(15,23,42,0.62)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  zIndex: 1200,
+                  padding: 18,
+                }}
+              >
+                <motion.div
+                  initial={{ y: 40, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  exit={{ y: 20, opacity: 0 }}
+                  style={{
+                    background: "white",
+                    width: "100%",
+                    maxWidth: 1040,
+                    borderRadius: 18,
+                    maxHeight: "88vh",
+                    overflow: "hidden",
+                    display: "flex",
+                    flexDirection: "column",
+                  }}
+                >
+                  <div
+                    style={{
+                      padding: "18px 22px",
+                      borderBottom: "1px solid #E2E8F0",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      gap: 12,
+                      alignItems: "center",
+                    }}
+                  >
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 5 }}>
+                        <span
+                          style={{
+                            background: footprint ? "#ECFDF5" : "#FEF2F2",
+                            color: footprint ? "#047857" : "#B91C1C",
+                            border: `1px solid ${footprint ? "#A7F3D0" : "#FECACA"}`,
+                            padding: "4px 8px",
+                            borderRadius: 6,
+                            fontSize: "0.68rem",
+                            fontWeight: 900,
+                          }}
+                        >
+                          {footprint ? "DIGITAL FOOTPRINT FOUND" : "DIGITAL FOOTPRINT MISSING"}
+                        </span>
+                        <span style={{ fontSize: "0.72rem", color: "#64748B", fontWeight: 800 }}>
+                          {errand?.trackingId || errand?._id}
+                        </span>
+                      </div>
+                      <h3 style={{ fontWeight: 900, fontSize: "1.1rem", margin: 0, color: "#0F172A" }}>
+                        {errand?.title}
+                      </h3>
+                    </div>
+                    <button
+                      onClick={() => setErrandIntelModal(null)}
+                      style={{ background: "none", border: "none", cursor: "pointer" }}
+                    >
+                      <X />
+                    </button>
+                  </div>
+
+                  <div style={{ overflow: "auto", padding: 22 }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 14, marginBottom: 18 }}>
+                      <div style={{ border: "1px solid #E2E8F0", borderRadius: 14, padding: 14 }}>
+                        <h4 style={{ fontWeight: 900, marginBottom: 10 }}>Sender Information</h4>
+                        {renderIntelField("Full Name", sender.name)}
+                        <div style={{ height: 8 }} />
+                        {renderIntelField("Email", sender.email)}
+                        <div style={{ height: 8 }} />
+                        {renderIntelField("Department", sender.department)}
+                        <div style={{ height: 8 }} />
+                        {renderIntelField("Hostel / Location", sender.location)}
+                      </div>
+
+                      <div style={{ border: "1px solid #E2E8F0", borderRadius: 14, padding: 14 }}>
+                        <h4 style={{ fontWeight: 900, marginBottom: 10 }}>Messenger Information</h4>
+                        {renderIntelField("Full Name", messenger.name)}
+                        <div style={{ height: 8 }} />
+                        {renderIntelField("Email", messenger.email)}
+                        <div style={{ height: 8 }} />
+                        {renderIntelField("Hostel / Location", messenger.location)}
+                        <div style={{ height: 8 }} />
+                        {renderIntelField("Rating", messenger.rating ? `${messenger.rating}` : "Not rated")}
+                      </div>
+
+                      <div style={{ border: "1px solid #E2E8F0", borderRadius: 14, padding: 14 }}>
+                        <h4 style={{ fontWeight: 900, marginBottom: 10 }}>Payment Status</h4>
+                        {renderIntelField("Errand Status", errand?.status)}
+                        <div style={{ height: 8 }} />
+                        {renderIntelField("Fee", `₦${(errand?.fee || 0).toLocaleString()}`)}
+                        <div style={{ height: 8 }} />
+                        {renderIntelField("Footprint Payment", footprint?.status)}
+                        <div style={{ height: 8 }} />
+                        {renderIntelField("Transaction Ref", footprint?.transactionReference)}
+                      </div>
+                    </div>
+
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 14, marginBottom: 18 }}>
+                      <div style={{ border: "1px solid #E2E8F0", borderRadius: 14, padding: 14 }}>
+                        <h4 style={{ fontWeight: 900, marginBottom: 10 }}>Activity Timeline</h4>
+                        {timeline.map(([label, value]) => (
+                          <div key={label} style={{ display: "flex", justifyContent: "space-between", gap: 10, padding: "8px 0", borderBottom: "1px solid #F1F5F9" }}>
+                            <span style={{ fontSize: "0.8rem", color: "#64748B", fontWeight: 800 }}>{label}</span>
+                            <span style={{ fontSize: "0.8rem", color: "#0F172A", fontWeight: 700, textAlign: "right" }}>
+                              {formatDateTime(value)}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+
+                      <div style={{ border: "1px solid #E2E8F0", borderRadius: 14, padding: 14 }}>
+                        <h4 style={{ fontWeight: 900, marginBottom: 10 }}>Device Logs</h4>
+                        {renderIntelField("Posted Device", footprint?.deviceInfo?.posted)}
+                        <div style={{ height: 8 }} />
+                        {renderIntelField("Accepted Device", footprint?.deviceInfo?.accepted)}
+                        <div style={{ height: 8 }} />
+                        {renderIntelField("Completed Device", footprint?.deviceInfo?.completed)}
+                        <div style={{ height: 8 }} />
+                        {renderIntelField("Confirmed Device", footprint?.deviceInfo?.confirmed)}
+                      </div>
+
+                      <div style={{ border: "1px solid #E2E8F0", borderRadius: 14, padding: 14 }}>
+                        <h4 style={{ fontWeight: 900, marginBottom: 10 }}>IP / Location Logs</h4>
+                        {renderIntelField("Posted IP", footprint?.ipAddress?.posted)}
+                        <div style={{ height: 8 }} />
+                        {renderIntelField("Accepted IP", footprint?.ipAddress?.accepted)}
+                        <div style={{ height: 8 }} />
+                        {renderIntelField("Completed IP", footprint?.ipAddress?.completed)}
+                        <div style={{ height: 8 }} />
+                        {renderIntelField("Last Location", footprint?.locationData?.confirmed || footprint?.locationData?.completed || footprint?.locationData?.posted)}
+                      </div>
+                    </div>
+
+                    <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(280px, 0.75fr)", gap: 14 }}>
+                      <div style={{ border: "1px solid #E2E8F0", borderRadius: 14, padding: 14, minHeight: 220 }}>
+                        <h4 style={{ fontWeight: 900, marginBottom: 10 }}>Chat History</h4>
+                        {messages.length === 0 ? (
+                          <div style={{ color: "#64748B", fontWeight: 700, padding: "30px 0", textAlign: "center" }}>
+                            No chat messages found for this errand.
+                          </div>
+                        ) : (
+                          <div style={{ display: "flex", flexDirection: "column", gap: 10, maxHeight: 260, overflow: "auto" }}>
+                            {messages.map((m) => (
+                              <div key={m._id} style={{ background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: 10, padding: 10 }}>
+                                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
+                                  <strong style={{ color: "#2563EB", fontSize: "0.75rem" }}>{m.senderId?.name || "System"}</strong>
+                                  <span style={{ color: "#94A3B8", fontSize: "0.68rem", fontWeight: 700 }}>{formatDateTime(m.createdAt)}</span>
+                                </div>
+                                {m.text && <div style={{ fontSize: "0.85rem", color: "#0F172A" }}>{m.text}</div>}
+                                {m.imageUrl && (
+                                  <img
+                                    src={m.imageUrl}
+                                    alt="Chat attachment"
+                                    style={{ marginTop: 8, maxWidth: "100%", maxHeight: 170, borderRadius: 8, objectFit: "cover", cursor: "pointer" }}
+                                    onClick={() => window.open(m.imageUrl, "_blank")}
+                                  />
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      <div style={{ border: "1px solid #E2E8F0", borderRadius: 14, padding: 14 }}>
+                        <h4 style={{ fontWeight: 900, marginBottom: 10 }}>Action Section</h4>
+                        <div style={{ display: "grid", gap: 8 }}>
+                          <button
+                            onClick={() => handleErrandAction(errand._id, "approve")}
+                            disabled={!!intelActionLoading}
+                            style={{ padding: "10px 12px", borderRadius: 8, border: "none", background: "#10B981", color: "white", fontWeight: 900, cursor: "pointer" }}
+                          >
+                            {intelActionLoading === "approve" ? "Processing..." : "Approve Transaction"}
+                          </button>
+                          <button
+                            onClick={() => handleErrandAction(errand._id, "approve")}
+                            disabled={!!intelActionLoading}
+                            style={{ padding: "10px 12px", borderRadius: 8, border: "1px solid #BFDBFE", background: "#EFF6FF", color: "#2563EB", fontWeight: 900, cursor: "pointer" }}
+                          >
+                            Release Funds
+                          </button>
+                          <button
+                            onClick={() => handleErrandAction(errand._id, "flag")}
+                            disabled={!!intelActionLoading}
+                            style={{ padding: "10px 12px", borderRadius: 8, border: "1px solid #FED7AA", background: "#FFF7ED", color: "#C2410C", fontWeight: 900, cursor: "pointer" }}
+                          >
+                            {footprint?.isSuspicious ? "Unflag Suspicious Activity" : "Flag Suspicious Activity"}
+                          </button>
+                          <button
+                            onClick={() => handleErrandAction(errand._id, "freeze")}
+                            disabled={!!intelActionLoading}
+                            style={{ padding: "10px 12px", borderRadius: 8, border: "1px solid #CBD5E1", background: "#F8FAFC", color: "#334155", fontWeight: 900, cursor: "pointer" }}
+                          >
+                            Freeze Funds
+                          </button>
+                          <button
+                            onClick={() => setShowRejectInput((value) => !value)}
+                            disabled={!!intelActionLoading}
+                            style={{ padding: "10px 12px", borderRadius: 8, border: "1px solid #FECACA", background: "#FEF2F2", color: "#DC2626", fontWeight: 900, cursor: "pointer" }}
+                          >
+                            Reject Transaction
+                          </button>
+                        </div>
+
+                        {showRejectInput && (
+                          <div style={{ marginTop: 10 }}>
+                            <textarea
+                              value={intelActionReason}
+                              onChange={(e) => setIntelActionReason(e.target.value)}
+                              placeholder="Reason for rejection"
+                              style={{ width: "100%", minHeight: 72, border: "1px solid #E2E8F0", borderRadius: 8, padding: 10 }}
+                            />
+                            <button
+                              onClick={() => handleErrandAction(errand._id, "reject", intelActionReason)}
+                              disabled={!intelActionReason.trim() || !!intelActionLoading}
+                              style={{ marginTop: 8, width: "100%", padding: "10px 12px", borderRadius: 8, border: "none", background: "#DC2626", color: "white", fontWeight: 900, cursor: "pointer", opacity: intelActionReason.trim() ? 1 : 0.55 }}
+                            >
+                              Confirm Rejection
+                            </button>
+                          </div>
+                        )}
+
+                        <div style={{ marginTop: 14 }}>
+                          <h5 style={{ fontWeight: 900, marginBottom: 8 }}>Full Audit Trail</h5>
+                          <div style={{ maxHeight: 210, overflow: "auto", display: "grid", gap: 8 }}>
+                            {(footprint?.auditTrail || []).map((entry, index) => (
+                              <div key={`${entry.action}-${index}`} style={{ background: "#F8FAFC", borderRadius: 8, padding: 9, border: "1px solid #E2E8F0" }}>
+                                <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
+                                  <strong style={{ fontSize: "0.72rem", color: "#0F172A" }}>{entry.action}</strong>
+                                  <span style={{ fontSize: "0.65rem", color: "#64748B", fontWeight: 700 }}>{formatDateTime(entry.timestamp)}</span>
+                                </div>
+                                <div style={{ fontSize: "0.74rem", color: "#475569", marginTop: 4 }}>{entry.details || "No details"}</div>
+                              </div>
+                            ))}
+                            {(!footprint?.auditTrail || footprint.auditTrail.length === 0) && (
+                              <div style={{ color: "#64748B", fontWeight: 700 }}>No audit entries recorded.</div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              </div>
+            );
+          })()}
+      </AnimatePresence>
+
       {/* Intel Chat Monitor Modal */}
       <AnimatePresence>
         {selectedErrandChat && (
@@ -1884,7 +2248,7 @@ const AdminPortal = () => {
                       style={{ opacity: 0.2, marginBottom: 15 }}
                     />
                     <p style={{ fontSize: "0.9rem", fontWeight: 600 }}>
-                      No digital footprint found for this errand.
+                      No chat messages found for this errand.
                     </p>
                   </div>
                 )}

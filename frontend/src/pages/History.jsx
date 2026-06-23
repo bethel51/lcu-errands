@@ -17,6 +17,12 @@ const History = () => {
   const [processing, setProcessing] = useState(false);
   const [selectedErrandId, setSelectedErrandId] = useState(null);
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
+  const [toast, setToast] = useState(null);
+
+  const showToast = (message, type = "success") => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 4000);
+  };
 
   useEffect(() => {
     const fetchHistory = async () => {
@@ -69,9 +75,10 @@ const History = () => {
     setProcessing(true);
     try {
       await api.delete(`/errands/${id}`);
+      showToast("Errand cancelled. Funds refunded to your wallet.");
       window.location.reload();
     } catch (err) {
-      alert("Failed to cancel. It might have been accepted already.");
+      showToast(err.response?.data?.message || "Failed to cancel. It might have been accepted already.", "error");
     } finally {
       setProcessing(false);
     }
@@ -81,9 +88,10 @@ const History = () => {
     setProcessing(true);
     try {
       await api.patch(`/errands/${id}/complete`);
+      showToast("✅ Delivery confirmed! Payment released to messenger.");
       window.location.reload();
     } catch (err) {
-      alert("Failed to complete task.");
+      showToast(err.response?.data?.message || "Failed to confirm delivery.", "error");
     } finally {
       setProcessing(false);
     }
@@ -93,9 +101,10 @@ const History = () => {
     setProcessing(true);
     try {
       await api.patch(`/errands/${id}/request-completion`);
+      showToast("Completion requested! Waiting for sender to confirm.");
       window.location.reload();
     } catch (err) {
-      alert("Failed to request completion.");
+      showToast(err.response?.data?.message || "Failed to request completion.", "error");
     } finally {
       setProcessing(false);
     }
@@ -114,15 +123,16 @@ const History = () => {
     }
 
     const steps = [
-      { label: "Posted", desc: "Funds in Escrow", active: ["open", "assigned", "completed"].includes(status) },
-      { label: "Assigned", desc: "Task in Progress", active: ["assigned", "completed"].includes(status) },
-      { label: "Completed", desc: "Task Finished", active: ["completed"].includes(status) },
+      { label: "Posted", desc: "Funds in Escrow", active: ["open", "assigned", "in_progress", "pending_confirmation", "completed"].includes(status) },
+      { label: "Assigned", desc: "Task in Progress", active: ["assigned", "in_progress", "pending_confirmation", "completed"].includes(status) },
+      { label: "Pending", desc: "Awaiting Confirmation", active: ["pending_confirmation", "completed"].includes(status) },
       { label: "Disbursed", desc: "Released to Wallet", active: ["completed"].includes(status) },
     ];
 
     let progressWidth = "0%";
     if (status === "completed") progressWidth = "100%";
-    else if (status === "assigned") progressWidth = "50%";
+    else if (status === "pending_confirmation") progressWidth = "75%";
+    else if (["assigned", "in_progress"].includes(status)) progressWidth = "45%";
 
     return (
       <div className="escrow-tracker">
@@ -347,35 +357,36 @@ const History = () => {
                       </button>
                     )}
 
-                    {filterType === "posted" && item.status === "assigned" && (
+                    {filterType === "posted" && item.status === "pending_confirmation" && (
                       <button
                         onClick={() => handleCompleteTask(item.id)}
                         className="btn btn-primary btn-sm"
                         style={{
-                          boxShadow: item.completionRequested ? "0 0 10px var(--blue-600)" : "none",
+                          boxShadow: "0 0 14px var(--blue-600)",
+                          animation: "pulse 1.8s infinite",
                         }}
                       >
-                        {item.completionRequested ? "Confirm Delivery 🔔" : "Confirm Delivery"}
+                        Confirm Delivery 🔔
                       </button>
                     )}
 
-                    {filterType === "accepted" && item.status === "assigned" && (
-                      item.completionRequested ? (
-                        <button
-                          className="btn btn-outline btn-sm"
-                          disabled
-                          style={{ borderColor: "var(--gray-300)", color: "var(--gray-400)", cursor: "not-allowed" }}
-                        >
-                          Pending Poster Confirmation
-                        </button>
-                      ) : (
-                        <button
-                          onClick={() => handleRequestCompletion(item.id)}
-                          className="btn btn-primary btn-sm"
-                        >
-                          Mark Completed
-                        </button>
-                      )
+                    {filterType === "accepted" && item.status === "in_progress" && (
+                      <button
+                        onClick={() => handleRequestCompletion(item.id)}
+                        className="btn btn-primary btn-sm"
+                      >
+                        Mark Completed
+                      </button>
+                    )}
+
+                    {filterType === "accepted" && item.status === "pending_confirmation" && (
+                      <button
+                        className="btn btn-outline btn-sm"
+                        disabled
+                        style={{ borderColor: "var(--gray-300)", color: "var(--gray-400)", cursor: "not-allowed" }}
+                      >
+                        ⏳ Awaiting Sender Confirmation
+                      </button>
                     )}
 
                     {item.status === "completed" && (
@@ -413,6 +424,21 @@ const History = () => {
             onSuccess={() => window.location.reload()}
           />
         )}
+
+        {/* Toast notifications */}
+        <AnimatePresence>
+          {toast && (
+            <motion.div
+              key="toast"
+              initial={{ opacity: 0, y: 20, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 10, scale: 0.97 }}
+              className={`toast toast-${toast.type}`}
+            >
+              {toast.message}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );

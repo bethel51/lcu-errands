@@ -9,6 +9,9 @@ import {
   Zap,
   Package,
   RefreshCw,
+  Building,
+  Home,
+  Star,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import api from "../api";
@@ -21,6 +24,9 @@ const CATEGORY_COLORS = {
   shopping: { bg: "#F3E8FF", color: "#6B21A8", border: "#E9D5FF" },
   laundry: { bg: "#ECFDF5", color: "#065F46", border: "#A7F3D0" },
   printing: { bg: "#FFF7ED", color: "#9A3412", border: "#FED7AA" },
+  meals: { bg: "#FEF3C7", color: "#92400E", border: "#FDE68A" },
+  academic: { bg: "#DBEAFE", color: "#1E40AF", border: "#BFDBFE" },
+  gates: { bg: "#F3F4F6", color: "#374151", border: "#E5E7EB" },
   default: { bg: "#F3F4F6", color: "#374151", border: "#E5E7EB" },
 };
 
@@ -36,6 +42,26 @@ const timeAgo = (dateStr) => {
   if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
   if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
   return new Date(dateStr).toLocaleDateString();
+};
+
+/* ─── Sender Avatar ────────────────────────────────────────────────── */
+const SenderAvatar = ({ picture, name }) => {
+  const initials = (name || "U").charAt(0).toUpperCase();
+  return picture ? (
+    <img
+      src={picture}
+      alt={name}
+      style={{ width: 40, height: 40, borderRadius: 12, objectFit: "cover", flexShrink: 0 }}
+    />
+  ) : (
+    <div style={{
+      width: 40, height: 40, borderRadius: 12, background: "var(--blue-100)",
+      color: "var(--blue-600)", display: "flex", alignItems: "center",
+      justifyContent: "center", fontWeight: 800, fontSize: "1rem", flexShrink: 0,
+    }}>
+      {initials}
+    </div>
+  );
 };
 
 /* ─── Component ────────────────────────────────────────────────────── */
@@ -68,11 +94,17 @@ const ErrandStream = () => {
     title: err.title,
     description: err.description,
     category: err.category,
+    pickupLocation: err.pickupLocation,
+    dropoffLocation: err.dropoffLocation,
     location: err.dropoffLocation,
     fee: err.fee,
     status: err.status,
-    posterName:
-      err.posterId?._id === cachedUserId ? "You" : err.posterId?.name || "User",
+    trackingId: err.trackingId,
+    posterName: err.posterId?._id === cachedUserId ? "You" : err.posterId?.name || "User",
+    posterPicture: err.posterId?.profilePicture || null,
+    posterDepartment: err.posterId?.department || null,
+    posterLocation: err.posterId?.location || null,
+    posterRating: err.posterId?.rating || 0,
     posterId: err.posterId?._id || err.posterId,
     createdAt: err.createdAt,
     isNew: false,
@@ -104,7 +136,6 @@ const ErrandStream = () => {
       if (mapped.status === "open") {
         setErrands((prev) => [mapped, ...prev]);
         showToast(`🆕 "${mapped.title}" just landed!`, "info");
-        // Clear the "new" highlight after 4 s
         setTimeout(() => {
           setErrands((prev) =>
             prev.map((e) => (e.id === mapped.id ? { ...e, isNew: false } : e))
@@ -154,28 +185,13 @@ const ErrandStream = () => {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             style={{
-              position: "fixed",
-              inset: 0,
-              background: "rgba(255,255,255,0.88)",
-              backdropFilter: "blur(6px)",
-              zIndex: 9999,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              flexDirection: "column",
-              gap: 16,
+              position: "fixed", inset: 0, background: "rgba(255,255,255,0.88)",
+              backdropFilter: "blur(6px)", zIndex: 9999, display: "flex",
+              alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 16,
             }}
           >
             <div className="loader" style={{ width: 44, height: 44 }} />
-            <div
-              style={{
-                fontWeight: 700,
-                color: "#111827",
-                fontSize: "0.8rem",
-                letterSpacing: "0.15em",
-                textTransform: "uppercase",
-              }}
-            >
+            <div style={{ fontWeight: 700, color: "#111827", fontSize: "0.8rem", letterSpacing: "0.15em", textTransform: "uppercase" }}>
               Accepting Task...
             </div>
           </motion.div>
@@ -199,10 +215,7 @@ const ErrandStream = () => {
             </div>
           </div>
           <button
-            onClick={() => {
-              setLoading(true);
-              fetchErrands();
-            }}
+            onClick={() => { setLoading(true); fetchErrands(); }}
             className="stream-refresh-btn"
             title="Refresh feed"
           >
@@ -231,18 +244,10 @@ const ErrandStream = () => {
             <p>Connecting to live stream…</p>
           </div>
         ) : filteredErrands.length === 0 ? (
-          <motion.div
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="stream-empty-state"
-          >
+          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="stream-empty-state">
             <Package size={40} strokeWidth={1.5} />
             <h3>No Active Errands</h3>
-            <p>
-              {search
-                ? "No tasks match your search. Try a different keyword."
-                : "The campus is quiet right now. New errands will appear here live."}
-            </p>
+            <p>{search ? "No tasks match your search. Try a different keyword." : "The campus is quiet right now. New errands will appear here live."}</p>
           </motion.div>
         ) : (
           <div className="stream-feed-list">
@@ -259,23 +264,44 @@ const ErrandStream = () => {
                     transition={{ type: "spring", stiffness: 460, damping: 28 }}
                     className={`stream-card${errand.isNew ? " stream-card--new" : ""}`}
                   >
-                    {errand.isNew && (
-                      <div className="stream-card-new-ribbon">NEW</div>
-                    )}
+                    {errand.isNew && <div className="stream-card-new-ribbon">NEW</div>}
+
+                    {/* Sender info row */}
+                    <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14, paddingBottom: 14, borderBottom: "1px solid var(--gray-100)" }}>
+                      <SenderAvatar picture={errand.posterPicture} name={errand.posterName} />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: 800, fontSize: "0.9rem", color: "var(--gray-900)" }}>{errand.posterName}</div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginTop: 3 }}>
+                          {errand.posterDepartment && (
+                            <span style={{ display: "flex", alignItems: "center", gap: 4, fontSize: "0.72rem", color: "var(--blue-600)", fontWeight: 600 }}>
+                              <Building size={11} /> {errand.posterDepartment}
+                            </span>
+                          )}
+                          {errand.posterLocation && (
+                            <span style={{ display: "flex", alignItems: "center", gap: 4, fontSize: "0.72rem", color: "var(--gray-500)", fontWeight: 600 }}>
+                              <Home size={11} /> {errand.posterLocation}
+                            </span>
+                          )}
+                          {errand.posterRating > 0 && (
+                            <span style={{ display: "flex", alignItems: "center", gap: 3, fontSize: "0.72rem", color: "#D97706", fontWeight: 700 }}>
+                              <Star size={10} fill="#D97706" color="#D97706" /> {errand.posterRating.toFixed(1)}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      {errand.trackingId && (
+                        <span style={{ fontSize: "0.6rem", fontWeight: 800, color: "var(--gray-400)", background: "var(--gray-50)", padding: "3px 8px", borderRadius: 6, letterSpacing: "0.05em" }}>
+                          {errand.trackingId}
+                        </span>
+                      )}
+                    </div>
 
                     {/* Card top row */}
                     <div className="stream-card-top">
                       <div className="stream-card-info">
                         <h3 className="stream-card-title">{errand.title}</h3>
                         <div className="stream-card-meta">
-                          <span
-                            className="stream-cat-chip"
-                            style={{
-                              background: catStyle.bg,
-                              color: catStyle.color,
-                              border: `1px solid ${catStyle.border}`,
-                            }}
-                          >
+                          <span className="stream-cat-chip" style={{ background: catStyle.bg, color: catStyle.color, border: `1px solid ${catStyle.border}` }}>
                             {errand.category}
                           </span>
                           <span className="stream-meta-dot">·</span>
@@ -283,33 +309,31 @@ const ErrandStream = () => {
                             <Clock size={11} />
                             {timeAgo(errand.createdAt)}
                           </span>
-                          <span className="stream-meta-dot">·</span>
-                          <span className="stream-meta-item">
-                            {errand.posterName}
-                          </span>
                         </div>
                       </div>
-
-                      <div className="stream-fee-badge">
-                        ₦{errand.fee.toLocaleString()}
-                      </div>
+                      <div className="stream-fee-badge">₦{errand.fee.toLocaleString()}</div>
                     </div>
 
                     {/* Description */}
                     <p className="stream-card-desc">{errand.description}</p>
 
+                    {/* Locations row */}
+                    {errand.pickupLocation && (
+                      <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.75rem", color: "var(--gray-500)", marginBottom: 8 }}>
+                        <Radio size={11} style={{ color: "var(--green-500)", flexShrink: 0 }} />
+                        <span>Pick up: {errand.pickupLocation}</span>
+                      </div>
+                    )}
+
                     {/* Footer */}
                     <div className="stream-card-footer">
                       <div className="stream-card-loc">
                         <MapPin size={13} />
-                        <span>{errand.location || "Not specified"}</span>
+                        <span>Drop off: {errand.location || "Not specified"}</span>
                       </div>
 
                       {userRole === "messenger" && !isOwner && (
-                        <button
-                          onClick={() => handleAcceptErrand(errand.id)}
-                          className="stream-accept-btn"
-                        >
+                        <button onClick={() => handleAcceptErrand(errand.id)} className="stream-accept-btn">
                           Accept Task
                           <ArrowRight size={14} />
                         </button>

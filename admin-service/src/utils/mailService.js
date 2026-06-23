@@ -45,9 +45,50 @@ transporter.verify((error) => {
 });
 
 export const sendEmail = async (to, subject, text, html) => {
+  const brevoApiKey = (process.env.BREVO_API_KEY || "").trim();
   const resendApiKey = (process.env.RESEND_API_KEY || "").trim();
-  const emailFrom = process.env.EMAIL_FROM || "onboarding@resend.dev";
+  const emailFrom = process.env.EMAIL_FROM || process.env.EMAIL_USER || "no-reply@leadcityerrands.com";
+  const senderName = process.env.EMAIL_SENDER_NAME || "LCU Errands";
 
+  // Try Brevo API first
+  if (brevoApiKey) {
+    try {
+      console.log(`📡 [Brevo API] Sending email to ${to}...`);
+      const response = await fetch("https://api.brevo.com/v3/smtp/email", {
+        method: "POST",
+        headers: {
+          "accept": "application/json",
+          "api-key": brevoApiKey,
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          sender: {
+            name: senderName,
+            email: emailFrom,
+          },
+          to: [{ email: to }],
+          subject,
+          htmlContent: html || text,
+          textContent: text,
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log(`📧 Email sent successfully via Brevo API to ${to}. MessageId: ${data.messageId}`);
+        return true;
+      } else {
+        const errorText = await response.text();
+        console.error("❌ Brevo API ERROR: Failed to send email", response.status, errorText);
+        console.log("Falling back...");
+      }
+    } catch (error) {
+      console.error("❌ Brevo API ERROR: Failed to send email", error.message);
+      console.log("Falling back...");
+    }
+  }
+
+  // Try Resend API
   if (resendApiKey) {
     try {
       console.log(`📡 [Resend API] Sending email to ${to}...`);
@@ -58,7 +99,7 @@ export const sendEmail = async (to, subject, text, html) => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          from: `LCU Errands <${emailFrom}>`,
+          from: `${senderName} <${emailFrom}>`,
           to: [to],
           subject,
           text,
@@ -73,16 +114,15 @@ export const sendEmail = async (to, subject, text, html) => {
       } else {
         const errorText = await response.text();
         console.error("❌ Resend API ERROR: Failed to send email", response.status, errorText);
-        return false;
+        console.log("Falling back...");
       }
     } catch (error) {
-      console.error("❌ Resend API ERROR: Failed to send email");
-      console.error("Target:", to);
-      console.error("Error Message:", error.message);
-      return false;
+      console.error("❌ Resend API ERROR: Failed to send email", error.message);
+      console.log("Falling back...");
     }
   }
 
+  // Fallback to Nodemailer SMTP
   const user = process.env.SMTP_USER || process.env.EMAIL_USER;
   const pass = process.env.SMTP_PASS || process.env.EMAIL_PASS;
 
@@ -93,18 +133,18 @@ export const sendEmail = async (to, subject, text, html) => {
 
   try {
     const info = await transporter.sendMail({
-      from: `"LCU Errands" <${user}>`,
+      from: `"${senderName}" <${user}>`,
       to,
       subject,
       text,
       html: html || text,
     });
     console.log(
-      `📧 Email sent successfully to ${to}. MessageId: ${info.messageId}`,
+      `📧 Email sent successfully to ${to} via SMTP. MessageId: ${info.messageId}`,
     );
     return true;
   } catch (error) {
-    console.error("❌ Failed to send email to:", to);
+    console.error("❌ Failed to send email via SMTP to:", to);
     console.error("Error Details:", error.message || error);
     if (error.code === "EAUTH") {
       console.error(

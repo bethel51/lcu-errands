@@ -209,17 +209,25 @@ io.on("connection", (socket) => {
   });
 
   socket.on("join", async (userId) => {
-    socket.join(userId);
-    onlineUsers.set(socket.id, userId);
+    try {
+      if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
+        console.warn(`[Socket] Invalid or missing userId passed to join: ${userId}`);
+        return;
+      }
+      socket.join(userId);
+      onlineUsers.set(socket.id, userId);
 
-    // Update DB
-    await User.findByIdAndUpdate(userId, { isOnline: true });
+      // Update DB
+      await User.findByIdAndUpdate(userId, { isOnline: true });
 
-    // Broadcast status change
-    io.emit("user_status_change", { userId, isOnline: true });
-    console.log(
-      `User ${socket.id} (ID: ${userId}) joined personal room and is now ONLINE`,
-    );
+      // Broadcast status change
+      io.emit("user_status_change", { userId, isOnline: true });
+      console.log(
+        `User ${socket.id} (ID: ${userId}) joined personal room and is now ONLINE`,
+      );
+    } catch (err) {
+      console.error("[Socket] Error in join handler:", err);
+    }
   });
 
   socket.on("send_message", async (data) => {
@@ -276,16 +284,20 @@ io.on("connection", (socket) => {
   });
 
   socket.on("disconnect", async () => {
-    const userId = onlineUsers.get(socket.id);
-    if (userId) {
-      // Check if user has other active connections before marking offline
-      const userSockets = await io.in(userId).fetchSockets();
-      if (userSockets.length === 0) {
-        await User.findByIdAndUpdate(userId, { isOnline: false });
-        io.emit("user_status_change", { userId, isOnline: false });
-        console.log(`User ${userId} is now OFFLINE`);
+    try {
+      const userId = onlineUsers.get(socket.id);
+      if (userId && mongoose.Types.ObjectId.isValid(userId)) {
+        // Check if user has other active connections before marking offline
+        const userSockets = await io.in(userId).fetchSockets();
+        if (userSockets.length === 0) {
+          await User.findByIdAndUpdate(userId, { isOnline: false });
+          io.emit("user_status_change", { userId, isOnline: false });
+          console.log(`User ${userId} is now OFFLINE`);
+        }
+        onlineUsers.delete(socket.id);
       }
-      onlineUsers.delete(socket.id);
+    } catch (err) {
+      console.error("[Socket] Error in disconnect handler:", err);
     }
     console.log("User disconnected:", socket.id);
   });

@@ -220,14 +220,39 @@ const Profile = () => {
     }
   };
 
-  const handleVerifySelf = async () => {
+  const handleVerifySelf = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
     setLoading(true);
     try {
-      const res = await api.post("/users/verify");
+      // Compress image
+      const options = {
+        maxSizeMB: 0.5,
+        maxWidthOrHeight: 1200,
+        useWebWorker: true,
+      };
+      const compressedFile = await imageCompression(file, options);
+      const uploadData = new FormData();
+      uploadData.append("image", compressedFile);
+
+      // Upload ID card
+      const uploadRes = await api.post("/users/upload", uploadData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
+      const imageUrl = uploadRes.data.url;
+      if (!imageUrl) {
+        throw new Error("Failed to get image URL from upload response");
+      }
+
+      // Submit verification request
+      const res = await api.post("/users/verify", { verificationProof: imageUrl });
       setUser(res.data.user);
       localStorage.setItem("user", JSON.stringify(res.data.user));
-      alert("✅ Account successfully verified!");
+      alert("✅ Verification request submitted to Admin! Under review.");
     } catch (err) {
+      console.error("Verification upload failed", err);
       alert("❌ Verification failed. Please try again.");
     } finally {
       setLoading(false);
@@ -448,15 +473,23 @@ const Profile = () => {
             >
               <ShieldCheck
                 size={20}
-                color={user.isVerified ? "var(--green-500)" : "var(--gray-300)"}
+                color={
+                  user.isVerified
+                    ? "var(--green-500)"
+                    : user.verificationStatus === "pending"
+                      ? "var(--amber-500)"
+                      : "var(--gray-300)"
+                }
               />
               <span style={{ fontWeight: 600 }}>
-                {user.isVerified ? "Verified Account" : "Unverified Student"}
+                {user.isVerified
+                  ? "Verified Account"
+                  : user.verificationStatus === "pending"
+                    ? "Verification Pending"
+                    : "Unverified Student"}
               </span>
-              {!user.isVerified && (
-                <button
-                  onClick={handleVerifySelf}
-                  disabled={loading}
+              {!user.isVerified && user.verificationStatus !== "pending" && (
+                <label
                   style={{
                     marginLeft: "auto",
                     padding: "6px 14px",
@@ -467,10 +500,18 @@ const Profile = () => {
                     fontWeight: 600,
                     cursor: loading ? "not-allowed" : "pointer",
                     border: "none",
+                    display: "inline-block",
                   }}
                 >
-                  {loading ? "..." : "Verify Now"}
-                </button>
+                  {loading ? "Uploading..." : "Upload ID"}
+                  <input
+                    type="file"
+                    hidden
+                    accept="image/*"
+                    onChange={handleVerifySelf}
+                    disabled={loading}
+                  />
+                </label>
               )}
             </div>
             {!isEditing && (
@@ -773,8 +814,20 @@ const Profile = () => {
                       background:
                         user.verificationStatus === "verified"
                           ? "var(--green-50)"
-                          : "var(--gray-50)",
-                      border: `1px solid ${user.verificationStatus === "verified" ? "var(--green-200)" : "var(--gray-200)"}`,
+                          : user.verificationStatus === "pending"
+                            ? "var(--amber-50)"
+                            : user.verificationReason
+                              ? "var(--red-50)"
+                              : "var(--gray-50)",
+                      border: `1px solid ${
+                        user.verificationStatus === "verified"
+                          ? "var(--green-200)"
+                          : user.verificationStatus === "pending"
+                            ? "var(--amber-200)"
+                            : user.verificationReason
+                              ? "var(--red-200)"
+                              : "var(--gray-200)"
+                      }`,
                       padding: 24,
                       borderRadius: 24,
                       display: "flex",
@@ -797,7 +850,11 @@ const Profile = () => {
                           color={
                             user.verificationStatus === "verified"
                               ? "var(--green-600)"
-                              : "var(--gray-400)"
+                              : user.verificationStatus === "pending"
+                                ? "var(--amber-600)"
+                                : user.verificationReason
+                                  ? "var(--red-600)"
+                                  : "var(--gray-400)"
                           }
                         />
                         <span
@@ -806,12 +863,20 @@ const Profile = () => {
                             color:
                               user.verificationStatus === "verified"
                                 ? "var(--green-800)"
-                                : "var(--gray-700)",
+                                : user.verificationStatus === "pending"
+                                  ? "var(--amber-800)"
+                                  : user.verificationReason
+                                    ? "var(--red-800)"
+                                    : "var(--gray-700)",
                           }}
                         >
                           {user.verificationStatus === "verified"
                             ? "Verified Messenger"
-                            : "Account Verification"}
+                            : user.verificationStatus === "pending"
+                              ? "Verification Pending"
+                              : user.verificationReason
+                                ? "Verification Rejected"
+                                : "Account Verification"}
                         </span>
                       </div>
                       <p
@@ -823,7 +888,11 @@ const Profile = () => {
                       >
                         {user.verificationStatus === "verified"
                           ? "You are a trusted LCU messenger."
-                          : "Your account is active. Complete errands to build your rating!"}
+                          : user.verificationStatus === "pending"
+                            ? "Your ID card has been uploaded and is under review."
+                            : user.verificationReason
+                              ? `Reason: ${user.verificationReason}. Please re-submit your ID.`
+                              : "Complete verification to accept high-value errands!"}
                       </p>
                     </div>
                   </div>

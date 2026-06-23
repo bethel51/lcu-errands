@@ -25,6 +25,7 @@ const History = () => {
         return;
       }
       const cacheKey = `history_${user.id}_${filterType}`;
+      // Show cached immediately while fresh data loads
       const cached = localStorage.getItem(cacheKey);
       if (cached) {
         setHistoryItems(JSON.parse(cached));
@@ -40,14 +41,17 @@ const History = () => {
           fee: errand.fee,
           location: errand.dropoffLocation,
           date: new Date(errand.createdAt).toLocaleDateString(),
-          type: errand.posterId === user.id ? "posted" : "accepted",
+          // Fix: stringify ObjectId from DB before comparison
+          type: errand.posterId?.toString() === user.id ? "posted" : "accepted",
           status: errand.status,
+          completionRequested: !!errand.completionRequested,
         }));
         setHistoryItems(formatted);
+        // Always overwrite cache with fresh data
         localStorage.setItem(cacheKey, JSON.stringify(formatted));
       } catch (err) {
         console.error("Failed to fetch history", err);
-        setHistoryItems([]);
+        if (!cached) setHistoryItems([]);
       } finally {
         setLoading(false);
       }
@@ -80,6 +84,18 @@ const History = () => {
       window.location.reload();
     } catch (err) {
       alert("Failed to complete task.");
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  const handleRequestCompletion = async (id) => {
+    setProcessing(true);
+    try {
+      await api.patch(`/errands/${id}/request-completion`);
+      window.location.reload();
+    } catch (err) {
+      alert("Failed to request completion.");
     } finally {
       setProcessing(false);
     }
@@ -331,13 +347,35 @@ const History = () => {
                       </button>
                     )}
 
-                    {filterType === "accepted" && item.status === "assigned" && (
+                    {filterType === "posted" && item.status === "assigned" && (
                       <button
                         onClick={() => handleCompleteTask(item.id)}
                         className="btn btn-primary btn-sm"
+                        style={{
+                          boxShadow: item.completionRequested ? "0 0 10px var(--blue-600)" : "none",
+                        }}
                       >
-                        Mark Completed
+                        {item.completionRequested ? "Confirm Delivery 🔔" : "Confirm Delivery"}
                       </button>
+                    )}
+
+                    {filterType === "accepted" && item.status === "assigned" && (
+                      item.completionRequested ? (
+                        <button
+                          className="btn btn-outline btn-sm"
+                          disabled
+                          style={{ borderColor: "var(--gray-300)", color: "var(--gray-400)", cursor: "not-allowed" }}
+                        >
+                          Pending Poster Confirmation
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => handleRequestCompletion(item.id)}
+                          className="btn btn-primary btn-sm"
+                        >
+                          Mark Completed
+                        </button>
+                      )
                     )}
 
                     {item.status === "completed" && (

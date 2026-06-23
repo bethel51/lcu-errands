@@ -372,6 +372,17 @@ const Navbar = () => {
                       >
                         My Profile
                       </Link>
+                      {JSON.parse(localStorage.getItem("user") || "{}").role === "admin" && (
+                        <a
+                          href={window.location.hostname === "localhost" ? "http://localhost:5174" : "https://leadcity-admin-portal.onrender.com"}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="profile-dropdown-item"
+                          style={{ color: "var(--blue-600)", fontWeight: "bold" }}
+                        >
+                          Admin Portal 🛡️
+                        </a>
+                      )}
                       <Link
                         to="/dashboard"
                         onClick={() => setIsProfileDropdownOpen(false)}

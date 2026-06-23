@@ -21,6 +21,7 @@ const errandSchema = new mongoose.Schema({
   isReviewedByPoster: { type: Boolean, default: false },
   isReviewedByErrander: { type: Boolean, default: false },
   completionProof: { type: String }, // Image URL
+  completionRequested: { type: Boolean, default: false },
   createdAt: { type: Date, default: Date.now },
 });
 

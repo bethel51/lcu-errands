@@ -298,9 +298,15 @@ export const uploadFile = catchAsync(async (req, res) => {
 });
 
 export const verifySelf = catchAsync(async (req, res) => {
+  const { verificationProof } = req.body;
   const userId = req.user?.id;
   if (!userId) {
     res.status(401).json({ message: "Unauthorized" });
+    return;
+  }
+
+  if (!verificationProof) {
+    res.status(400).json({ message: "Verification proof image is required" });
     return;
   }
 
@@ -310,10 +316,11 @@ export const verifySelf = catchAsync(async (req, res) => {
     return;
   }
 
-  user.isVerified = true;
+  user.verificationStatus = "pending";
+  user.verificationProof = verificationProof;
   await user.save();
 
-  res.json({ message: "Account verified successfully", user });
+  res.json({ message: "Verification request submitted successfully", user });
 });
 
 export const deleteAccount = catchAsync(async (req, res) => {

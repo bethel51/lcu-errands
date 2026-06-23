@@ -42,8 +42,6 @@ export const createInquiry = catchAsync(async (req, res) => {
 export const completeErrand = catchAsync(async (req, res) => {
   const { id } = req.params;
   const userId = req.user.id;
-  const session = await mongoose.startSession();
-  session.startTransaction();
 
   const errand = await Errand.findById(id);
 
@@ -72,6 +70,9 @@ export const completeErrand = catchAsync(async (req, res) => {
     res.status(404).json({ message: "Assigned messenger not found" });
     return;
   }
+
+  const session = await mongoose.startSession();
+  session.startTransaction();
 
   try {
     errander.balance += errand.fee;
@@ -177,9 +178,6 @@ export const createErrand = catchAsync(async (req, res) => {
     erranderId,
   } = req.body;
   const posterId = req.user.id;
-  const session = await mongoose.startSession();
-  session.startTransaction();
-
   // Check if poster has sufficient balance
   const user = await User.findById(posterId);
   if (!user || user.balance < fee) {
@@ -188,6 +186,9 @@ export const createErrand = catchAsync(async (req, res) => {
       .json({ message: "Insufficient wallet balance. Please top up." });
     return;
   }
+
+  const session = await mongoose.startSession();
+  session.startTransaction();
 
   try {
     const [newErrand] = await Errand.create(
@@ -461,4 +462,58 @@ export const deleteErrand = catchAsync(async (req, res) => {
   } finally {
     session.endSession();
   }
+});
+
+export const requestCompletion = catchAsync(async (req, res) => {
+  const { id } = req.params;
+  const userId = req.user.id;
+
+  const errand = await Errand.findById(id);
+  if (!errand) {
+    res.status(404).json({ message: "Errand not found" });
+    return;
+  }
+
+  // Security: Only the assigned messenger can request completion
+  if (errand.erranderId?.toString() !== userId) {
+    res.status(403).json({ message: "You are not the assigned messenger for this errand" });
+    return;
+  }
+
+  if (errand.status !== "assigned") {
+    res.status(400).json({ message: "Errand must be in assigned status to request completion" });
+    return;
+  }
+
+  errand.completionRequested = true;
+  await errand.save();
+
+  // Notify the poster
+  const notificationData = {
+    userId: errand.posterId.toString(),
+    title: "Errand Delivery Pending! 📦",
+    message: `The messenger has marked your errand "${errand.title}" as completed. Please confirm delivery to release funds.`,
+    type: "errand_delivered",
+    relatedId: errand._id.toString(),
+  };
+
+  await Notification.create(notificationData);
+
+  const io = req.io;
+  if (io) {
+    io.to(errand.posterId.toString()).emit("notification", notificationData);
+  }
+
+  // Send email to poster
+  const poster = await User.findById(errand.posterId);
+  if (poster) {
+    sendErrandNotification(
+      poster.email,
+      poster.name,
+      "completed", // This notifies the poster to log in and confirm
+      errand.title
+    ).catch(console.error);
+  }
+
+  res.json({ message: "Completion request sent to poster successfully" });
 });

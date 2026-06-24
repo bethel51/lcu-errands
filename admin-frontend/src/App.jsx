@@ -881,6 +881,56 @@ const AdminPortal = () => {
                 />
               </div>
 
+              {/* Communication Intel Center Stats */}
+              <h3 style={{ fontSize: "1.25rem", fontWeight: 900, margin: "0 0 15px", letterSpacing: "-0.3px", color: "var(--text-primary)" }}>
+                Communication Intel Center
+              </h3>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
+                  gap: 15,
+                  marginBottom: 30,
+                }}
+              >
+                <StatCard
+                  label="Total Activities"
+                  value={stats?.totalActivities || 0}
+                  icon={<Activity size={18} />}
+                  color="#6366F1"
+                />
+                <StatCard
+                  label="Activities Today"
+                  value={stats?.activitiesToday || 0}
+                  icon={<Clock size={18} />}
+                  color="#F59E0B"
+                />
+                <StatCard
+                  label="Completed Errands"
+                  value={stats?.completedErrands || 0}
+                  icon={<CheckCircle size={18} />}
+                  color="#10B981"
+                />
+                <StatCard
+                  label="Pending Confirmations"
+                  value={stats?.pendingConfirmations || 0}
+                  icon={<Clock size={18} />}
+                  color="#0891B2"
+                />
+                <StatCard
+                  label="Failed Errands"
+                  value={stats?.failedErrands || 0}
+                  icon={<X size={18} />}
+                  color="#EF4444"
+                />
+                <StatCard
+                  label="Disputes"
+                  value={stats?.disputes || 0}
+                  icon={<AlertTriangle size={18} />}
+                  color="#EC4899"
+                />
+              </div>
+
               <div
                 style={{
                   display: "grid",
@@ -2091,16 +2141,45 @@ const AdminPortal = () => {
                           <h5 style={{ fontWeight: 900, marginBottom: 8 }}>Full Audit Trail</h5>
                           <div style={{ maxHeight: 210, overflow: "auto", display: "grid", gap: 8 }}>
                             {(footprint?.auditTrail || []).map((entry, index) => (
-                              <div key={`${entry.action}-${index}`} style={{ background: "#F8FAFC", borderRadius: 8, padding: 9, border: "1px solid #E2E8F0" }}>
-                                <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
-                                  <strong style={{ fontSize: "0.72rem", color: "#0F172A" }}>{entry.action}</strong>
-                                  <span style={{ fontSize: "0.65rem", color: "#64748B", fontWeight: 700 }}>{formatDateTime(entry.timestamp)}</span>
+                              <div key={`${entry.action}-${index}`} style={{ background: "#F8FAFC", borderRadius: 8, padding: 10, border: "1px solid #E2E8F0" }}>
+                                <div style={{ display: "flex", justifyContent: "space-between", gap: 8, flexWrap: "wrap", marginBottom: 4 }}>
+                                  <strong style={{ fontSize: "0.76rem", color: "#1E293B" }}>
+                                    {entry.actionTitle || entry.action}
+                                  </strong>
+                                  <span style={{ fontSize: "0.65rem", color: "#64748B", fontWeight: 700 }}>
+                                    {formatDateTime(entry.timestamp)}
+                                  </span>
                                 </div>
-                                <div style={{ fontSize: "0.74rem", color: "#475569", marginTop: 4 }}>{entry.details || "No details"}</div>
+                                <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
+                                  <span style={{ fontSize: "0.72rem", fontWeight: 800, color: "#475569" }}>
+                                    {entry.actorName || "System"}
+                                  </span>
+                                  <span style={{
+                                    fontSize: "0.6rem", padding: "1px 4px", borderRadius: 3,
+                                    fontWeight: 900, textTransform: "uppercase",
+                                    background: entry.actorRole === "admin" ? "#FEE2E2" : entry.actorRole === "messenger" ? "#DCFCE7" : "#DBEAFE",
+                                    color: entry.actorRole === "admin" ? "#991B1B" : entry.actorRole === "messenger" ? "#166534" : "#1E40AF"
+                                  }}>
+                                    {entry.actorRole || "system"}
+                                  </span>
+                                </div>
+                                <div style={{ fontSize: "0.78rem", color: "#475569" }}>
+                                  {entry.actionDescription || entry.details || "No details"}
+                                </div>
+                                {entry.metadata && entry.metadata.imageUrl && (
+                                  <img
+                                    src={entry.metadata.imageUrl}
+                                    alt="Proof"
+                                    onClick={() => window.open(entry.metadata.imageUrl, "_blank")}
+                                    style={{ marginTop: 8, width: 80, height: 80, objectFit: "cover", borderRadius: 8, border: "1px solid #E2E8F0", cursor: "zoom-in" }}
+                                  />
+                                )}
                               </div>
                             ))}
                             {(!footprint?.auditTrail || footprint.auditTrail.length === 0) && (
-                              <div style={{ color: "#64748B", fontWeight: 700 }}>No audit entries recorded.</div>
+                              <div style={{ color: "#64748B", fontWeight: 700, padding: 10, textAlign: "center" }}>
+                                No activity recorded yet. Activity logs will appear here automatically.
+                              </div>
                             )}
                           </div>
                         </div>

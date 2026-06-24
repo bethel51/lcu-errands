@@ -24,6 +24,27 @@ export const getStats = catchAsync(async (req, res) => {
   });
   const pendingConfirmations = await Errand.countDocuments({ status: "pending_confirmation" });
   const flaggedErrands = await DigitalFootprint.countDocuments({ isSuspicious: true });
+  const failedErrands = await Errand.countDocuments({ status: "cancelled" });
+
+  const disputes = await DigitalFootprint.countDocuments({
+    $or: [{ isSuspicious: true }, { status: "frozen" }]
+  });
+
+  // Calculate activities count
+  const totalActivitiesResult = await DigitalFootprint.aggregate([
+    { $project: { auditTrailSize: { $size: { $ifNull: ["$auditTrail", []] } } } },
+    { $group: { _id: null, total: { $sum: "$auditTrailSize" } } }
+  ]);
+  const totalActivities = totalActivitiesResult[0]?.total || 0;
+
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+  const activitiesTodayResult = await DigitalFootprint.aggregate([
+    { $unwind: "$auditTrail" },
+    { $match: { "auditTrail.timestamp": { $gte: startOfToday } } },
+    { $group: { _id: null, count: { $sum: 1 } } }
+  ]);
+  const activitiesToday = activitiesTodayResult[0]?.count || 0;
 
   // Total funds held in escrow (open/in-progress errands)
   const pendingPaymentsResult = await Errand.aggregate([
@@ -81,6 +102,10 @@ export const getStats = catchAsync(async (req, res) => {
     pendingConfirmations,
     pendingPayments,
     flaggedErrands,
+    failedErrands,
+    disputes,
+    totalActivities,
+    activitiesToday,
     totalFees: totalFees[0]?.total || 0,
     revenueTrends,
     errandTrends,
@@ -200,7 +225,16 @@ export const approveErrandTransaction = catchAsync(async (req, res) => {
         $set: { status: "released", transactionReference: txRef, timeConfirmed: new Date() },
         $push: {
           walletMovementLogs: { timestamp: new Date(), userId: messenger._id, action: "RELEASE_FUNDS", amount: errand.fee, previousBalance, newBalance: messenger.balance },
-          auditTrail: { action: "APPROVED", timestamp: new Date(), userId: req.admin.id, details: `Admin approved and released ₦${errand.fee} to messenger wallet.` },
+          auditTrail: {
+            action: "APPROVED",
+            timestamp: new Date(),
+            userId: req.admin.id,
+            actorName: req.admin.name || "Admin",
+            actorRole: "admin",
+            actionTitle: "Admin Approved ✅",
+            actionDescription: `Admin approved transaction and released ₦${errand.fee} to messenger wallet.`,
+            details: `Admin approved and released ₦${errand.fee} to messenger wallet.`,
+          },
         },
       },
       { session }
@@ -258,7 +292,18 @@ export const rejectErrandTransaction = catchAsync(async (req, res) => {
       { errandId: errand._id },
       {
         $set: { status: "rejected" },
-        $push: { auditTrail: { action: "REJECTED", timestamp: new Date(), userId: req.admin.id, details: reason || "Admin rejected transaction. Funds refunded to sender." } },
+        $push: {
+          auditTrail: {
+            action: "REJECTED",
+            timestamp: new Date(),
+            userId: req.admin.id,
+            actorName: req.admin.name || "Admin",
+            actorRole: "admin",
+            actionTitle: "Admin Cancelled ❌",
+            actionDescription: `Admin rejected transaction and refunded funds. Reason: ${reason || "N/A"}`,
+            details: reason || "Admin rejected transaction. Funds refunded to sender.",
+          },
+        },
       },
       { session }
     );
@@ -290,7 +335,16 @@ export const toggleErrandSuspicious = catchAsync(async (req, res) => {
     return;
   }
   footprint.isSuspicious = !footprint.isSuspicious;
-  footprint.auditTrail.push({ action: "FLAGGED", timestamp: new Date(), userId: req.admin.id, details: `Admin ${footprint.isSuspicious ? "flagged" : "unflagged"} this errand as suspicious.` });
+  footprint.auditTrail.push({
+    action: "FLAGGED",
+    timestamp: new Date(),
+    userId: req.admin.id,
+    actorName: req.admin.name || "Admin",
+    actorRole: "admin",
+    actionTitle: footprint.isSuspicious ? "Errand Flagged ⚠️" : "Errand Unflagged ✅",
+    actionDescription: `Admin ${req.admin.name || "Admin"} ${footprint.isSuspicious ? "flagged" : "unflagged"} this errand as suspicious.`,
+    details: `Admin ${footprint.isSuspicious ? "flagged" : "unflagged"} this errand as suspicious.`,
+  });
   await footprint.save();
 
   await Log.create({ adminId: req.admin.id, adminName: req.admin.name || "Admin", action: footprint.isSuspicious ? "FLAG_ERRAND" : "UNFLAG_ERRAND", targetId: errandId, details: `Errand ${footprint.isSuspicious ? "flagged" : "unflagged"} as suspicious.` });
@@ -304,7 +358,18 @@ export const freezeErrandFunds = catchAsync(async (req, res) => {
     { errandId },
     {
       $set: { status: "frozen", isSuspicious: true },
-      $push: { auditTrail: { action: "FROZEN", timestamp: new Date(), userId: req.admin.id, details: "Admin froze funds pending investigation." } },
+      $push: {
+        auditTrail: {
+          action: "FROZEN",
+          timestamp: new Date(),
+          userId: req.admin.id,
+          actorName: req.admin.name || "Admin",
+          actorRole: "admin",
+          actionTitle: "Funds Frozen ❄️",
+          actionDescription: "Admin froze the errand funds pending dispute resolution.",
+          details: "Admin froze funds pending investigation.",
+        },
+      },
     },
     { new: true }
   );

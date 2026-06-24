@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { MapPin, Clock, Package, Star } from "lucide-react";
+import { MapPin, Clock, Package, Star, Shield, CheckCircle, Upload, Activity, X, Camera } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import api from "../api";
 import ReviewModal from "../components/ReviewModal";
+import { useSocket } from "../context/SocketContext";
 
 const History = () => {
   const navigate = useNavigate();
@@ -12,12 +13,24 @@ const History = () => {
   const userStr = localStorage.getItem("user");
   const user = userStr ? JSON.parse(userStr) : null;
 
+  const { socket } = useSocket();
   const [historyItems, setHistoryItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
   const [selectedErrandId, setSelectedErrandId] = useState(null);
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
   const [toast, setToast] = useState(null);
+
+  // Digital Footprint Timeline States
+  const [intelFootprint, setIntelFootprint] = useState(null);
+  const [intelModalOpen, setIntelModalOpen] = useState(false);
+  const [loadingIntel, setLoadingIntel] = useState(false);
+
+  // Proof Upload States
+  const [proofModalOpen, setProofModalOpen] = useState(false);
+  const [proofText, setProofText] = useState("");
+  const [proofImage, setProofImage] = useState("");
+  const [uploadingProof, setUploadingProof] = useState(false);
 
   const showToast = (message, type = "success") => {
     setToast({ message, type });
@@ -109,6 +122,88 @@ const History = () => {
       setProcessing(false);
     }
   };
+
+  const handleStartErrand = async (id) => {
+    setProcessing(true);
+    try {
+      await api.patch(`/errands/${id}/start`);
+      showToast("🚀 Errand started! Go ahead and complete the task.");
+      window.location.reload();
+    } catch (err) {
+      showToast(err.response?.data?.message || "Failed to start errand.", "error");
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  const handleProofImageUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setUploadingProof(true);
+    const formData = new FormData();
+    formData.append("image", file);
+    try {
+      const res = await api.post("/users/upload", formData, {
+        headers: { "Content-Type": "multipart/form-data" }
+      });
+      setProofImage(res.data.url);
+      showToast("Image uploaded successfully!");
+    } catch (err) {
+      showToast("Failed to upload image.", "error");
+    } finally {
+      setUploadingProof(false);
+    }
+  };
+
+  const handleSubmitProof = async () => {
+    if (!proofText.trim() && !proofImage) {
+      showToast("Please provide details or upload an image proof.", "error");
+      return;
+    }
+    setProcessing(true);
+    try {
+      await api.patch(`/errands/${selectedErrandId}/upload-proof`, {
+        imageUrl: proofImage,
+        text: proofText
+      });
+      showToast("📸 Proof uploaded successfully!");
+      setProofModalOpen(false);
+      setProofText("");
+      setProofImage("");
+      window.location.reload();
+    } catch (err) {
+      showToast("Failed to upload proof.", "error");
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  const handleOpenIntel = async (id) => {
+    setSelectedErrandId(id);
+    setIntelModalOpen(true);
+    setLoadingIntel(true);
+    try {
+      const res = await api.get(`/errands/${id}/footprint`);
+      setIntelFootprint(res.data);
+    } catch (err) {
+      console.error("Failed to load digital footprint", err);
+    } finally {
+      setLoadingIntel(false);
+    }
+  };
+
+  // Real-time listener for timeline update
+  useEffect(() => {
+    if (!socket) return;
+    socket.on("footprint_updated", (updatedFootprint) => {
+      if (selectedErrandId && updatedFootprint.errandId === selectedErrandId) {
+        setIntelFootprint(updatedFootprint);
+      }
+    });
+    return () => {
+      socket.off("footprint_updated");
+    };
+  }, [socket, selectedErrandId]);
 
   const filteredItems = historyItems.filter((item) => item.type === filterType);
 
@@ -347,6 +442,20 @@ const History = () => {
                       ₦{item.fee.toLocaleString()}
                     </span>
 
+                    <button
+                      onClick={() => handleOpenIntel(item.id)}
+                      className="btn btn-outline btn-sm"
+                      style={{
+                        borderColor: "var(--blue-200)",
+                        color: "var(--blue-600)",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 6
+                      }}
+                    >
+                      <Activity size={12} /> Intel
+                    </button>
+
                     {filterType === "posted" && item.status === "open" && (
                       <button
                         onClick={() => handleCancelErrand(item.id)}
@@ -370,13 +479,35 @@ const History = () => {
                       </button>
                     )}
 
-                    {filterType === "accepted" && item.status === "in_progress" && (
+                    {filterType === "accepted" && item.status === "assigned" && (
                       <button
-                        onClick={() => handleRequestCompletion(item.id)}
+                        onClick={() => handleStartErrand(item.id)}
                         className="btn btn-primary btn-sm"
+                        style={{ background: "var(--green-600)", borderColor: "var(--green-600)", color: "var(--white)" }}
                       >
-                        Mark Completed
+                        Start Errand 🚀
                       </button>
+                    )}
+
+                    {filterType === "accepted" && item.status === "in_progress" && (
+                      <div style={{ display: "flex", gap: 8 }}>
+                        <button
+                          onClick={() => {
+                            setSelectedErrandId(item.id);
+                            setProofModalOpen(true);
+                          }}
+                          className="btn btn-outline btn-sm"
+                          style={{ borderColor: "var(--blue-300)", color: "var(--blue-600)", display: "flex", alignItems: "center", gap: 4 }}
+                        >
+                          <Camera size={12} /> Upload Proof
+                        </button>
+                        <button
+                          onClick={() => handleRequestCompletion(item.id)}
+                          className="btn btn-primary btn-sm"
+                        >
+                          Mark Completed
+                        </button>
+                      </div>
                     )}
 
                     {filterType === "accepted" && item.status === "pending_confirmation" && (
@@ -385,7 +516,7 @@ const History = () => {
                         disabled
                         style={{ borderColor: "var(--gray-300)", color: "var(--gray-400)", cursor: "not-allowed" }}
                       >
-                        ⏳ Awaiting Sender Confirmation
+                        Awaiting Sender Confirmation
                       </button>
                     )}
 
@@ -424,6 +555,265 @@ const History = () => {
             onSuccess={() => window.location.reload()}
           />
         )}
+
+        {/* Proof Upload Modal */}
+        <AnimatePresence>
+          {proofModalOpen && (
+            <>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setProofModalOpen(false)}
+                style={{ position: "fixed", inset: 0, background: "rgba(15,23,42,0.6)", backdropFilter: "blur(4px)", zIndex: 9992 }}
+              />
+              <motion.div
+                initial={{ y: "100%" }}
+                animate={{ y: 0 }}
+                exit={{ y: "100%" }}
+                transition={{ type: "spring", damping: 25, stiffness: 200 }}
+                style={{
+                  position: "fixed", bottom: 0, left: 0, right: 0,
+                  background: "var(--white)", borderTopLeftRadius: 28, borderTopRightRadius: 28,
+                  padding: "24px 20px 40px", zIndex: 9993, maxOpacity: "80vh", boxShadow: "0 -8px 24px rgba(0,0,0,0.12)"
+                }}
+              >
+                <div style={{ width: 44, height: 5, background: "var(--gray-200)", borderRadius: 10, margin: "0 auto 16px" }} />
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+                  <h3 style={{ fontWeight: 900, fontSize: "1.2rem", margin: 0 }}>Upload Delivery Proof 📸</h3>
+                  <button onClick={() => setProofModalOpen(false)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--gray-500)" }}>
+                    <X size={20} />
+                  </button>
+                </div>
+                
+                <div style={{ display: "grid", gap: 16 }}>
+                  <div>
+                    <label style={{ fontSize: "0.8rem", fontWeight: 800, color: "var(--gray-700)", display: "block", marginBottom: 6 }}>
+                      Proof Details / Notes
+                    </label>
+                    <textarea
+                      placeholder="Explain what was delivered and where..."
+                      value={proofText}
+                      onChange={(e) => setProofText(e.target.value)}
+                      style={{ width: "100%", height: 80, border: "1px solid var(--gray-200)", borderRadius: 12, padding: 12, fontSize: "0.88rem" }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ fontSize: "0.8rem", fontWeight: 800, color: "var(--gray-700)", display: "block", marginBottom: 6 }}>
+                      Photo Proof (Optional)
+                    </label>
+                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                      <label style={{
+                        display: "flex", alignItems: "center", gap: 8, padding: "10px 16px",
+                        border: "1px dashed var(--blue-300)", borderRadius: 12, cursor: "pointer",
+                        fontSize: "0.84rem", fontWeight: 700, color: "var(--blue-600)", background: "var(--blue-50)"
+                      }}>
+                        <Upload size={16} /> Choose File
+                        <input type="file" accept="image/*" onChange={handleProofImageUpload} style={{ display: "none" }} />
+                      </label>
+                      {uploadingProof && <span style={{ fontSize: "0.76rem", color: "var(--gray-500)" }}>Uploading...</span>}
+                      {proofImage && <span style={{ fontSize: "0.76rem", color: "var(--green-600)", fontWeight: 700 }}>✓ File ready</span>}
+                    </div>
+                    {proofImage && (
+                      <img src={proofImage} alt="Proof" style={{ width: 80, height: 80, objectFit: "cover", borderRadius: 10, marginTop: 10 }} />
+                    )}
+                  </div>
+
+                  <button
+                    onClick={handleSubmitProof}
+                    disabled={uploadingProof}
+                    className="btn btn-primary"
+                    style={{ width: "100%", marginTop: 8 }}
+                  >
+                    Submit Proof
+                  </button>
+                </div>
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>
+
+        {/* Digital Footprint / Communication Intel Timeline Bottom Sheet */}
+        <AnimatePresence>
+          {intelModalOpen && (
+            <>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setIntelModalOpen(false)}
+                style={{ position: "fixed", inset: 0, background: "rgba(15,23,42,0.65)", backdropFilter: "blur(4px)", zIndex: 9990 }}
+              />
+              <motion.div
+                initial={{ y: "100%" }}
+                animate={{ y: 0 }}
+                exit={{ y: "100%" }}
+                transition={{ type: "spring", damping: 25, stiffness: 220 }}
+                style={{
+                  position: "fixed", bottom: 0, left: 0, right: 0,
+                  background: "var(--white)", borderTopLeftRadius: 28, borderTopRightRadius: 28,
+                  padding: "24px 20px 40px", zIndex: 9991, maxHeight: "88vh", overflowY: "auto",
+                  boxShadow: "0 -10px 25px rgba(0,0,0,0.15)", overscrollBehavior: "contain"
+                }}
+              >
+                <div style={{ width: 44, height: 5, background: "var(--gray-300)", borderRadius: 10, margin: "0 auto 16px" }} />
+                
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+                  <div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                      <h3 style={{ fontWeight: 900, fontSize: "1.25rem", margin: 0, color: "var(--gray-900)" }}>
+                        Communication Intel
+                      </h3>
+                      {intelFootprint && (
+                        <span style={{
+                          background: intelFootprint.status === "released" ? "var(--green-50)" : "var(--blue-50)",
+                          color: intelFootprint.status === "released" ? "var(--green-700)" : "var(--blue-600)",
+                          border: `1px solid ${intelFootprint.status === "released" ? "var(--green-200)" : "var(--blue-100)"}`,
+                          padding: "3px 8px", borderRadius: 20, fontSize: "0.68rem", fontWeight: 900, textTransform: "uppercase"
+                        }}>
+                          {intelFootprint.status}
+                        </span>
+                      )}
+                    </div>
+                    <p style={{ fontSize: "0.78rem", color: "var(--gray-500)", margin: 0 }}>
+                      Secure cryptographic audit trail logs.
+                    </p>
+                  </div>
+                  <div style={{ display: "flex", gap: 10 }}>
+                    <button
+                      onClick={() => handleOpenIntel(selectedErrandId)}
+                      style={{
+                        background: "none", border: "1px solid var(--gray-200)", borderRadius: 10,
+                        padding: "6px 12px", fontSize: "0.78rem", fontWeight: 800, cursor: "pointer"
+                      }}
+                    >
+                      Refresh
+                    </button>
+                    <button onClick={() => setIntelModalOpen(false)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--gray-500)" }}>
+                      <X size={22} />
+                    </button>
+                  </div>
+                </div>
+
+                {loadingIntel ? (
+                  <div style={{ padding: "40px 0", textAlign: "center" }}>
+                    <div className="loader" style={{ margin: "0 auto 12px" }} />
+                    <span style={{ fontSize: "0.85rem", color: "var(--gray-500)" }}>Synchronizing digital blueprint...</span>
+                  </div>
+                ) : !intelFootprint || !intelFootprint.auditTrail || intelFootprint.auditTrail.length === 0 ? (
+                  <div style={{ padding: "40px 20px", textAlign: "center", border: "1px dashed var(--gray-200)", borderRadius: 16 }}>
+                    <p style={{ color: "var(--gray-500)", fontWeight: 700, margin: 0 }}>
+                      No activity recorded yet. Activity logs will appear here automatically.
+                    </p>
+                  </div>
+                ) : (
+                  <div>
+                    {/* Activity Count Badge */}
+                    <div style={{ marginBottom: 20, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <span style={{ fontSize: "0.8rem", color: "var(--gray-500)", fontWeight: 800 }}>
+                        Audit trail contains <strong style={{ color: "var(--blue-600)" }}>{intelFootprint.auditTrail.length}</strong> event records
+                      </span>
+                    </div>
+
+                    {/* Timeline Container */}
+                    <div style={{ position: "relative", paddingLeft: 24 }}>
+                      {/* Vertical line connector */}
+                      <div style={{
+                        position: "absolute", left: 6, top: 12, bottom: 12, width: 2,
+                        background: "var(--gray-200)"
+                      }} />
+
+                      {intelFootprint.auditTrail.map((entry, index) => {
+                        const isLast = index === intelFootprint.auditTrail.length - 1;
+                        let roleColor = "var(--gray-600)";
+                        let roleBg = "var(--gray-50)";
+                        if (entry.actorRole === "sender") {
+                          roleColor = "var(--blue-700)";
+                          roleBg = "var(--blue-50)";
+                        } else if (entry.actorRole === "messenger") {
+                          roleColor = "var(--green-700)";
+                          roleBg = "var(--green-50)";
+                        } else if (entry.actorRole === "admin") {
+                          roleColor = "var(--red-700)";
+                          roleBg = "var(--red-50)";
+                        }
+
+                        return (
+                          <div key={index} style={{ position: "relative", marginBottom: 24 }}>
+                            {/* Dot indicator */}
+                            <div style={{
+                              position: "absolute", left: -24, top: 4, width: 14, height: 14,
+                              borderRadius: "50%", background: isLast ? "var(--blue-500)" : "var(--gray-300)",
+                              border: "3px solid var(--white)", boxShadow: isLast ? "0 0 0 3px rgba(37,99,235,0.2)" : "none"
+                            }} />
+
+                            <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "flex-start" }}>
+                              <div>
+                                <h4 style={{ fontWeight: 800, fontSize: "0.95rem", margin: "0 0 3px", color: "var(--gray-900)" }}>
+                                  {entry.actionTitle || entry.action}
+                                </h4>
+                                <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", marginBottom: 6 }}>
+                                  <span style={{ fontSize: "0.78rem", fontWeight: 800, color: "var(--gray-800)" }}>
+                                    {entry.actorName}
+                                  </span>
+                                  <span style={{
+                                    fontSize: "0.65rem", padding: "1px 6px", borderRadius: 4,
+                                    fontWeight: 900, textTransform: "uppercase", background: roleBg, color: roleColor
+                                  }}>
+                                    {entry.actorRole}
+                                  </span>
+                                </div>
+                                <p style={{ fontSize: "0.86rem", color: "var(--gray-600)", margin: "0 0 6px" }}>
+                                  {entry.actionDescription || entry.details}
+                                </p>
+
+                                {/* Metadata if any (e.g. proof image) */}
+                                {entry.metadata && entry.metadata.imageUrl && (
+                                  <div style={{ marginTop: 8 }}>
+                                    <span style={{ fontSize: "0.72rem", color: "var(--gray-500)", fontWeight: 800, display: "block", marginBottom: 4 }}>
+                                      Attached Proof File:
+                                    </span>
+                                    <img
+                                      src={entry.metadata.imageUrl}
+                                      alt="Proof attachment"
+                                      onClick={() => window.open(entry.metadata.imageUrl, "_blank")}
+                                      style={{ width: "100%", maxWidth: 220, maxHeight: 130, objectFit: "cover", borderRadius: 12, border: "1px solid var(--gray-200)", cursor: "zoom-in" }}
+                                    />
+                                  </div>
+                                )}
+                              </div>
+                              
+                              <span style={{ fontSize: "0.74rem", color: "var(--gray-400)", fontWeight: 700, whiteSpace: "nowrap" }}>
+                                {new Date(entry.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Metadata summary (Devices, IPs, etc.) */}
+                    <div style={{ marginTop: 24, paddingTop: 20, borderTop: "1px solid var(--gray-100)", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 14 }}>
+                      <div style={{ background: "var(--gray-50)", padding: 12, borderRadius: 12 }}>
+                        <span style={{ fontSize: "0.74rem", fontWeight: 800, color: "var(--gray-500)", display: "block", marginBottom: 4 }}>Device Log (Last)</span>
+                        <span style={{ fontSize: "0.78rem", color: "var(--gray-800)", fontWeight: 700 }}>
+                          {intelFootprint.auditTrail[intelFootprint.auditTrail.length - 1]?.deviceInfo || "Unknown Device"}
+                        </span>
+                      </div>
+                      <div style={{ background: "var(--gray-50)", padding: 12, borderRadius: 12 }}>
+                        <span style={{ fontSize: "0.74rem", fontWeight: 800, color: "var(--gray-500)", display: "block", marginBottom: 4 }}>IP Address</span>
+                        <span style={{ fontSize: "0.78rem", color: "var(--gray-800)", fontWeight: 700 }}>
+                          {intelFootprint.auditTrail[intelFootprint.auditTrail.length - 1]?.ipAddress || "127.0.0.1"}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>
 
         {/* Toast notifications */}
         <AnimatePresence>

@@ -1,12 +1,17 @@
 import mongoose from "mongoose";
 
 const footprintLogSchema = new mongoose.Schema({
-  action: { type: String, required: true }, // "POSTED", "ACCEPTED", "COMPLETED", "CONFIRMED", "APPROVED", "REJECTED", "FLAGGED", "FROZEN", "RELEASED"
+  action: { type: String, required: true }, // "POSTED", "EDITED", "ACCEPTED", "STARTED", "PROOF_UPLOADED", "COMPLETED", "REVIEWED", "CONFIRMED", "RELEASED", "ADMIN_INTERVENED", "ADMIN_CANCELLED", "ADMIN_DISPUTE_RESOLVED"
   timestamp: { type: Date, default: Date.now },
   userId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+  actorName: String,
+  actorRole: String, // "sender", "messenger", "admin"
+  actionTitle: String,
+  actionDescription: String,
   ipAddress: String,
   deviceInfo: String,
-  details: String
+  details: String,
+  metadata: mongoose.Schema.Types.Mixed
 });
 
 const digitalFootprintSchema = new mongoose.Schema({

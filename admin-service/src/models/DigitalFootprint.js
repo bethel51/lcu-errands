@@ -4,9 +4,14 @@ const footprintLogSchema = new mongoose.Schema({
   action: { type: String, required: true },
   timestamp: { type: Date, default: Date.now },
   userId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+  actorName: String,
+  actorRole: String, // "sender", "messenger", "admin"
+  actionTitle: String,
+  actionDescription: String,
   ipAddress: String,
   deviceInfo: String,
-  details: String
+  details: String,
+  metadata: mongoose.Schema.Types.Mixed
 });
 
 const digitalFootprintSchema = new mongoose.Schema({

@@ -105,6 +105,7 @@ const ErrandStream = () => {
     posterDepartment: err.posterId?.department || null,
     posterLocation: err.posterId?.location || null,
     posterRating: err.posterId?.rating || 0,
+    posterVerified: !!err.posterId?.isVerified,
     posterId: err.posterId?._id || err.posterId,
     createdAt: err.createdAt,
     isNew: false,
@@ -270,7 +271,28 @@ const ErrandStream = () => {
                     <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14, paddingBottom: 14, borderBottom: "1px solid var(--gray-100)" }}>
                       <SenderAvatar picture={errand.posterPicture} name={errand.posterName} />
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontWeight: 800, fontSize: "0.9rem", color: "var(--gray-900)" }}>{errand.posterName}</div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 5, fontWeight: 800, fontSize: "0.9rem", color: "var(--gray-900)" }}>
+                          {errand.posterName}
+                          {errand.posterVerified && (
+                            <span
+                              style={{
+                                display: "inline-flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                background: "var(--blue-100)",
+                                color: "var(--blue-600)",
+                                borderRadius: "50%",
+                                width: 14,
+                                height: 14,
+                                fontSize: "0.6rem",
+                                fontWeight: 900
+                              }}
+                              title="Verified User"
+                            >
+                              ✓
+                            </span>
+                          )}
+                        </div>
                         <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginTop: 3 }}>
                           {errand.posterDepartment && (
                             <span style={{ display: "flex", alignItems: "center", gap: 4, fontSize: "0.72rem", color: "var(--blue-600)", fontWeight: 600 }}>

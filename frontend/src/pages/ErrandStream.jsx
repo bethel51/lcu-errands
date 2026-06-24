@@ -12,6 +12,7 @@ import {
   Building,
   Home,
   Star,
+  X,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import api from "../api";
@@ -74,6 +75,7 @@ const ErrandStream = () => {
   const [search, setSearch] = useState("");
   const [processing, setProcessing] = useState(false);
   const [toast, setToast] = useState(null);
+  const [acceptingErrand, setAcceptingErrand] = useState(null);
 
   const userRole = localStorage.getItem("userRole") || "messenger";
   const cachedUserId = (() => {
@@ -355,7 +357,7 @@ const ErrandStream = () => {
                       </div>
 
                       {userRole === "messenger" && !isOwner && (
-                        <button onClick={() => handleAcceptErrand(errand.id)} className="stream-accept-btn">
+                        <button onClick={() => setAcceptingErrand(errand)} className="stream-accept-btn">
                           Accept Task
                           <ArrowRight size={14} />
                         </button>
@@ -374,6 +376,165 @@ const ErrandStream = () => {
           </div>
         )}
       </div>
+
+      {/* ── Acceptance Confirmation Modal ── */}
+      <AnimatePresence>
+        {acceptingErrand && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setAcceptingErrand(null)}
+              style={{
+                position: "fixed",
+                inset: 0,
+                background: "rgba(15,23,42,0.65)",
+                backdropFilter: "blur(6px)",
+                zIndex: 9992,
+              }}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              transition={{ type: "spring", damping: 25, stiffness: 220 }}
+              style={{
+                position: "fixed",
+                top: "50%",
+                left: "50%",
+                transform: "translate(-50%, -50%)",
+                width: "90%",
+                maxWidth: 480,
+                background: "var(--white)",
+                borderRadius: 24,
+                boxShadow: "0 20px 40px rgba(0,0,0,0.15)",
+                zIndex: 9993,
+                overflow: "hidden",
+                padding: "24px 20px",
+                maxHeight: "90vh",
+                display: "flex",
+                flexDirection: "column"
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, borderBottom: "1px solid var(--gray-100)", paddingBottom: 12 }}>
+                <h3 style={{ fontWeight: 900, fontSize: "1.2rem", margin: 0, color: "var(--gray-900)" }}>Accept Errand Request</h3>
+                <button
+                  onClick={() => setAcceptingErrand(null)}
+                  style={{ background: "none", border: "none", cursor: "pointer", color: "var(--gray-400)" }}
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              <div style={{ flex: 1, overflowY: "auto", paddingRight: 4, display: "flex", flexDirection: "column", gap: 16 }}>
+                {/* Sender Card */}
+                <div style={{ background: "var(--gray-50)", border: "1px solid var(--gray-200)", borderRadius: 16, padding: 14 }}>
+                  <h4 style={{ margin: "0 0 10px 0", fontSize: "0.8rem", fontWeight: 800, color: "var(--gray-500)", textTransform: "uppercase", letterSpacing: "0.05em" }}>Sender Details</h4>
+                  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                    <SenderAvatar picture={acceptingErrand.posterPicture} name={acceptingErrand.posterName} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 5, fontWeight: 800, fontSize: "0.95rem", color: "var(--gray-900)" }}>
+                        {acceptingErrand.posterName}
+                        {acceptingErrand.posterVerified && (
+                          <span
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              background: "var(--blue-100)",
+                              color: "var(--blue-600)",
+                              borderRadius: "50%",
+                              width: 14,
+                              height: 14,
+                              fontSize: "0.6rem",
+                              fontWeight: 900
+                            }}
+                            title="Verified User"
+                          >
+                            ✓
+                          </span>
+                        )}
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginTop: 4 }}>
+                        {acceptingErrand.posterDepartment && (
+                          <span style={{ display: "flex", alignItems: "center", gap: 4, fontSize: "0.75rem", color: "var(--blue-600)", fontWeight: 600 }}>
+                            <Building size={11} /> {acceptingErrand.posterDepartment}
+                          </span>
+                        )}
+                        {acceptingErrand.posterLocation && (
+                          <span style={{ display: "flex", alignItems: "center", gap: 4, fontSize: "0.75rem", color: "var(--gray-500)", fontWeight: 600 }}>
+                            <Home size={11} /> {acceptingErrand.posterLocation}
+                          </span>
+                        )}
+                        {acceptingErrand.posterRating > 0 && (
+                          <span style={{ display: "flex", alignItems: "center", gap: 3, fontSize: "0.75rem", color: "#D97706", fontWeight: 700 }}>
+                            <Star size={10} fill="#D97706" color="#D97706" /> {acceptingErrand.posterRating.toFixed(1)}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Errand Info */}
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  <h4 style={{ margin: "0", fontSize: "0.8rem", fontWeight: 800, color: "var(--gray-500)", textTransform: "uppercase", letterSpacing: "0.05em" }}>Errand Details</h4>
+                  <div>
+                    <h3 style={{ margin: "0 0 6px 0", fontSize: "1.05rem", fontWeight: 800, color: "var(--gray-900)" }}>{acceptingErrand.title}</h3>
+                    <p style={{ margin: 0, fontSize: "0.88rem", color: "var(--gray-600)", lineHeight: 1.5 }}>{acceptingErrand.description}</p>
+                  </div>
+
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 8 }}>
+                    <div style={{ background: "var(--blue-50)", border: "1px solid var(--blue-100)", padding: 10, borderRadius: 12 }}>
+                      <span style={{ display: "block", fontSize: "0.65rem", color: "var(--blue-500)", fontWeight: 800, textTransform: "uppercase", marginBottom: 2 }}>Category</span>
+                      <span style={{ fontSize: "0.85rem", color: "var(--blue-900)", fontWeight: 700 }}>{acceptingErrand.category}</span>
+                    </div>
+                    <div style={{ background: "var(--green-50)", border: "1px solid var(--green-100)", padding: 10, borderRadius: 12 }}>
+                      <span style={{ display: "block", fontSize: "0.65rem", color: "var(--green-500)", fontWeight: 800, textTransform: "uppercase", marginBottom: 2 }}>Payout Fee</span>
+                      <span style={{ fontSize: "0.95rem", color: "var(--green-900)", fontWeight: 800 }}>₦{acceptingErrand.fee.toLocaleString()}</span>
+                    </div>
+                  </div>
+
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 8 }}>
+                    {acceptingErrand.pickupLocation && (
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.8rem", color: "var(--gray-600)" }}>
+                        <span style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--green-500)" }} />
+                        <span><strong>Pick Up:</strong> {acceptingErrand.pickupLocation}</span>
+                      </div>
+                    )}
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.8rem", color: "var(--gray-600)" }}>
+                      <span style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--blue-500)" }} />
+                      <span><strong>Drop Off:</strong> {acceptingErrand.location || "Not specified"}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: "flex", gap: 12, marginTop: 24, borderTop: "1px solid var(--gray-100)", paddingTop: 16 }}>
+                <button
+                  onClick={() => setAcceptingErrand(null)}
+                  className="btn btn-outline"
+                  style={{ flex: 1, borderRadius: 12 }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={async () => {
+                    const id = acceptingErrand.id || acceptingErrand._id;
+                    setAcceptingErrand(null);
+                    await handleAcceptErrand(id);
+                  }}
+                  className="btn btn-primary"
+                  style={{ flex: 1, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}
+                >
+                  Accept Errand <ArrowRight size={14} />
+                </button>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
 
       {/* ── Toast ── */}
       <AnimatePresence>

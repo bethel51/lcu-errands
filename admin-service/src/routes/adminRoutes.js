@@ -18,6 +18,7 @@ import {
   sendBroadcast,
   getChatHistory,
   getUserWithdrawalEvidence,
+  getAllFootprints,
 } from "../controllers/adminController.js";
 import { adminAuthMiddleware } from "../middleware/adminAuthMiddleware.js";
 
@@ -30,6 +31,7 @@ router.get("/stats", getStats);
 router.get("/users", getAllUsers);
 router.get("/errands", getAllErrands);
 router.get("/withdrawals", getAllWithdrawals);
+router.get("/footprints", getAllFootprints);
 router.patch("/users/:id/suspend", toggleSuspendUser);
 router.patch("/users/:id/verify", verifyUser);
 router.get("/pending-verifications", getPendingVerifications);

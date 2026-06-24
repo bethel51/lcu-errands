@@ -63,6 +63,7 @@ const AdminPortal = () => {
   const [pendingVerifications, setPendingVerifications] = useState([]);
   const [health, setHealth] = useState(null);
   const [logs, setLogs] = useState([]);
+  const [footprints, setFootprints] = useState([]);
 
   // UI States
   const [activeTab, setActiveTab] = useState("overview");
@@ -168,6 +169,7 @@ const AdminPortal = () => {
         verificationsRes,
         healthRes,
         logsRes,
+        footprintsRes,
       ] = await Promise.all([
         adminApi.get("/management/stats").catch(() => ({ data: null })),
         adminApi.get("/management/users").catch(() => ({ data: [] })),
@@ -178,6 +180,7 @@ const AdminPortal = () => {
           .catch(() => ({ data: [] })),
         adminApi.get("/management/health").catch(() => ({ data: null })),
         adminApi.get("/management/logs").catch(() => ({ data: [] })),
+        adminApi.get("/management/footprints").catch(() => ({ data: [] })),
       ]);
 
       setStats(statsRes.data);
@@ -187,6 +190,7 @@ const AdminPortal = () => {
       setPendingVerifications(Array.isArray(verificationsRes.data) ? verificationsRes.data : []);
       setHealth(healthRes.data);
       setLogs(Array.isArray(logsRes.data) ? logsRes.data : []);
+      setFootprints(Array.isArray(footprintsRes.data) ? footprintsRes.data : []);
     } catch (err) {
       if (err.response?.status === 401) {
         handleLogout();
@@ -416,6 +420,21 @@ const AdminPortal = () => {
           .toLowerCase()
           .includes(searchTerm.toLowerCase());
         return matchesSearch;
+      })
+    : [];
+
+  const filteredFootprints = Array.isArray(footprints)
+    ? footprints.filter((f) => {
+        const matchesSearch =
+          (f.errandId?.title || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+          (f.senderId?.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+          (f.messengerId?.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+          (f.errandId?.trackingId || "").toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesStatus =
+          statusFilter === "all" ||
+          (statusFilter === "suspicious" && f.isSuspicious) ||
+          f.status === statusFilter;
+        return matchesSearch && matchesStatus;
       })
     : [];
 
@@ -649,6 +668,7 @@ const AdminPortal = () => {
     { id: "overview", label: "Dashboard", icon: <Activity size={18} /> },
     { id: "users", label: "Directory", icon: <Users size={18} /> },
     { id: "errands", label: "Errands", icon: <Package size={18} /> },
+    { id: "footprints", label: "Digital Footprints", icon: <Activity size={18} /> },
     { id: "withdrawals", label: "Payouts", icon: <CreditCard size={18} /> },
     {
       id: "verifications",
@@ -1372,6 +1392,197 @@ const AdminPortal = () => {
                             </td>
                           </tr>
                         ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {activeTab === "footprints" && (
+            <div
+              style={{
+                background: "white",
+                borderRadius: 20,
+                border: "1px solid #E2E8F0",
+                overflow: "hidden",
+              }}
+            >
+              <div
+                style={{
+                  padding: 15,
+                  borderBottom: "1px solid #F1F5F9",
+                  display: "flex",
+                  gap: 10,
+                  flexWrap: "wrap",
+                }}
+              >
+                <div style={{ flex: 1, minWidth: 200, position: "relative" }}>
+                  <Search
+                    size={18}
+                    style={{
+                      position: "absolute",
+                      left: 12,
+                      top: "50%",
+                      transform: "translateY(-50%)",
+                      color: "#94A3B8",
+                    }}
+                  />
+                  <input
+                    placeholder="Search footprints by title, sender, messenger, tracking ID..."
+                    style={{
+                      width: "100%",
+                      padding: "12px 40px",
+                      borderRadius: 10,
+                      border: "1px solid #E2E8F0",
+                      outline: "none",
+                      color: "#1E293B",
+                    }}
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+                </div>
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  style={{
+                    padding: 10,
+                    borderRadius: 10,
+                    border: "1px solid #E2E8F0",
+                    flexShrink: 0,
+                    color: "#1E293B",
+                  }}
+                >
+                  <option value="all">All Footprints</option>
+                  <option value="held">Held Escrow</option>
+                  <option value="released">Released Funds</option>
+                  <option value="frozen">Frozen Funds</option>
+                  <option value="rejected">Refunded / Cancelled</option>
+                  <option value="suspicious">Suspicious Only</option>
+                </select>
+              </div>
+              <div style={{ overflowX: "auto" }}>
+                <table
+                  style={{
+                    width: "100%",
+                    borderCollapse: "collapse",
+                    minWidth: 800,
+                  }}
+                >
+                  <thead style={{ background: "#F8FAFC", textAlign: "left" }}>
+                    <tr>
+                      <th style={{ padding: 15 }}>ERRAND / TRACKING ID</th>
+                      <th style={{ padding: 15 }}>SENDER</th>
+                      <th style={{ padding: 15 }}>MESSENGER</th>
+                      <th style={{ padding: 15 }}>ESCROW STATUS</th>
+                      <th style={{ padding: 15 }}>AUDIT TRAIL</th>
+                      <th style={{ padding: 15 }}>LAST ACTIVITY</th>
+                      <th style={{ padding: 15 }}>ACTION</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredFootprints.map((f) => {
+                      const lastActivity = f.auditTrail?.[f.auditTrail.length - 1] || {};
+                      return (
+                        <tr
+                          key={f._id}
+                          style={{ borderTop: "1px solid #F1F5F9" }}
+                        >
+                          <td style={{ padding: 15 }}>
+                            <div style={{ fontWeight: 700, fontSize: "0.9rem" }}>
+                              {f.errandId?.title || "Deleted Errand"}
+                            </div>
+                            <div style={{ fontSize: "0.75rem", color: "#64748B", marginTop: 2 }}>
+                              {f.errandId?.trackingId || f.errandId?._id || "N/A"}
+                            </div>
+                          </td>
+                          <td style={{ padding: 15 }}>
+                            <div style={{ fontWeight: 600 }}>{f.senderId?.name || "N/A"}</div>
+                            <div style={{ fontSize: "0.72rem", color: "#64748B" }}>
+                              {f.senderId?.email}
+                            </div>
+                          </td>
+                          <td style={{ padding: 15 }}>
+                            {f.messengerId ? (
+                              <>
+                                <div style={{ fontWeight: 600 }}>{f.messengerId.name}</div>
+                                <div style={{ fontSize: "0.72rem", color: "#64748B" }}>
+                                  {f.messengerId.email}
+                                </div>
+                              </>
+                            ) : (
+                              <span style={{ color: "#94A3B8", fontStyle: "italic", fontSize: "0.8rem" }}>Unassigned</span>
+                            )}
+                          </td>
+                          <td style={{ padding: 15 }}>
+                            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+                              <span style={{
+                                display: "inline-block",
+                                padding: "3px 8px",
+                                borderRadius: 6,
+                                fontSize: "0.7rem",
+                                fontWeight: 800,
+                                background: f.status === "released" ? "#ECFDF5" : f.status === "frozen" ? "#FEF3C7" : f.status === "rejected" ? "#FEF2F2" : "#EFF6FF",
+                                color: f.status === "released" ? "#065F46" : f.status === "frozen" ? "#D97706" : f.status === "rejected" ? "#991B1B" : "#1D4ED8",
+                              }}>
+                                {f.status?.toUpperCase()}
+                              </span>
+                              {f.isSuspicious && (
+                                <span style={{
+                                  display: "inline-block",
+                                  padding: "3px 8px",
+                                  borderRadius: 6,
+                                  fontSize: "0.7rem",
+                                  fontWeight: 800,
+                                  background: "#FEF2F2",
+                                  color: "#EF4444",
+                                  border: "1px solid #FECACA"
+                                }}>
+                                  SUSPICIOUS
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                          <td style={{ padding: 15, fontWeight: 700, fontSize: "0.85rem", color: "#475569" }}>
+                            {f.auditTrail?.length || 0} steps
+                          </td>
+                          <td style={{ padding: 15, fontSize: "0.8rem" }}>
+                            <div style={{ fontWeight: 600, color: "#1E293B" }}>
+                              {lastActivity.actionTitle || lastActivity.action || "No activity"}
+                            </div>
+                            <div style={{ fontSize: "0.72rem", color: "#64748B", marginTop: 2 }}>
+                              {lastActivity.timestamp ? new Date(lastActivity.timestamp).toLocaleString() : "N/A"}
+                            </div>
+                          </td>
+                          <td style={{ padding: 15 }}>
+                            <button
+                              onClick={() => fetchErrandIntel(f.errandId?._id || f.errandId)}
+                              style={{
+                                background: "#EFF6FF",
+                                color: "#2563EB",
+                                padding: "7px 14px",
+                                border: "1px solid #BFDBFE",
+                                borderRadius: 8,
+                                fontWeight: 800,
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 5,
+                                fontSize: "0.75rem",
+                                cursor: "pointer",
+                              }}
+                            >
+                              <Eye size={13} /> INSPECT
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                    {filteredFootprints.length === 0 && (
+                      <tr>
+                        <td colSpan="7" style={{ textAlign: "center", padding: 30, color: "#64748B" }}>
+                          No digital footprints found matching the filters.
+                        </td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
               </div>

@@ -203,8 +203,8 @@ export const completeErrand = catchAsync(async (req, res) => {
     return;
   }
 
-  if (errand.status !== "pending_confirmation") {
-    res.status(400).json({ message: "Errand must be in pending_confirmation status for sender to confirm delivery." });
+  if (!["assigned", "in_progress", "pending_confirmation"].includes(errand.status)) {
+    res.status(400).json({ message: "Errand must be accepted by a messenger to confirm completion." });
     return;
   }
 

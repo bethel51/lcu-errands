@@ -608,3 +608,13 @@ export const sendBroadcast = catchAsync(async (req, res) => {
     await Log.create({ adminId: req.admin.id, adminName: req.admin.name || "Admin", action: "BROADCAST_SENT", targetName: "Global", details: `Mass campaign "${subject}" complete.` });
   })();
 });
+
+export const getAllFootprints = catchAsync(async (req, res) => {
+  const footprints = await DigitalFootprint.find()
+    .populate("errandId", "title status fee trackingId")
+    .populate("senderId", "name email")
+    .populate("messengerId", "name email")
+    .sort({ updatedAt: -1 });
+  res.json(footprints);
+});
+

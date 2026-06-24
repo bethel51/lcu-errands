@@ -1431,13 +1431,23 @@ ul { list-style: none; }
   }
 }
 
-@media (max-width: 600px) {
+@media (max-width: 768px) {
   .container {
     padding-left: 16px;
     padding-right: 16px;
   }
   h1 { font-size: 2rem; }
 }
+
+.nav-bell-wrapper {
+  position: relative;
+}
+@media (max-width: 768px) {
+  .nav-bell-wrapper {
+    position: static !important;
+  }
+}
+
 
 /* ===== NOTIFICATION DROPDOWN (redeclare for specificity) ===== */
 /* Desktop: anchored below bell icon */
@@ -1456,7 +1466,7 @@ ul { list-style: none; }
 }
 
 /* Mobile: full-width bottom sheet */
-@media (max-width: 600px) {
+@media (max-width: 768px) {
   .notification-dropdown {
     position: fixed !important;
     top: auto !important;
@@ -1492,7 +1502,7 @@ ul { list-style: none; }
 }
 
 /* Mobile: add a drag handle visual cue on notification header */
-@media (max-width: 600px) {
+@media (max-width: 768px) {
   .notification-header::before {
     content: '';
     display: block;
@@ -1517,7 +1527,7 @@ ul { list-style: none; }
   overscroll-behavior: contain;
 }
 
-@media (max-width: 600px) {
+@media (max-width: 768px) {
   .notification-list {
     max-height: none; /* parent handles height */
   }

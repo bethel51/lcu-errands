@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Bell, CheckCircle, MessageSquare, Info } from "lucide-react";
+import { Bell, CheckCircle, Info } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSocket } from "../context/SocketContext";
 import { PageImports } from "../App";
@@ -113,19 +113,10 @@ const Navbar = () => {
           >
             My Errands
           </Link>
-          {isAuth && (
-            <Link
-              to="/chats"
-              className={`nav-pill ${isActive("/chats") ? "active" : ""}`}
-              onMouseEnter={() => prefetch(PageImports.Chats)}
-            >
-              Chats
-            </Link>
-          )}
         </div>
 
         <div className="nav-actions">
-          <div style={{ position: "relative" }}>
+          <div className="nav-bell-wrapper">
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
               {socket?.connected && (
                 <div className="nav-live-pill">

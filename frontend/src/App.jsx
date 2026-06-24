@@ -23,7 +23,6 @@ export const PageImports = {
   Dashboard: () => import("./pages/Dashboard"),
   History: () => import("./pages/History"),
   Profile: () => import("./pages/Profile"),
-  Chats: () => import("./pages/Chats"),
   ErrandStream: () => import("./pages/ErrandStream"),
 };
 
@@ -35,7 +34,6 @@ const ForgotPassword = lazy(PageImports.ForgotPassword);
 const Dashboard = lazy(PageImports.Dashboard);
 const History = lazy(PageImports.History);
 const Profile = lazy(PageImports.Profile);
-const Chats = lazy(PageImports.Chats);
 const ErrandStream = lazy(PageImports.ErrandStream);
 
 const PageLoader = () => (
@@ -102,14 +100,7 @@ const AppLayout = () => {
               </ProtectedRoute>
             }
           />
-          <Route
-            path="/chats"
-            element={
-              <ProtectedRoute>
-                <Chats />
-              </ProtectedRoute>
-            }
-          />
+
           <Route
             path="/stream"
             element={

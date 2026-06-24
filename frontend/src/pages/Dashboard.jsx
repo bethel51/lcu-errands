@@ -8,10 +8,6 @@ import {
   Wallet,
   ArrowRight,
   Star,
-  MessageSquare,
-  Send,
-  ImagePlus,
-  CheckCheck,
   Building,
   Home,
 } from "lucide-react";
@@ -96,11 +92,15 @@ const Dashboard = () => {
     setTimeout(() => setToast(null), 3000);
   };
 
-  const [activeChat, setActiveChat] = useState(null);
-  const [messages, setMessages] = useState([]);
-  const [newMessage, setNewMessage] = useState("");
-  const [chatImageUrl, setChatImageUrl] = useState("");
-  const [chatImageUploading, setChatImageUploading] = useState(false);
+  const [transactions, setTransactions] = useState([]);
+  const [withdrawals, setWithdrawals] = useState([]);
+  const [isWithdrawModalOpen, setIsWithdrawModalOpen] = useState(false);
+  const [withdrawData, setWithdrawData] = useState({
+    amount: "",
+    bankName: "",
+    accountNumber: "",
+    accountName: "",
+  });
 
   const userRole = localStorage.getItem("userRole") || "messenger";
   const cachedUserId = (() => {
@@ -149,15 +149,33 @@ const Dashboard = () => {
     }
   };
 
+  const fetchWalletData = async () => {
+    try {
+      const [profileRes, txsRes, withdrawalsRes] = await Promise.all([
+        api.get("/users/profile"),
+        api.get("/users/transactions"),
+        api.get("/withdrawals/my"),
+      ]);
+      setUser(profileRes.data);
+      localStorage.setItem("user", JSON.stringify(profileRes.data));
+      setTransactions(Array.isArray(txsRes.data) ? txsRes.data.slice(0, 5) : []);
+      setWithdrawals(Array.isArray(withdrawalsRes.data) ? withdrawalsRes.data : []);
+    } catch (err) {
+      console.error("Failed to refresh wallet data", err);
+    }
+  };
+
   useEffect(() => {
     const loadDashboard = async () => {
       try {
-        const [errandsRes, historyRes, profileRes, messengersRes] =
+        const [errandsRes, historyRes, profileRes, messengersRes, txsRes, withdrawalsRes] =
           await Promise.allSettled([
             api.get("/errands"),
             api.get("/errands/history"),
             api.get("/users/profile"),
             api.get("/users/messengers"),
+            api.get("/users/transactions"),
+            api.get("/withdrawals/my"),
           ]);
 
         if (errandsRes.status === "fulfilled") {
@@ -180,6 +198,12 @@ const Dashboard = () => {
           const data = Array.isArray(messengersRes.value.data) ? messengersRes.value.data : [];
           setMessengers(data);
         }
+        if (txsRes.status === "fulfilled") {
+          setTransactions(Array.isArray(txsRes.value.data) ? txsRes.value.data.slice(0, 5) : []);
+        }
+        if (withdrawalsRes.status === "fulfilled") {
+          setWithdrawals(Array.isArray(withdrawalsRes.value.data) ? withdrawalsRes.value.data : []);
+        }
       } catch (err) {
         console.error("Dashboard load failed", err);
       } finally {
@@ -188,31 +212,6 @@ const Dashboard = () => {
     };
     loadDashboard();
   }, []);
-
-  useEffect(() => {
-    if (activeChat) {
-      api.get(`/chat/${activeChat._id}`).then((res) => {
-        setMessages(res.data);
-        socket?.emit("read_receipt", { errandId: activeChat._id });
-      });
-      socket?.emit("join_room", activeChat._id);
-    }
-  }, [activeChat, socket]);
-
-  useEffect(() => {
-    const openChatId = location.state?.openChatId;
-    if (!openChatId || activeChat) return;
-
-    const match = activeRequests.find((errand) => {
-      const errandId = errand._id || errand.id;
-      return errandId === openChatId;
-    });
-
-    if (match) {
-      setActiveChat({ ...match, _id: match._id || match.id });
-      window.history.replaceState({}, document.title);
-    }
-  }, [location.state, activeRequests, activeChat]);
 
   useEffect(() => {
     if (!socket) return;
@@ -226,83 +225,48 @@ const Dashboard = () => {
         data.type === "errand_requested" ? "info" : "success",
       );
     });
-    socket.on("receive_message", (data) => {
-      if (activeChat?._id === data.room || activeChat?._id === data.errandId) {
-        setMessages((prev) =>
-          data.senderId === (user?._id || user?.id) ? prev : [...prev, data],
-        );
-        socket.emit("read_receipt", { errandId: data.errandId || data.room });
-      }
-    });
-    socket.on("messages_read", ({ readBy }) => {
-      if (readBy === (user?._id || user?.id)) return;
-      setMessages((prev) =>
-        prev.map((message) =>
-          message.senderId === (user?._id || user?.id)
-            ? { ...message, isRead: true }
-            : message,
-        ),
-      );
-    });
     return () => {
       socket.off("new_errand");
       socket.off("notification");
-      socket.off("receive_message");
-      socket.off("messages_read");
     };
-  }, [socket, activeChat, user]);
+  }, [socket]);
 
-  const handleOpenChat = (errand) => {
-    setActiveChat({ ...errand, _id: errand._id || errand.id });
-    setNewMessage("");
-    setChatImageUrl("");
-  };
-
-  const handleUploadChatImage = async (file) => {
-    if (!file) return;
-    setChatImageUploading(true);
-    try {
-      const data = new FormData();
-      data.append("image", file);
-      const res = await api.post("/users/upload", data, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
-      setChatImageUrl(res.data.url);
-    } catch (err) {
-      showToast(err.response?.data?.message || "Image upload failed.", "error");
-    } finally {
-      setChatImageUploading(false);
-    }
-  };
-
-  const handleSendMessage = (e) => {
+  const handleWithdraw = async (e) => {
     e.preventDefault();
-    if (!socket || !activeChat) return;
-
-    const text = newMessage.trim();
-    if (!text && !chatImageUrl) return;
-
-    const payload = {
-      room: activeChat._id,
-      text,
-      imageUrl: chatImageUrl || undefined,
-    };
-
-    socket.emit("send_message", payload);
-    setMessages((prev) => [
-      ...prev,
-      {
-        _id: `local-${Date.now()}`,
-        errandId: activeChat._id,
-        senderId: user?._id || user?.id,
-        text,
-        imageUrl: chatImageUrl,
-        isRead: false,
-        createdAt: new Date().toISOString(),
-      },
-    ]);
-    setNewMessage("");
-    setChatImageUrl("");
+    if (!withdrawData.accountNumber || !withdrawData.bankName || !withdrawData.accountName) {
+      showToast("Please fill in all bank details", "error");
+      return;
+    }
+    const amt = Number(withdrawData.amount);
+    if (!amt || amt <= 0) {
+      showToast("Please enter a valid amount", "error");
+      return;
+    }
+    if (amt > (user?.balance || 0)) {
+      showToast("Insufficient balance", "error");
+      return;
+    }
+    if (amt < 1000) {
+      showToast("Minimum withdrawal is ₦1,000", "error");
+      return;
+    }
+    setProcessing(true);
+    try {
+      await api.post("/withdrawals/request", withdrawData);
+      setIsWithdrawModalOpen(false);
+      setWithdrawData({
+        amount: "",
+        bankName: "",
+        accountNumber: "",
+        accountName: "",
+      });
+      await fetchWalletData();
+      showToast("Withdrawal request submitted successfully!");
+    } catch (err) {
+      showToast(err.response?.data?.message || "Withdrawal failed", "error");
+    } finally {
+      setProcessing(false);
+    }
   };
 
   const handlePostErrand = async (e) => {
@@ -446,6 +410,80 @@ const Dashboard = () => {
           )}
         </div>
 
+        {/* ── Wallet & Payouts Card ── */}
+        <div
+          className="card"
+          style={{
+            background: "linear-gradient(135deg, #1e4db7 0%, #0f172a 100%)",
+            color: "#ffffff",
+            borderRadius: 24,
+            padding: 24,
+            marginBottom: 28,
+            boxShadow: "0 10px 25px -5px rgba(30, 77, 183, 0.3)",
+            display: "grid",
+            gap: 20,
+            gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+          }}
+        >
+          {/* Left Column: Balance & Action */}
+          <div style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", gap: 16 }}>
+            <div>
+              <span style={{ fontSize: "0.8rem", textTransform: "uppercase", letterSpacing: "0.1em", opacity: 0.8, fontWeight: 700 }}>
+                LCU Errand Wallet
+              </span>
+              <div style={{ fontSize: "2.5rem", fontWeight: 900, marginTop: 4, display: "flex", alignItems: "center", gap: 10 }}>
+                <Wallet size={32} /> ₦{user?.balance?.toLocaleString() || "0"}
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 12 }}>
+              {userRole === "messenger" ? (
+                <button
+                  className="btn"
+                  onClick={() => setIsWithdrawModalOpen(true)}
+                  style={{
+                    background: "#ffffff",
+                    color: "#1e4db7",
+                    fontWeight: 800,
+                    borderRadius: 12,
+                    padding: "10px 18px",
+                    border: "none",
+                    cursor: "pointer",
+                    boxShadow: "0 4px 12px rgba(255,255,255,0.15)",
+                  }}
+                >
+                  Withdraw Funds
+                </button>
+              ) : (
+                <div style={{ fontSize: "0.85rem", opacity: 0.9, lineHeight: 1.4 }}>
+                  💡 <strong>To Top Up:</strong> Go to the <strong>Profile</strong> tab to add funds to your wallet instantly using Paystack.
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Right Column: Explainer / Recent Request */}
+          <div style={{ borderLeft: "1px solid rgba(255,255,255,0.15)", paddingLeft: 20, display: "flex", flexDirection: "column", justifyContent: "center", gap: 10 }}>
+            <h4 style={{ fontSize: "0.85rem", fontWeight: 800, margin: 0, textTransform: "uppercase", letterSpacing: "0.05em", color: "#60a5fa" }}>
+              Secure Payment System
+            </h4>
+            <ul style={{ margin: 0, paddingLeft: 18, fontSize: "0.82rem", opacity: 0.9, display: "flex", flexDirection: "column", gap: 6 }}>
+              <li><strong>Escrow Protection:</strong> Senders pay in advance. Funds are held securely in escrow.</li>
+              <li><strong>Delivery Release:</strong> When the sender confirms delivery, funds release instantly to the messenger's LCU Wallet.</li>
+              <li><strong>Direct Cash Out:</strong> Withdraw from your wallet balance to your bank account anytime.</li>
+            </ul>
+
+            {/* Pending withdrawal notice */}
+            {withdrawals.filter(w => w.status === "pending").length > 0 && (
+              <div style={{ background: "rgba(245, 158, 11, 0.15)", border: "1px solid rgba(245, 158, 11, 0.3)", borderRadius: 12, padding: "8px 12px", display: "flex", alignItems: "center", gap: 8, marginTop: 8 }}>
+                <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#f59e0b", display: "inline-block" }} />
+                <span style={{ fontSize: "0.78rem", color: "#fef3c7", fontWeight: 700 }}>
+                  Pending payout: ₦{withdrawals.find(w => w.status === "pending")?.amount?.toLocaleString()} (Processing)
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+
         {/* ── Search ── */}
         <div className="search-bar">
           <div className="search-input-wrapper">
@@ -489,7 +527,7 @@ const Dashboard = () => {
                 Active Errands
               </h2>
               <span style={{ fontSize: "0.75rem", color: "var(--gray-400)", fontWeight: 700 }}>
-                {activeRequests.length} open conversation{activeRequests.length === 1 ? "" : "s"}
+                {activeRequests.length} active errand{activeRequests.length === 1 ? "" : "s"}
               </span>
             </div>
             <div style={{ display: "grid", gap: 12 }}>
@@ -543,12 +581,6 @@ const Dashboard = () => {
                         Confirm Delivery 🔔
                       </button>
                     )}
-                    <button
-                      className="btn btn-outline btn-sm"
-                      onClick={() => handleOpenChat(errand)}
-                    >
-                      <MessageSquare size={14} /> Chat
-                    </button>
                   </div>
                 </div>
               ))}
@@ -944,179 +976,122 @@ const Dashboard = () => {
         )}
       </AnimatePresence>
 
-      {/* ── Chat Modal ── */}
+      {/* ── Withdrawal Modal ── */}
       <AnimatePresence>
-        {activeChat && (
+        {isWithdrawModalOpen && (
           <div
             className="modal-overlay"
-            onClick={() => setActiveChat(null)}
+            onClick={() => setIsWithdrawModalOpen(false)}
             style={{ display: "flex", alignItems: "center", justifyContent: "center" }}
           >
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 10 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              transition={{ type: "spring", stiffness: 400, damping: 28 }}
               className="modal-container"
               onClick={(e) => e.stopPropagation()}
-              style={{ maxWidth: 520, height: "min(720px, 86vh)", display: "flex", flexDirection: "column" }}
+              style={{ maxWidth: 440 }}
             >
               <div
                 style={{
                   display: "flex",
                   justifyContent: "space-between",
                   alignItems: "center",
+                  marginBottom: 20,
                   paddingBottom: 16,
                   borderBottom: "1px solid var(--gray-100)",
-                  marginBottom: 16,
                 }}
               >
-                <div style={{ minWidth: 0 }}>
-                  <h2
-                    style={{
-                      fontWeight: 900,
-                      fontSize: "1.05rem",
-                      color: "var(--gray-900)",
-                      whiteSpace: "nowrap",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                    }}
-                  >
-                    {activeChat.title}
-                  </h2>
-                  <p style={{ fontSize: "0.78rem", color: "var(--gray-400)", marginTop: 4 }}>
-                    Linked to errand ID {activeChat._id}
-                  </p>
-                </div>
-                <button className="btn-icon" onClick={() => setActiveChat(null)}>
+                <h3 style={{ fontWeight: 900, fontSize: "1.2rem", margin: 0, color: "var(--gray-900)" }}>
+                  Withdraw Funds
+                </h3>
+                <button
+                  className="btn-icon"
+                  onClick={() => setIsWithdrawModalOpen(false)}
+                >
                   <X size={18} />
                 </button>
               </div>
 
-              <div
-                style={{
-                  flex: 1,
-                  overflowY: "auto",
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 10,
-                  paddingRight: 4,
-                }}
-              >
-                {messages.length === 0 ? (
-                  <div style={{ textAlign: "center", color: "var(--gray-400)", padding: "48px 16px" }}>
-                    <MessageSquare size={36} style={{ opacity: 0.35, marginBottom: 10 }} />
-                    <p style={{ fontWeight: 700 }}>No messages yet</p>
+              <form onSubmit={handleWithdraw}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                  <div>
+                    <label className="form-label" style={{ fontWeight: 700, fontSize: "0.85rem", color: "var(--gray-700)" }}>
+                      Amount to Withdraw (₦)
+                    </label>
+                    <input
+                      type="number"
+                      required
+                      min="1000"
+                      className="input-field"
+                      placeholder="Minimum ₦1,000"
+                      value={withdrawData.amount}
+                      onChange={(e) => setWithdrawData({ ...withdrawData, amount: e.target.value })}
+                    />
                   </div>
-                ) : (
-                  messages.map((message) => {
-                    const senderId =
-                      typeof message.senderId === "object"
-                        ? message.senderId?._id
-                        : message.senderId;
-                    const isMine = senderId === (user?._id || user?.id);
-                    return (
-                      <div
-                        key={message._id}
-                        style={{
-                          alignSelf: isMine ? "flex-end" : "flex-start",
-                          maxWidth: "82%",
-                          background: isMine ? "var(--blue-600)" : "var(--gray-50)",
-                          color: isMine ? "white" : "var(--gray-800)",
-                          borderRadius: 14,
-                          padding: "10px 12px",
-                        }}
-                      >
-                        {message.text && (
-                          <div style={{ fontSize: "0.9rem", lineHeight: 1.45 }}>{message.text}</div>
-                        )}
-                        {message.imageUrl && (
-                          <img
-                            src={message.imageUrl}
-                            alt="Chat attachment"
-                            style={{
-                              marginTop: message.text ? 8 : 0,
-                              maxWidth: "100%",
-                              maxHeight: 220,
-                              borderRadius: 10,
-                              objectFit: "cover",
-                              display: "block",
-                            }}
-                            onClick={() => window.open(message.imageUrl, "_blank")}
-                          />
-                        )}
-                        <div
-                          style={{
-                            marginTop: 6,
-                            display: "flex",
-                            justifyContent: "flex-end",
-                            gap: 5,
-                            alignItems: "center",
-                            fontSize: "0.66rem",
-                            opacity: 0.75,
-                          }}
-                        >
-                          {new Date(message.createdAt).toLocaleTimeString([], {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
-                          {isMine && <CheckCheck size={12} color={message.isRead ? "#A7F3D0" : "currentColor"} />}
-                        </div>
-                      </div>
-                    );
-                  })
-                )}
-              </div>
+                  <div>
+                    <label className="form-label" style={{ fontWeight: 700, fontSize: "0.85rem", color: "var(--gray-700)" }}>
+                      Bank Name
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      className="input-field"
+                      placeholder="e.g. GTBank, Access Bank"
+                      value={withdrawData.bankName}
+                      onChange={(e) => setWithdrawData({ ...withdrawData, bankName: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label className="form-label" style={{ fontWeight: 700, fontSize: "0.85rem", color: "var(--gray-700)" }}>
+                      Account Number
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      maxLength="10"
+                      className="input-field"
+                      placeholder="10-digit Account Number"
+                      value={withdrawData.accountNumber}
+                      onChange={(e) => setWithdrawData({ ...withdrawData, accountNumber: e.target.value.replace(/\D/g, "") })}
+                    />
+                  </div>
+                  <div>
+                    <label className="form-label" style={{ fontWeight: 700, fontSize: "0.85rem", color: "var(--gray-700)" }}>
+                      Account Name
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      className="input-field"
+                      placeholder="Official Bank Account Name"
+                      value={withdrawData.accountName}
+                      onChange={(e) => setWithdrawData({ ...withdrawData, accountName: e.target.value })}
+                    />
+                  </div>
+                  <div style={{ fontSize: "0.76rem", color: "var(--gray-500)", lineHeight: 1.4, background: "var(--gray-50)", padding: 12, borderRadius: 12 }}>
+                    <strong>Note:</strong> Withdrawals are processed manually by administrators within 24 hours. Please ensure your account details are correct.
+                  </div>
+                </div>
 
-              {chatImageUrl && (
-                <div
-                  style={{
-                    marginTop: 12,
-                    padding: 8,
-                    border: "1px solid var(--gray-100)",
-                    borderRadius: 12,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    gap: 10,
-                  }}
-                >
-                  <img src={chatImageUrl} alt="Pending attachment" style={{ width: 54, height: 54, borderRadius: 10, objectFit: "cover" }} />
-                  <span style={{ flex: 1, fontSize: "0.78rem", color: "var(--gray-500)", fontWeight: 700 }}>
-                    Image ready to send
-                  </span>
-                  <button className="btn-icon" onClick={() => setChatImageUrl("")}>
-                    <X size={15} />
+                <div style={{ display: "flex", gap: 12, marginTop: 24 }}>
+                  <button
+                    type="button"
+                    onClick={() => setIsWithdrawModalOpen(false)}
+                    className="btn btn-outline"
+                    style={{ flex: 1, borderRadius: 12 }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="btn btn-primary"
+                    style={{ flex: 1, borderRadius: 12 }}
+                  >
+                    Submit Request
                   </button>
                 </div>
-              )}
-
-              <form onSubmit={handleSendMessage} style={{ display: "flex", gap: 8, marginTop: 14 }}>
-                <label className="btn btn-outline btn-sm" style={{ cursor: chatImageUploading ? "wait" : "pointer", flexShrink: 0 }}>
-                  <ImagePlus size={16} />
-                  <input
-                    type="file"
-                    accept="image/*"
-                    disabled={chatImageUploading}
-                    onChange={(e) => handleUploadChatImage(e.target.files?.[0])}
-                    style={{ display: "none" }}
-                  />
-                </label>
-                <input
-                  className="input-field"
-                  value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
-                  placeholder={chatImageUploading ? "Uploading image..." : "Type a message"}
-                  disabled={chatImageUploading}
-                  style={{ minWidth: 0 }}
-                />
-                <button
-                  className="btn btn-primary btn-sm"
-                  type="submit"
-                  disabled={chatImageUploading || (!newMessage.trim() && !chatImageUrl)}
-                  style={{ flexShrink: 0 }}
-                >
-                  <Send size={15} />
-                </button>
               </form>
             </motion.div>
           </div>

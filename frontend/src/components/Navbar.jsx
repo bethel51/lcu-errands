@@ -175,11 +175,10 @@ const Navbar = () => {
                   <div className="dropdown-backdrop" onClick={() => setIsDropdownOpen(false)} />
                   <motion.div
                     className="notification-dropdown"
-                    initial={{ opacity: 0, y: 15, scale: 0.95 }}
+                    initial={{ opacity: 0, y: 15, scale: 0.97 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: 15, scale: 0.95 }}
+                    exit={{ opacity: 0, y: 15, scale: 0.97 }}
                     transition={{ type: "spring", duration: 0.25, bounce: 0.1 }}
-                    style={{ originX: 0.9, originY: 0 }}
                   >
                     <div className="notification-header">
                       <h4 style={{ fontWeight: 800, margin: 0 }}>

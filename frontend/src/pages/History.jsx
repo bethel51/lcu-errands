@@ -21,6 +21,11 @@ const History = () => {
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
   const [toast, setToast] = useState(null);
 
+  // Status Filter Tabs & Modal Confirmation States
+  const [activeStatusTab, setActiveStatusTab] = useState("All");
+  const [confirmModalOpen, setConfirmModalOpen] = useState(false);
+  const [confirmErrandId, setConfirmErrandId] = useState(null);
+
   // Digital Footprint Timeline States
   const [intelFootprint, setIntelFootprint] = useState(null);
   const [intelModalOpen, setIntelModalOpen] = useState(false);
@@ -37,46 +42,66 @@ const History = () => {
     setTimeout(() => setToast(null), 4000);
   };
 
-  useEffect(() => {
-    const fetchHistory = async () => {
-      if (!user) {
-        setLoading(false);
-        return;
-      }
-      const cacheKey = `history_${user.id}_${filterType}`;
-      // Show cached immediately while fresh data loads
-      const cached = localStorage.getItem(cacheKey);
-      if (cached) {
-        setHistoryItems(JSON.parse(cached));
-        setLoading(false);
-      }
+  const fetchHistory = async () => {
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+    const userId = user.id || user._id || "";
+    const cacheKey = `history_${userId}_${filterType}`;
+    // Show cached immediately while fresh data loads
+    const cached = localStorage.getItem(cacheKey);
+    if (cached) {
+      setHistoryItems(JSON.parse(cached));
+      setLoading(false);
+    }
 
-      try {
-        const res = await api.get("/errands/history");
-        const data = Array.isArray(res.data) ? res.data : [];
-        const formatted = data.map((errand) => ({
+    try {
+      const res = await api.get("/errands/history");
+      const data = Array.isArray(res.data) ? res.data : [];
+      const formatted = data.map((errand) => {
+        const posterIdStr = errand.posterId?._id ? errand.posterId._id.toString() : errand.posterId?.toString();
+        return {
           id: errand._id,
           title: errand.title,
+          description: errand.description,
+          category: errand.category,
+          pickupLocation: errand.pickupLocation,
+          dropoffLocation: errand.dropoffLocation,
           fee: errand.fee,
-          location: errand.dropoffLocation,
           date: new Date(errand.createdAt).toLocaleDateString(),
-          // Fix: stringify ObjectId from DB before comparison
-          type: errand.posterId?.toString() === user.id ? "posted" : "accepted",
+          type: posterIdStr === userId ? "posted" : "accepted",
           status: errand.status,
           completionRequested: !!errand.completionRequested,
-        }));
-        setHistoryItems(formatted);
-        // Always overwrite cache with fresh data
-        localStorage.setItem(cacheKey, JSON.stringify(formatted));
-      } catch (err) {
-        console.error("Failed to fetch history", err);
-        if (!cached) setHistoryItems([]);
-      } finally {
-        setLoading(false);
-      }
-    };
+          poster: errand.posterId,
+          errander: errand.erranderId,
+        };
+      });
+      setHistoryItems(formatted);
+      // Always overwrite cache with fresh data
+      localStorage.setItem(cacheKey, JSON.stringify(formatted));
+    } catch (err) {
+      console.error("Failed to fetch history", err);
+      if (!cached) setHistoryItems([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchHistory();
-  }, [user?.id, filterType]);
+  }, [user?.id, user?._id, filterType]);
+
+  useEffect(() => {
+    if (!socket) return;
+    const handleNotification = (data) => {
+      fetchHistory();
+    };
+    socket.on("notification", handleNotification);
+    return () => {
+      socket.off("notification", handleNotification);
+    };
+  }, [socket, user]);
 
   const handleCancelErrand = async (id) => {
     if (
@@ -205,7 +230,16 @@ const History = () => {
     };
   }, [socket, selectedErrandId]);
 
-  const filteredItems = historyItems.filter((item) => item.type === filterType);
+  const filteredItems = historyItems
+    .filter((item) => item.type === filterType)
+    .filter((item) => {
+      if (activeStatusTab === "All") return true;
+      if (activeStatusTab === "Open") return item.status === "open";
+      if (activeStatusTab === "Accepted") return ["assigned", "accepted", "in_progress"].includes(item.status);
+      if (activeStatusTab === "Pending Confirmation") return ["pending_confirmation", "pending_sender_confirmation"].includes(item.status);
+      if (activeStatusTab === "Completed") return ["completed", "confirmed_completed"].includes(item.status);
+      return true;
+    });
 
   const renderEscrowTracker = (status) => {
     if (status === "cancelled") {
@@ -218,16 +252,16 @@ const History = () => {
     }
 
     const steps = [
-      { label: "Posted", desc: "Funds in Escrow", active: ["open", "assigned", "in_progress", "pending_confirmation", "completed"].includes(status) },
-      { label: "Assigned", desc: "Task in Progress", active: ["assigned", "in_progress", "pending_confirmation", "completed"].includes(status) },
-      { label: "Pending", desc: "Awaiting Confirmation", active: ["pending_confirmation", "completed"].includes(status) },
-      { label: "Disbursed", desc: "Released to Wallet", active: ["completed"].includes(status) },
+      { label: "Posted", desc: "Funds in Escrow", active: ["open", "assigned", "accepted", "in_progress", "pending_confirmation", "pending_sender_confirmation", "completed", "confirmed_completed"].includes(status) },
+      { label: "Assigned", desc: "Task in Progress", active: ["assigned", "accepted", "in_progress", "pending_confirmation", "pending_sender_confirmation", "completed", "confirmed_completed"].includes(status) },
+      { label: "Pending", desc: "Awaiting Confirmation", active: ["pending_confirmation", "pending_sender_confirmation", "completed", "confirmed_completed"].includes(status) },
+      { label: "Disbursed", desc: "Released to Wallet", active: ["completed", "confirmed_completed"].includes(status) },
     ];
 
     let progressWidth = "0%";
-    if (status === "completed") progressWidth = "100%";
-    else if (status === "pending_confirmation") progressWidth = "75%";
-    else if (["assigned", "in_progress"].includes(status)) progressWidth = "45%";
+    if (["completed", "confirmed_completed"].includes(status)) progressWidth = "100%";
+    else if (["pending_confirmation", "pending_sender_confirmation"].includes(status)) progressWidth = "75%";
+    else if (["assigned", "accepted", "in_progress"].includes(status)) progressWidth = "45%";
 
     return (
       <div className="escrow-tracker">
@@ -296,7 +330,7 @@ const History = () => {
           )}
         </AnimatePresence>
 
-        <div className="dashboard-header" style={{ marginBottom: 32 }}>
+        <div className="dashboard-header" style={{ marginBottom: 16 }}>
           <div className="dashboard-title">
             <h1>My Errands</h1>
             <p>
@@ -304,6 +338,34 @@ const History = () => {
               tasks.
             </p>
           </div>
+        </div>
+
+        {/* ── Status Tabs ── */}
+        <div style={{
+          display: "flex",
+          gap: 8,
+          overflowX: "auto",
+          paddingBottom: 8,
+          marginBottom: 24,
+          scrollbarWidth: "none",
+          msOverflowStyle: "none"
+        }}>
+          {["All", ...(filterType === "posted" ? ["Open"] : []), "Accepted", "Pending Confirmation", "Completed"].map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setActiveStatusTab(tab)}
+              className={`chip ${activeStatusTab === tab ? "active" : ""}`}
+              style={{
+                fontSize: "0.82rem",
+                fontWeight: 800,
+                padding: "8px 16px",
+                whiteSpace: "nowrap",
+                borderRadius: "var(--radius-full)"
+              }}
+            >
+              {tab}
+            </button>
+          ))}
         </div>
 
         {loading ? (
@@ -368,8 +430,9 @@ const History = () => {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 className="history-item-card"
+                style={{ display: "flex", flexDirection: "column", padding: 18, borderRadius: 20, background: "var(--white)", border: "1px solid var(--gray-100)", boxShadow: "var(--shadow-sm)" }}
               >
-                <div className="history-item-content">
+                <div className="history-item-content" style={{ display: "flex", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div
                       style={{
@@ -392,16 +455,18 @@ const History = () => {
                       </h3>
                       <span
                         className={`badge ${
-                          item.status === "completed"
+                          ["completed", "confirmed_completed"].includes(item.status)
                             ? "badge-green"
-                            : item.status === "assigned"
+                            : ["assigned", "accepted"].includes(item.status)
                               ? "badge-blue"
                               : item.status === "cancelled"
                                 ? "badge-red"
-                                : "badge-orange"
+                                : item.status === "in_progress"
+                                  ? "badge-orange"
+                                  : "badge-blue"
                         }`}
                       >
-                        {item.status.toUpperCase()}
+                        {item.status.replace("_", " ").toUpperCase()}
                       </span>
                     </div>
 
@@ -413,14 +478,40 @@ const History = () => {
                         color: "var(--gray-500)",
                         fontSize: "0.85rem",
                         flexWrap: "wrap",
+                        marginBottom: 10
                       }}
                     >
                       <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                        <MapPin size={14} /> {item.location}
+                        <MapPin size={14} /> {item.dropoffLocation || item.location}
                       </span>
                       <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
                         <Clock size={14} /> {item.date}
                       </span>
+                    </div>
+
+                    <p style={{ fontSize: "0.88rem", color: "var(--gray-600)", margin: "8px 0 12px 0", lineHeight: 1.5 }}>
+                      {item.description}
+                    </p>
+
+                    <div style={{
+                      display: "grid",
+                      gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+                      gap: 8,
+                      fontSize: "0.8rem",
+                      color: "var(--gray-600)",
+                      background: "var(--gray-50)",
+                      padding: "10px 14px",
+                      borderRadius: 12,
+                      marginTop: 10,
+                      marginBottom: 10,
+                      border: "1px solid var(--gray-100)"
+                    }}>
+                      <div>
+                        <strong>📍 Pickup:</strong> {item.pickupLocation || "Campus"}
+                      </div>
+                      <div>
+                        <strong>🏁 Dropoff:</strong> {item.dropoffLocation}
+                      </div>
                     </div>
                   </div>
 
@@ -430,6 +521,8 @@ const History = () => {
                       alignItems: "center",
                       gap: 16,
                       flexWrap: "wrap",
+                      alignSelf: "flex-start",
+                      flexShrink: 0
                     }}
                   >
                     <span
@@ -466,16 +559,19 @@ const History = () => {
                       </button>
                     )}
 
-                    {filterType === "posted" && item.status === "pending_confirmation" && (
+                    {filterType === "posted" && ["pending_confirmation", "pending_sender_confirmation"].includes(item.status) && (
                       <button
-                        onClick={() => handleCompleteTask(item.id)}
+                        onClick={() => {
+                          setConfirmErrandId(item.id);
+                          setConfirmModalOpen(true);
+                        }}
                         className="btn btn-primary btn-sm"
                         style={{
                           boxShadow: "0 0 14px var(--blue-600)",
                           animation: "pulse 1.8s infinite",
                         }}
                       >
-                        Confirm Delivery 🔔
+                        Confirm Errand Completed
                       </button>
                     )}
 
@@ -510,7 +606,7 @@ const History = () => {
                       </div>
                     )}
 
-                    {filterType === "accepted" && item.status === "pending_confirmation" && (
+                    {filterType === "accepted" && ["pending_confirmation", "pending_sender_confirmation"].includes(item.status) && (
                       <button
                         className="btn btn-outline btn-sm"
                         disabled
@@ -520,7 +616,7 @@ const History = () => {
                       </button>
                     )}
 
-                    {item.status === "completed" && (
+                    {["completed", "confirmed_completed"].includes(item.status) && (
                       <button
                         className="btn btn-outline btn-sm"
                         style={{
@@ -541,11 +637,208 @@ const History = () => {
                   </div>
                 </div>
 
+                {/* ── Contact Profiles ── */}
+                {filterType === "posted" && item.errander && (
+                  <div style={{
+                    background: "var(--gray-50)",
+                    border: "1px solid var(--gray-100)",
+                    borderRadius: 16,
+                    padding: 12,
+                    marginTop: 12,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 12
+                  }}>
+                    {item.errander.profilePicture ? (
+                      <img
+                        src={item.errander.profilePicture}
+                        alt={item.errander.name}
+                        style={{ width: 36, height: 36, borderRadius: 10, objectFit: "cover" }}
+                      />
+                    ) : (
+                      <div style={{
+                        width: 36, height: 36, borderRadius: 10, background: "var(--blue-100)",
+                        color: "var(--blue-600)", display: "flex", alignItems: "center",
+                        justifyContent: "center", fontWeight: 800, fontSize: "0.85rem"
+                      }}>
+                        {item.errander.name.charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 800, fontSize: "0.82rem", color: "var(--gray-800)" }}>
+                        {item.errander.name} (Assigned Messenger)
+                      </div>
+                      <div style={{ fontSize: "0.75rem", color: "var(--gray-500)", marginTop: 1 }}>
+                        📞 {item.errander.phoneNumber || "No contact info listed"}
+                      </div>
+                    </div>
+                    {item.errander.phoneNumber && (
+                      <a
+                        href={`tel:${item.errander.phoneNumber}`}
+                        className="btn btn-outline btn-sm"
+                        style={{ borderRadius: 8, padding: "5px 10px", textDecoration: "none", fontSize: "0.72rem" }}
+                      >
+                        Call
+                      </a>
+                    )}
+                  </div>
+                )}
+
+                {filterType === "accepted" && item.poster && (
+                  <div style={{
+                    background: "var(--gray-50)",
+                    border: "1px solid var(--gray-100)",
+                    borderRadius: 16,
+                    padding: 12,
+                    marginTop: 12,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 12
+                  }}>
+                    {item.poster.profilePicture ? (
+                      <img
+                        src={item.poster.profilePicture}
+                        alt={item.poster.name}
+                        style={{ width: 36, height: 36, borderRadius: 10, objectFit: "cover" }}
+                      />
+                    ) : (
+                      <div style={{
+                        width: 36, height: 36, borderRadius: 10, background: "var(--blue-100)",
+                        color: "var(--blue-600)", display: "flex", alignItems: "center",
+                        justifyContent: "center", fontWeight: 800, fontSize: "0.85rem"
+                      }}>
+                        {item.poster.name.charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 800, fontSize: "0.82rem", color: "var(--gray-800)" }}>
+                        {item.poster.name} (Sender Details)
+                      </div>
+                      <div style={{ fontSize: "0.75rem", color: "var(--gray-500)", marginTop: 1 }}>
+                        📞 {item.poster.phoneNumber || "No contact info listed"}
+                      </div>
+                    </div>
+                    {item.poster.phoneNumber && (
+                      <a
+                        href={`tel:${item.poster.phoneNumber}`}
+                        className="btn btn-outline btn-sm"
+                        style={{ borderRadius: 8, padding: "5px 10px", textDecoration: "none", fontSize: "0.72rem" }}
+                      >
+                        Call
+                      </a>
+                    )}
+                  </div>
+                )}
+
+                {/* ── Pending Confirmation Alert banner ── */}
+                {filterType === "posted" && ["pending_confirmation", "pending_sender_confirmation"].includes(item.status) && (
+                  <div style={{
+                    background: "rgba(245, 158, 11, 0.08)",
+                    border: "1px solid rgba(245, 158, 11, 0.25)",
+                    borderRadius: 16,
+                    padding: "12px 14px",
+                    marginTop: 12,
+                    fontSize: "0.82rem",
+                    color: "var(--amber-700)",
+                    fontWeight: 700,
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 8,
+                  }}>
+                    <span>⚠️ Messenger marked this errand as completed. Please confirm.</span>
+                    <button
+                      onClick={() => {
+                        setConfirmErrandId(item.id);
+                        setConfirmModalOpen(true);
+                      }}
+                      className="btn btn-primary btn-sm"
+                      style={{
+                        background: "var(--blue-600)",
+                        borderColor: "var(--blue-600)",
+                        color: "var(--white)",
+                        alignSelf: "flex-start",
+                        boxShadow: "0 0 10px rgba(37, 99, 235, 0.15)",
+                        animation: "pulse 2s infinite",
+                      }}
+                    >
+                      Confirm Errand Completed
+                    </button>
+                  </div>
+                )}
+
                 {renderEscrowTracker(item.status)}
               </motion.div>
             ))}
           </div>
         )}
+
+        {/* ── Confirm Completion Modal ── */}
+        <AnimatePresence>
+          {confirmModalOpen && (
+            <>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => {
+                  setConfirmModalOpen(false);
+                  setConfirmErrandId(null);
+                }}
+                style={{ position: "fixed", inset: 0, background: "rgba(15,23,42,0.6)", backdropFilter: "blur(4px)", zIndex: 9994 }}
+              />
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                transition={{ type: "spring", damping: 25, stiffness: 220 }}
+                style={{
+                  position: "fixed",
+                  top: "50%",
+                  left: "50%",
+                  transform: "translate(-50%, -50%)",
+                  width: "90%",
+                  maxWidth: 440,
+                  background: "var(--white)",
+                  borderRadius: 24,
+                  padding: 24,
+                  boxShadow: "0 20px 40px rgba(0,0,0,0.15)",
+                  zIndex: 9995,
+                }}
+              >
+                <h3 style={{ fontWeight: 900, fontSize: "1.25rem", margin: "0 0 12px 0", color: "var(--gray-900)" }}>
+                  Confirm completion?
+                </h3>
+                <p style={{ fontSize: "0.9rem", color: "var(--gray-600)", lineHeight: 1.5, margin: "0 0 24px 0" }}>
+                  Confirm that the messenger successfully completed this errand. Once confirmed, the errand payment will be released to the messenger wallet.
+                </p>
+                <div style={{ display: "flex", gap: 12 }}>
+                  <button
+                    onClick={() => {
+                      setConfirmModalOpen(false);
+                      setConfirmErrandId(null);
+                    }}
+                    className="btn btn-outline"
+                    style={{ flex: 1, borderRadius: 12 }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={async () => {
+                      const id = confirmErrandId;
+                      setConfirmModalOpen(false);
+                      setConfirmErrandId(null);
+                      await handleCompleteTask(id);
+                    }}
+                    className="btn btn-primary"
+                    style={{ flex: 1, borderRadius: 12, background: "var(--blue-600)", borderColor: "var(--blue-600)" }}
+                  >
+                    Confirm & Release Payment
+                  </button>
+                </div>
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>
 
         {selectedErrandId && (
           <ReviewModal

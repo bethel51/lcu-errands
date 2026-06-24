@@ -9,7 +9,7 @@ const errandSchema = new mongoose.Schema({
   fee: { type: Number, required: true },
   status: {
     type: String,
-    enum: ["open", "assigned", "in_progress", "pending_confirmation", "completed", "cancelled"],
+    enum: ["open", "accepted", "assigned", "in_progress", "pending_sender_confirmation", "pending_confirmation", "confirmed_completed", "completed", "cancelled"],
     default: "open",
   },
   posterId: {
@@ -24,6 +24,12 @@ const errandSchema = new mongoose.Schema({
   completionRequested: { type: Boolean, default: false },
   trackingId: { type: String, unique: true, sparse: true },
   createdAt: { type: Date, default: Date.now },
+  acceptedAt: { type: Date },
+  messengerCompletedAt: { type: Date },
+  senderConfirmedAt: { type: Date },
+  paymentReleased: { type: Boolean, default: false },
+  paymentReleasedAt: { type: Date },
+  paymentTransactionId: { type: String },
 });
 
 errandSchema.pre("save", function (next) {

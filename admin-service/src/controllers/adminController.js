@@ -18,11 +18,11 @@ import { catchAsync } from "../utils/catchAsync.js";
 export const getStats = catchAsync(async (req, res) => {
   const totalUsers = await User.countDocuments();
   const totalErrands = await Errand.countDocuments();
-  const completedErrands = await Errand.countDocuments({ status: "completed" });
+  const completedErrands = await Errand.countDocuments({ status: { $in: ["completed", "confirmed_completed"] } });
   const totalActiveErrands = await Errand.countDocuments({
-    status: { $in: ["open", "assigned", "in_progress", "pending_confirmation"] },
+    status: { $in: ["open", "assigned", "accepted", "in_progress", "pending_confirmation", "pending_sender_confirmation"] },
   });
-  const pendingConfirmations = await Errand.countDocuments({ status: "pending_confirmation" });
+  const pendingConfirmations = await Errand.countDocuments({ status: { $in: ["pending_confirmation", "pending_sender_confirmation"] } });
   const flaggedErrands = await DigitalFootprint.countDocuments({ isSuspicious: true });
   const failedErrands = await Errand.countDocuments({ status: "cancelled" });
 
@@ -48,7 +48,7 @@ export const getStats = catchAsync(async (req, res) => {
 
   // Total funds held in escrow (open/in-progress errands)
   const pendingPaymentsResult = await Errand.aggregate([
-    { $match: { status: { $in: ["assigned", "in_progress", "pending_confirmation"] } } },
+    { $match: { status: { $in: ["assigned", "accepted", "in_progress", "pending_confirmation", "pending_sender_confirmation"] } } },
     { $group: { _id: null, total: { $sum: "$fee" } } },
   ]);
   const pendingPayments = pendingPaymentsResult[0]?.total || 0;
@@ -62,7 +62,7 @@ export const getStats = catchAsync(async (req, res) => {
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
   const revenueTrends = await Errand.aggregate([
-    { $match: { status: "completed", createdAt: { $gte: sevenDaysAgo } } },
+    { $match: { status: { $in: ["completed", "confirmed_completed"] }, createdAt: { $gte: sevenDaysAgo } } },
     {
       $group: {
         _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
@@ -151,20 +151,20 @@ export const getErrandIntel = catchAsync(async (req, res) => {
       senderId: errand.posterId?._id || errand.posterId,
       messengerId: errand.erranderId?._id || errand.erranderId,
       timePosted: errand.createdAt || new Date(),
-      timeAccepted: ["in_progress", "pending_confirmation", "completed"].includes(errand.status)
-        ? errand.updatedAt || errand.createdAt
+      timeAccepted: ["assigned", "accepted", "in_progress", "pending_confirmation", "pending_sender_confirmation", "completed", "confirmed_completed"].includes(errand.status)
+        ? errand.acceptedAt || errand.updatedAt || errand.createdAt
         : undefined,
-      timeCompleted: ["pending_confirmation", "completed"].includes(errand.status)
-        ? errand.updatedAt || errand.createdAt
+      timeCompleted: ["pending_confirmation", "pending_sender_confirmation", "completed", "confirmed_completed"].includes(errand.status)
+        ? errand.messengerCompletedAt || errand.updatedAt || errand.createdAt
         : undefined,
-      timeConfirmed: errand.status === "completed" ? errand.updatedAt || errand.createdAt : undefined,
+      timeConfirmed: ["completed", "confirmed_completed"].includes(errand.status) ? errand.senderConfirmedAt || errand.updatedAt || errand.createdAt : undefined,
       locationData: {
         posted: errand.dropoffLocation || "Campus",
         accepted: errand.pickupLocation || "Campus",
         completed: errand.dropoffLocation || "Campus",
         confirmed: errand.dropoffLocation || "Campus",
       },
-      status: errand.status === "completed" ? "released" : "held",
+      status: ["completed", "confirmed_completed"].includes(errand.status) ? "released" : "held",
       auditTrail: [
         {
           action: "POSTED",
@@ -193,7 +193,7 @@ export const approveErrandTransaction = catchAsync(async (req, res) => {
       return;
     }
 
-    if (errand.status === "completed") {
+    if (["completed", "confirmed_completed"].includes(errand.status)) {
       await session.abortTransaction();
       res.status(400).json({ message: "Errand is already completed" });
       return;
@@ -210,12 +210,27 @@ export const approveErrandTransaction = catchAsync(async (req, res) => {
     messenger.balance += errand.fee;
     await messenger.save({ session });
 
-    await Transaction.create(
-      [{ userId: messenger._id, amount: errand.fee, type: "credit", description: `Admin-approved: Earnings from Errand: ${errand.title}`, errandId: errand._id }],
+    const [tx] = await Transaction.create(
+      [
+        {
+          userId: messenger._id,
+          amount: errand.fee,
+          type: "errand_earning",
+          description: `Payment for completed errand: ${errand.title}`,
+          errandId: errand._id,
+          senderId: errand.posterId,
+          messengerId: messenger._id,
+          status: "completed",
+        },
+      ],
       { session }
     );
 
-    errand.status = "completed";
+    errand.status = "confirmed_completed";
+    errand.senderConfirmedAt = new Date();
+    errand.paymentReleased = true;
+    errand.paymentReleasedAt = new Date();
+    errand.paymentTransactionId = tx._id.toString();
     await errand.save({ session });
 
     const txRef = `ADMIN-TX-${Date.now()}`;
@@ -572,7 +587,7 @@ export const getChatHistory = catchAsync(async (req, res) => {
 
 export const getUserWithdrawalEvidence = catchAsync(async (req, res) => {
   const { userId } = req.params;
-  const completedErrands = await Errand.find({ erranderId: userId, status: "completed" })
+  const completedErrands = await Errand.find({ erranderId: userId, status: { $in: ["completed", "confirmed_completed"] } })
     .populate("posterId", "name email")
     .populate("erranderId", "name email")
     .sort({ createdAt: -1 })

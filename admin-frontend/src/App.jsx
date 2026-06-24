@@ -43,6 +43,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import adminApi from "./adminApi";
+import { io } from "socket.io-client";
 
 const AdminPortal = () => {
   // Auth States
@@ -148,6 +149,36 @@ const AdminPortal = () => {
       fetchData();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoggedIn]);
+
+  useEffect(() => {
+    if (!isLoggedIn) return;
+    const adminUrl = import.meta.env.VITE_ADMIN_API_URL || "http://localhost:5001";
+    const socketUrl = import.meta.env.VITE_API_URL
+      ? import.meta.env.VITE_API_URL.replace("/api", "")
+      : adminUrl.replace(":5001", ":5000").replace("-admin", "");
+      
+    const socket = io(socketUrl);
+
+    socket.on("connect", () => {
+      console.log("Admin connected to socket");
+    });
+
+    socket.on("notification", () => {
+      fetchData();
+    });
+
+    socket.on("footprint_updated", () => {
+      fetchData();
+    });
+
+    socket.on("new_errand", () => {
+      fetchData();
+    });
+
+    return () => {
+      socket.disconnect();
+    };
   }, [isLoggedIn]);
 
   useEffect(() => {
@@ -889,7 +920,7 @@ const AdminPortal = () => {
                 />
                 <StatCard
                   label="Live Errands"
-                  value={errands.filter((e) => e.status !== "completed").length}
+                  value={errands.filter((e) => !["completed", "confirmed_completed"].includes(e.status)).length}
                   icon={<Package size={18} />}
                   color="#0891B2"
                 />
@@ -1364,10 +1395,10 @@ const AdminPortal = () => {
                                 borderRadius: 6,
                                 fontSize: "0.7rem",
                                 fontWeight: 800,
-                                background: e.status === "completed" ? "#ECFDF5" : e.status === "pending_confirmation" ? "#FFF7ED" : e.status === "open" ? "#EFF6FF" : "#F3F4F6",
-                                color: e.status === "completed" ? "#065F46" : e.status === "pending_confirmation" ? "#92400E" : e.status === "open" ? "#1D4ED8" : "#374151",
+                                background: ["completed", "confirmed_completed"].includes(e.status) ? "#ECFDF5" : ["pending_confirmation", "pending_sender_confirmation"].includes(e.status) ? "#FFF7ED" : ["open", "accepted", "assigned", "in_progress"].includes(e.status) ? "#EFF6FF" : "#F3F4F6",
+                                color: ["completed", "confirmed_completed"].includes(e.status) ? "#065F46" : ["pending_confirmation", "pending_sender_confirmation"].includes(e.status) ? "#92400E" : ["open", "accepted", "assigned", "in_progress"].includes(e.status) ? "#1D4ED8" : "#374151",
                               }}>
-                                {e.status?.toUpperCase()}
+                                {e.status?.toUpperCase()?.replace("_", " ")}
                               </span>
                             </td>
                             <td style={{ padding: 15 }}>
@@ -2114,9 +2145,9 @@ const AdminPortal = () => {
             const messenger = errand?.erranderId || {};
             const timeline = [
               ["Posted", footprint?.timePosted || errand?.createdAt],
-              ["Accepted", footprint?.timeAccepted],
-              ["Completed", footprint?.timeCompleted],
-              ["Confirmed", footprint?.timeConfirmed],
+              ["Accepted", footprint?.timeAccepted || errand?.acceptedAt],
+              ["Completed", footprint?.timeCompleted || errand?.messengerCompletedAt],
+              ["Confirmed", footprint?.timeConfirmed || errand?.senderConfirmedAt],
             ];
 
             return (
@@ -2214,13 +2245,15 @@ const AdminPortal = () => {
 
                       <div style={{ border: "1px solid #E2E8F0", borderRadius: 14, padding: 14 }}>
                         <h4 style={{ fontWeight: 900, marginBottom: 10 }}>Payment Status</h4>
-                        {renderIntelField("Errand Status", errand?.status)}
+                        {renderIntelField("Errand Status", errand?.status?.toUpperCase()?.replace("_", " "))}
                         <div style={{ height: 8 }} />
                         {renderIntelField("Fee", `₦${(errand?.fee || 0).toLocaleString()}`)}
                         <div style={{ height: 8 }} />
-                        {renderIntelField("Footprint Payment", footprint?.status)}
+                        {renderIntelField("Payment Released", errand?.paymentReleased ? "Yes" : (footprint?.status === "released" ? "Yes" : "No"))}
                         <div style={{ height: 8 }} />
-                        {renderIntelField("Transaction Ref", footprint?.transactionReference)}
+                        {renderIntelField("Released At", errand?.paymentReleasedAt ? formatDateTime(errand.paymentReleasedAt) : (footprint?.timeConfirmed ? formatDateTime(footprint.timeConfirmed) : "N/A"))}
+                        <div style={{ height: 8 }} />
+                        {renderIntelField("Tx Ref / ID", errand?.paymentTransactionId || footprint?.transactionReference || "N/A")}
                       </div>
                     </div>
 

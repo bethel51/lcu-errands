@@ -468,7 +468,7 @@ export const resetPasswordOtp = catchAsync(async (req: Request<{}, {}, { email?:
 
 export const getPublicStats = catchAsync(async (req: Request, res: Response) => {
   const activeStudents = await User.countDocuments({ role: { $in: ["sender", "messenger"] } });
-  const completedErrands = await Errand.countDocuments({ status: "completed" });
+  const completedErrands = await Errand.countDocuments({ status: { $in: ["completed", "confirmed_completed"] } });
   
   const reviews = await Review.find();
   let averageRating = 4.8;

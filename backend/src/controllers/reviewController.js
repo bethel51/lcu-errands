@@ -13,7 +13,7 @@ export const createReview = catchAsync(async (req, res) => {
     return;
   }
 
-  if (errand.status !== "completed") {
+  if (!["completed", "confirmed_completed"].includes(errand.status)) {
     res.status(400).json({ message: "You can only review completed errands" });
     return;
   }

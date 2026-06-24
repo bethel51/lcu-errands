@@ -165,51 +165,52 @@ const Dashboard = () => {
     }
   };
 
-  useEffect(() => {
-    const loadDashboard = async () => {
-      try {
-        const [errandsRes, historyRes, profileRes, messengersRes, txsRes, withdrawalsRes] =
-          await Promise.allSettled([
-            api.get("/errands"),
-            api.get("/errands/history"),
-            api.get("/users/profile"),
-            api.get("/users/messengers"),
-            api.get("/users/transactions"),
-            api.get("/withdrawals/my"),
-          ]);
+  const loadDashboard = async () => {
+    try {
+      const [errandsRes, historyRes, profileRes, messengersRes, txsRes, withdrawalsRes] =
+        await Promise.allSettled([
+          api.get("/errands"),
+          api.get("/errands/history"),
+          api.get("/users/profile"),
+          api.get("/users/messengers"),
+          api.get("/users/transactions"),
+          api.get("/withdrawals/my"),
+        ]);
 
-        if (errandsRes.status === "fulfilled") {
-          const data = Array.isArray(errandsRes.value.data) ? errandsRes.value.data : [];
-          setErrands(data.map(mapBackendToFrontend));
-        }
-        if (historyRes.status === "fulfilled") {
-          const data = Array.isArray(historyRes.value.data) ? historyRes.value.data : [];
-          const active = data.filter(
-            (e) => e.status !== "completed" && e.status !== "cancelled",
-          );
-          setActiveRequests(active.map(mapBackendToFrontend));
-        }
-        if (profileRes.status === "fulfilled") {
-          const u = profileRes.value.data;
-          setUser(u);
-          localStorage.setItem("user", JSON.stringify(u));
-        }
-        if (messengersRes.status === "fulfilled") {
-          const data = Array.isArray(messengersRes.value.data) ? messengersRes.value.data : [];
-          setMessengers(data);
-        }
-        if (txsRes.status === "fulfilled") {
-          setTransactions(Array.isArray(txsRes.value.data) ? txsRes.value.data.slice(0, 5) : []);
-        }
-        if (withdrawalsRes.status === "fulfilled") {
-          setWithdrawals(Array.isArray(withdrawalsRes.value.data) ? withdrawalsRes.value.data : []);
-        }
-      } catch (err) {
-        console.error("Dashboard load failed", err);
-      } finally {
-        setLoading(false);
+      if (errandsRes.status === "fulfilled") {
+        const data = Array.isArray(errandsRes.value.data) ? errandsRes.value.data : [];
+        setErrands(data.map(mapBackendToFrontend));
       }
-    };
+      if (historyRes.status === "fulfilled") {
+        const data = Array.isArray(historyRes.value.data) ? historyRes.value.data : [];
+        const active = data.filter(
+          (e) => !["completed", "confirmed_completed", "cancelled"].includes(e.status),
+        );
+        setActiveRequests(active.map(mapBackendToFrontend));
+      }
+      if (profileRes.status === "fulfilled") {
+        const u = profileRes.value.data;
+        setUser(u);
+        localStorage.setItem("user", JSON.stringify(u));
+      }
+      if (messengersRes.status === "fulfilled") {
+        const data = Array.isArray(messengersRes.value.data) ? messengersRes.value.data : [];
+        setMessengers(data);
+      }
+      if (txsRes.status === "fulfilled") {
+        setTransactions(Array.isArray(txsRes.value.data) ? txsRes.value.data.slice(0, 5) : []);
+      }
+      if (withdrawalsRes.status === "fulfilled") {
+        setWithdrawals(Array.isArray(withdrawalsRes.value.data) ? withdrawalsRes.value.data : []);
+      }
+    } catch (err) {
+      console.error("Dashboard load failed", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     loadDashboard();
   }, []);
 
@@ -219,7 +220,7 @@ const Dashboard = () => {
       setErrands((prev) => [mapBackendToFrontend(newErrand), ...prev]);
     });
     socket.on("notification", (data) => {
-      fetchErrands();
+      loadDashboard();
       showToast(
         data.message,
         data.type === "errand_requested" ? "info" : "success",

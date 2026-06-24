@@ -198,13 +198,18 @@ export const completeErrand = catchAsync(async (req, res) => {
     return;
   }
 
-  if (errand.status === "completed") {
-    res.status(400).json({ message: "Errand is already completed" });
+  if (errand.status === "completed" || errand.status === "confirmed_completed" || errand.paymentReleased) {
+    res.status(400).json({ message: "Errand is already completed and payment has been released" });
     return;
   }
 
-  if (!["assigned", "in_progress", "pending_confirmation"].includes(errand.status)) {
-    res.status(400).json({ message: "Errand must be accepted by a messenger to confirm completion." });
+  if (!["pending_confirmation", "pending_sender_confirmation"].includes(errand.status)) {
+    res.status(400).json({ message: "Errand is not pending confirmation. The messenger must request completion first." });
+    return;
+  }
+
+  if (!errand.erranderId) {
+    res.status(400).json({ message: "Sender confirmation is not allowed because no messenger is assigned to this errand." });
     return;
   }
 
@@ -230,15 +235,22 @@ export const completeErrand = catchAsync(async (req, res) => {
         {
           userId: errander._id,
           amount: errand.fee,
-          type: "credit",
-          description: `Earnings from Errand: ${errand.title}`,
+          type: "errand_earning",
+          description: `Payment for completed errand: ${errand.title}`,
           errandId: errand._id,
+          senderId: errand.posterId,
+          messengerId: errander._id,
+          status: "completed",
         },
       ],
       { session },
     );
 
-    errand.status = "completed";
+    errand.status = "confirmed_completed";
+    errand.senderConfirmedAt = new Date();
+    errand.paymentReleased = true;
+    errand.paymentReleasedAt = new Date();
+    errand.paymentTransactionId = tx._id.toString();
     if (proof) errand.completionProof = proof;
     await errand.save({ session });
 
@@ -308,7 +320,7 @@ export const completeErrand = catchAsync(async (req, res) => {
       {
         userId: errand.erranderId ? errand.erranderId.toString() : null,
         title: "Wallet Credited! 💰",
-        message: `₦${errand.fee} has been credited to your wallet for completing "${errand.title}".`,
+        message: `Your payment for "${errand.title}" has been released to your wallet.`,
         type: "wallet_credited",
         relatedId: errand._id.toString(),
       },
@@ -338,6 +350,8 @@ export const getUserHistory = catchAsync(async (req, res) => {
   const errands = await Errand.find({
     $or: [{ posterId: userId }, { erranderId: userId }],
   })
+    .populate("posterId", "name profilePicture phoneNumber rating isVerified email department location")
+    .populate("erranderId", "name profilePicture phoneNumber rating isVerified email department location")
     .sort({ createdAt: -1 })
     .lean();
 
@@ -597,6 +611,7 @@ export const acceptErrand = catchAsync(async (req, res) => {
       $set: {
         erranderId: erranderObjectId,
         status: "assigned",
+        acceptedAt: new Date(),
       },
     },
     { new: true }
@@ -770,7 +785,8 @@ export const requestCompletion = catchAsync(async (req, res) => {
   }
 
   errand.completionRequested = true;
-  errand.status = "pending_confirmation";
+  errand.status = "pending_sender_confirmation";
+  errand.messengerCompletedAt = new Date();
   await errand.save();
 
   // Capture user IP & Device info

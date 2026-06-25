@@ -1486,6 +1486,19 @@ ul { list-style: none; }
   to { transform: translateY(0); }
 }
 
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.notif-drag-handle {
+  width: 36px;
+  height: 4px;
+  background: var(--gray-300);
+  border-radius: 2px;
+  margin: 0 auto 12px;
+}
+
 .notification-header {
   padding: 16px 20px;
   border-bottom: 1px solid var(--gray-100);
@@ -1522,6 +1535,7 @@ ul { list-style: none; }
   max-height: 400px;
   overflow-y: auto;
   overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 @media (max-width: 768px) {

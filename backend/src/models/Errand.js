@@ -31,6 +31,7 @@ const errandSchema = new mongoose.Schema({
   paymentReleased: { type: Boolean, default: false },
   paymentReleasedAt: { type: Date },
   paymentTransactionId: { type: String },
+  autoReleased: { type: Boolean, default: false }, // true = released by 45min system timer
 });
 
 errandSchema.pre("save", function (next) {

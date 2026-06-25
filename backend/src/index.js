@@ -25,6 +25,9 @@ import { Message } from "./models/Message.js";
 import { User } from "./models/User.js";
 import { Notification } from "./models/Notification.js";
 import { Errand } from "./models/Errand.js";
+import { Transaction } from "./models/Transaction.js";
+import { DigitalFootprint } from "./models/DigitalFootprint.js";
+import cron from "node-cron";
 
 const allowedOrigins = [
   process.env.FRONTEND_URL,
@@ -153,6 +156,140 @@ app.get("/api/cron/cleanup", async (req, res) => {
     res.status(500).json({ error: "Failed to clean up boosts" });
   }
 });
+
+// ===== AUTO-RELEASE ESCROW LOGIC (45 min timer) =====
+const AUTO_RELEASE_MINUTES = 45;
+
+const autoReleaseStalePendingErrands = async () => {
+  const cutoff = new Date(Date.now() - AUTO_RELEASE_MINUTES * 60 * 1000);
+  const staleErrands = await Errand.find({
+    status: "pending_sender_confirmation",
+    messengerCompletedAt: { $lte: cutoff },
+    paymentReleased: { $ne: true },
+  });
+
+  if (staleErrands.length === 0) return { released: 0, total: 0 };
+
+  let released = 0;
+  for (const errand of staleErrands) {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+    try {
+      const errander = await User.findById(errand.erranderId).session(session);
+      if (!errander) { await session.abortTransaction(); session.endSession(); continue; }
+
+      const previousBalance = errander.balance;
+      errander.balance += errand.fee;
+      await errander.save({ session });
+
+      const [tx] = await Transaction.create([{
+        userId: errander._id,
+        amount: errand.fee,
+        type: "errand_earning",
+        description: `Auto-released payment for errand: ${errand.title}`,
+        errandId: errand._id,
+        senderId: errand.posterId,
+        messengerId: errander._id,
+        status: "completed",
+      }], { session });
+
+      errand.status = "confirmed_completed";
+      errand.paymentReleased = true;
+      errand.paymentReleasedAt = new Date();
+      errand.paymentTransactionId = tx._id.toString();
+      errand.autoReleased = true;
+      await errand.save({ session });
+
+      await DigitalFootprint.findOneAndUpdate(
+        { errandId: errand._id },
+        {
+          $set: { status: "released", timeConfirmed: new Date(), transactionReference: `AUTO-TX-${tx._id}` },
+          $push: {
+            auditTrail: {
+              action: "AUTO_RELEASED",
+              timestamp: new Date(),
+              actorName: "System",
+              actorRole: "system",
+              actionTitle: "Auto-Released ⏱️",
+              actionDescription: `Sender did not confirm within ${AUTO_RELEASE_MINUTES} minutes. ₦${errand.fee} auto-released to messenger wallet.`,
+              details: "Payment auto-released by system timeout.",
+            },
+            walletMovementLogs: {
+              timestamp: new Date(),
+              userId: errander._id,
+              action: "AUTO_CREDIT_WALLET",
+              amount: errand.fee,
+              previousBalance,
+              newBalance: errander.balance,
+            },
+          },
+        },
+        { session }
+      );
+
+      await session.commitTransaction();
+      released++;
+
+      // Notify both parties after commit
+      const notifications = [
+        {
+          userId: errand.posterId.toString(),
+          title: "Payment Auto-Released ⏱️",
+          message: `You didn't confirm "${errand.title}" within ${AUTO_RELEASE_MINUTES} mins. Funds were automatically released to the messenger.`,
+          type: "payment_released",
+          relatedId: errand._id.toString(),
+        },
+        {
+          userId: errander._id.toString(),
+          title: "Wallet Credited! 💰",
+          message: `Your payment for "${errand.title}" was auto-released to your wallet.`,
+          type: "wallet_credited",
+          relatedId: errand._id.toString(),
+        },
+      ];
+      await Notification.insertMany(notifications);
+      notifications.forEach((n) => io.to(n.userId).emit("notification", n));
+      io.to("admin").emit("errand_auto_released", { errandId: errand._id, fee: errand.fee, messenger: errander.name });
+
+      console.log(`[AutoRelease] ✅ Errand ${errand._id} (₦${errand.fee}) auto-released to ${errander.name}`);
+    } catch (err) {
+      await session.abortTransaction();
+      console.error(`[AutoRelease] ❌ Failed for errand ${errand._id}:`, err.message);
+    } finally {
+      session.endSession();
+    }
+  }
+
+  return { released, total: staleErrands.length };
+};
+
+// HTTP endpoint for manual trigger / external cron service
+app.get("/api/cron/auto-release", async (req, res) => {
+  if (req.headers.authorization !== `Bearer ${process.env.CRON_SECRET}`) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+  try {
+    const result = await autoReleaseStalePendingErrands();
+    console.log(`[AutoRelease] HTTP trigger: ${result.released}/${result.total} released`);
+    res.json({ success: true, ...result });
+  } catch (err) {
+    console.error("[AutoRelease] HTTP trigger error:", err);
+    res.status(500).json({ error: "Auto-release failed" });
+  }
+});
+
+// Scheduled auto-release: runs every 5 minutes
+cron.schedule("*/5 * * * *", async () => {
+  try {
+    const result = await autoReleaseStalePendingErrands();
+    if (result.released > 0) {
+      console.log(`[AutoRelease] Cron: ${result.released} errand(s) auto-released`);
+    }
+  } catch (err) {
+    console.error("[AutoRelease] Cron error:", err.message);
+  }
+});
+// ===================================================
 
 // Global Error Handler (Must be at the end)
 app.use(errorHandler);

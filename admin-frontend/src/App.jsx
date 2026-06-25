@@ -71,6 +71,8 @@ const AdminPortal = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [errandStatusFilter, setErrandStatusFilter] = useState("all"); // For Intel Center card navigation
+  const [activeFilterLabel, setActiveFilterLabel] = useState(""); // Human-readable label for current filter
   const [selectedUser, setSelectedUser] = useState(null);
   const [selectedErrandChat, setSelectedErrandChat] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -445,12 +447,33 @@ const AdminPortal = () => {
       })
     : [];
 
+  // navigateToFiltered: Navigate to a tab with optional pre-set filters.
+  // Used by Intel Center stat cards to jump to relevant filtered views.
+  const navigateToFiltered = (tab, options = {}) => {
+    setSearchTerm("");
+    setRoleFilter("all");
+    setStatusFilter(options.statusFilter || "all");
+    setErrandStatusFilter(options.errandStatusFilter || "all");
+    setActiveFilterLabel(options.label || "");
+    setSidebarOpen(false);
+    setActiveTab(tab);
+    // Scroll to top smoothly
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
   const filteredErrands = Array.isArray(errands)
     ? errands.filter((e) => {
         const matchesSearch = (e?.title || "")
           .toLowerCase()
           .includes(searchTerm.toLowerCase());
-        return matchesSearch;
+        const matchesStatus =
+          errandStatusFilter === "all" ||
+          (errandStatusFilter === "completed" && ["completed", "confirmed_completed"].includes(e.status)) ||
+          (errandStatusFilter === "pending" && ["pending_sender_confirmation", "pending_confirmation"].includes(e.status)) ||
+          (errandStatusFilter === "failed" && ["cancelled"].includes(e.status)) ||
+          (errandStatusFilter === "active" && ["open", "accepted", "assigned", "in_progress"].includes(e.status)) ||
+          e.status === errandStatusFilter;
+        return matchesSearch && matchesStatus;
       })
     : [];
 
@@ -810,6 +833,8 @@ const AdminPortal = () => {
                 key={item.id}
                 onClick={() => {
                   setActiveTab(item.id);
+                  setErrandStatusFilter("all");
+                  setActiveFilterLabel("");
                   setSidebarOpen(false);
                 }}
                 className={`sidebar-btn ${activeTab === item.id ? "active" : ""}`}
@@ -949,36 +974,50 @@ const AdminPortal = () => {
                   value={stats?.totalActivities || 0}
                   icon={<Activity size={18} />}
                   color="#6366F1"
+                  subtitle="View all footprints"
+                  onClick={() => navigateToFiltered("footprints", { label: "All Footprints" })}
                 />
                 <StatCard
                   label="Activities Today"
                   value={stats?.activitiesToday || 0}
                   icon={<Clock size={18} />}
                   color="#F59E0B"
+                  subtitle="View today's activity"
+                  onClick={() => navigateToFiltered("footprints", { label: "Today's Activities" })}
                 />
                 <StatCard
                   label="Completed Errands"
                   value={stats?.completedErrands || 0}
                   icon={<CheckCircle size={18} />}
                   color="#10B981"
+                  subtitle="View completed errands"
+                  onClick={() => navigateToFiltered("errands", { errandStatusFilter: "completed", label: "Completed Errands" })}
                 />
                 <StatCard
                   label="Pending Confirmations"
                   value={stats?.pendingConfirmations || 0}
                   icon={<Clock size={18} />}
                   color="#0891B2"
+                  subtitle="Awaiting sender confirmation"
+                  badge={stats?.pendingConfirmations > 0 ? "URGENT" : null}
+                  onClick={() => navigateToFiltered("errands", { errandStatusFilter: "pending", label: "Pending Sender Confirmation" })}
                 />
                 <StatCard
                   label="Failed Errands"
                   value={stats?.failedErrands || 0}
                   icon={<X size={18} />}
                   color="#EF4444"
+                  subtitle="Cancelled / failed errands"
+                  onClick={() => navigateToFiltered("errands", { errandStatusFilter: "failed", label: "Failed / Cancelled Errands" })}
                 />
                 <StatCard
                   label="Disputes"
                   value={stats?.disputes || 0}
                   icon={<AlertTriangle size={18} />}
                   color="#EC4899"
+                  subtitle="Suspicious activity"
+                  badge={stats?.disputes > 0 ? "REVIEW" : null}
+                  onClick={() => navigateToFiltered("footprints", { statusFilter: "suspicious", label: "Flagged Disputes" })}
                 />
               </div>
 
@@ -1213,6 +1252,30 @@ const AdminPortal = () => {
                 overflow: "hidden",
               }}
             >
+              {/* Active filter banner */}
+              {activeTab === "errands" && activeFilterLabel && (
+                <div style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  padding: "10px 16px",
+                  background: "linear-gradient(90deg, #EFF6FF, #F0F9FF)",
+                  borderBottom: "1px solid #BFDBFE",
+                  gap: 10,
+                }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <span style={{ fontSize: "0.7rem", background: "#2563EB", color: "white", padding: "2px 8px", borderRadius: 20, fontWeight: 800, letterSpacing: 0.5 }}>FILTERED</span>
+                    <span style={{ fontSize: "0.85rem", fontWeight: 700, color: "#1E40AF" }}>Showing: {activeFilterLabel}</span>
+                    <span style={{ fontSize: "0.8rem", color: "#64748B" }}>({filteredErrands.length} result{filteredErrands.length !== 1 ? "s" : ""})</span>
+                  </div>
+                  <button
+                    onClick={() => { setErrandStatusFilter("all"); setActiveFilterLabel(""); }}
+                    style={{ background: "none", border: "1px solid #BFDBFE", borderRadius: 8, padding: "4px 12px", fontSize: "0.75rem", fontWeight: 700, color: "#2563EB", cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}
+                  >
+                    <X size={12} /> Clear Filter
+                  </button>
+                </div>
+              )}
               <div
                 style={{
                   padding: 15,
@@ -3036,50 +3099,68 @@ const AdminPortal = () => {
   );
 };
 
-const StatCard = ({ label, value, icon, color }) => (
+const StatCard = ({ label, value, icon, color, onClick, subtitle, badge }) => (
   <div
     className="card"
     style={{
-      padding: "24px 28px",
+      padding: "20px 22px",
       borderRadius: "20px",
       display: "flex",
       alignItems: "center",
       justifyContent: "space-between",
       position: "relative",
       overflow: "hidden",
-      cursor: "pointer",
+      cursor: onClick ? "pointer" : "default",
       boxShadow: "var(--shadow-sm)",
       transition: "all 0.3s cubic-bezier(0.16, 1, 0.3, 1)",
     }}
+    onClick={onClick}
     onMouseEnter={(e) => {
-      e.currentTarget.style.transform = "translateY(-4px)";
-      e.currentTarget.style.boxShadow = `0 12px 24px -6px ${color}22`;
-      e.currentTarget.style.borderColor = `${color}40`;
+      if (!onClick) return;
+      e.currentTarget.style.transform = "translateY(-4px) scale(1.02)";
+      e.currentTarget.style.boxShadow = `0 16px 32px -8px ${color}33`;
+      e.currentTarget.style.borderColor = `${color}50`;
     }}
     onMouseLeave={(e) => {
-      e.currentTarget.style.transform = "translateY(0)";
+      if (!onClick) return;
+      e.currentTarget.style.transform = "translateY(0) scale(1)";
       e.currentTarget.style.boxShadow = "var(--shadow-sm)";
       e.currentTarget.style.borderColor = "var(--border-color)";
     }}
   >
-    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-      <span style={{ fontSize: "0.825rem", color: "var(--text-secondary)", fontWeight: 700, letterSpacing: "0.5px", textTransform: "uppercase" }}>
-        {label}
-      </span>
-      <span style={{ fontSize: "1.85rem", fontWeight: 900, color: "var(--text-primary)", letterSpacing: "-0.5px" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 4, flex: 1, minWidth: 0 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+        <span style={{ fontSize: "0.75rem", color: "var(--text-secondary)", fontWeight: 700, letterSpacing: "0.5px", textTransform: "uppercase" }}>
+          {label}
+        </span>
+        {badge && (
+          <span style={{ fontSize: "0.6rem", background: color, color: "white", padding: "1px 6px", borderRadius: 10, fontWeight: 900, letterSpacing: 0.5, animation: "pulse 2s infinite" }}>
+            {badge}
+          </span>
+        )}
+      </div>
+      <span style={{ fontSize: "1.75rem", fontWeight: 900, color: "var(--text-primary)", letterSpacing: "-0.5px" }}>
         {value}
       </span>
+      {subtitle && onClick && (
+        <span style={{ fontSize: "0.7rem", color, fontWeight: 700, display: "flex", alignItems: "center", gap: 3, marginTop: 2 }}>
+          {subtitle} →
+        </span>
+      )}
     </div>
     <div
       style={{
         color,
-        background: `${color}12`,
-        width: 52,
-        height: 52,
-        borderRadius: "16px",
+        background: `${color}15`,
+        width: 48,
+        height: 48,
+        borderRadius: "14px",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
+        flexShrink: 0,
+        marginLeft: 12,
+        transition: "transform 0.2s",
       }}
     >
       {icon}

@@ -25,6 +25,7 @@ const errandSchema = new mongoose.Schema({
   trackingId: { type: String, unique: true, sparse: true },
   createdAt: { type: Date, default: Date.now },
   acceptedAt: { type: Date },
+  startedAt: { type: Date },
   messengerCompletedAt: { type: Date },
   senderConfirmedAt: { type: Date },
   paymentReleased: { type: Boolean, default: false },

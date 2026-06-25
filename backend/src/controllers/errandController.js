@@ -848,34 +848,57 @@ export const startErrand = catchAsync(async (req, res) => {
     return;
   }
 
-  if (errand.erranderId?.toString() !== userId) {
+  // Ensure only the assigned messenger can start the errand
+  if (!errand.erranderId || errand.erranderId.toString() !== userId.toString()) {
     res.status(403).json({ message: "You are not the assigned messenger for this errand" });
     return;
   }
 
   if (errand.status !== "assigned") {
-    res.status(400).json({ message: "Errand must be in assigned status to start it." });
+    res.status(400).json({ message: `Errand cannot be started (current status: ${errand.status}). It must be in assigned status.` });
     return;
   }
 
   errand.status = "in_progress";
+  errand.startedAt = new Date();
   await errand.save();
 
-  const startedContext = getRequestContext(req, errand.pickupLocation || "Campus");
-  await updateDigitalFootprint({
-    errand,
-    action: "STARTED",
-    req,
-    userId,
-    actionTitle: "Errand Started 🚀",
-    actionDescription: "Messenger has started working on the errand.",
-    details: "Errand status changed to In Progress by messenger.",
-    set: {
-      "deviceInfo.accepted": startedContext.deviceInfo,
-    },
-  });
+  // Update digital footprint — wrapped in try/catch so a temporary DB issue
+  // doesn't rollback the errand status update that already succeeded.
+  try {
+    const startedContext = getRequestContext(req, errand.pickupLocation || "Campus");
+    await updateDigitalFootprint({
+      errand,
+      action: "STARTED",
+      req,
+      userId,
+      actionTitle: "Errand Started 🚀",
+      actionDescription: "Messenger has started working on the errand.",
+      details: "Errand status changed to In Progress by messenger.",
+      set: {
+        messengerId: errand.erranderId,
+        timeStarted: errand.startedAt,
+      },
+    });
+  } catch (footprintErr) {
+    console.error("[startErrand] Footprint update failed (non-critical):", footprintErr.message);
+  }
 
-  res.json({ message: "Errand started successfully", status: errand.status });
+  // Emit real-time update via socket
+  const io = req?.io;
+  if (io) {
+    const notification = {
+      type: "errand_started",
+      errandId: errand._id,
+      status: "in_progress",
+      message: "Messenger has started the errand.",
+    };
+    if (errand.posterId) io.to(errand.posterId.toString()).emit("notification", notification);
+    io.to(errand.erranderId.toString()).emit("notification", notification);
+    io.to("admin").emit("notification", notification);
+  }
+
+  res.json({ message: "Errand started successfully! 🚀", status: errand.status });
 });
 
 export const uploadProof = catchAsync(async (req, res) => {

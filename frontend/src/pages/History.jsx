@@ -466,7 +466,7 @@ const History = () => {
                                   : "badge-blue"
                         }`}
                       >
-                        {item.status.replace("_", " ").toUpperCase()}
+                        {item.status.replace(/_/g, " ").toUpperCase()}
                       </span>
                     </div>
 

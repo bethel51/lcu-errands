@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Bell, CheckCircle, Info } from "lucide-react";
+import { Bell, CheckCircle, Info, MessageSquare } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSocket } from "../context/SocketContext";
 import { PageImports } from "../App";
@@ -17,7 +17,14 @@ const Navbar = () => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   const [notificationsLoading, setNotificationsLoading] = useState(false);
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 768);
   const unreadCount = notifications.filter((n) => !n.isRead).length;
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth <= 768);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   useEffect(() => {
     if (isAuth) {
@@ -163,13 +170,20 @@ const Navbar = () => {
             <AnimatePresence>
               {isDropdownOpen && (
                 <>
-                  <div className="dropdown-backdrop" onClick={() => setIsDropdownOpen(false)} />
+                  <div
+                    className="dropdown-backdrop"
+                    onClick={() => setIsDropdownOpen(false)}
+                    style={isMobile ? { position: "fixed", inset: 0, zIndex: 1099, background: "rgba(0,0,0,0.3)" } : {}}
+                  />
                   <motion.div
                     className="notification-dropdown"
-                    initial={{ opacity: 0, y: 15, scale: 0.97 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: 15, scale: 0.97 }}
-                    transition={{ type: "spring", duration: 0.25, bounce: 0.1 }}
+                    initial={isMobile ? { y: "100%" } : { opacity: 0, y: -8, scale: 0.97 }}
+                    animate={isMobile ? { y: 0 } : { opacity: 1, y: 0, scale: 1 }}
+                    exit={isMobile ? { y: "100%" } : { opacity: 0, y: -8, scale: 0.97 }}
+                    transition={isMobile
+                      ? { type: "tween", duration: 0.28, ease: "easeOut" }
+                      : { type: "spring", duration: 0.25, bounce: 0.1 }
+                    }
                   >
                     <div className="notification-header">
                       <h4 style={{ fontWeight: 800, margin: 0 }}>

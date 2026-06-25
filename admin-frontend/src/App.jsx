@@ -164,6 +164,9 @@ const AdminPortal = () => {
 
     socket.on("connect", () => {
       console.log("Admin connected to socket");
+      // Join the admin room to receive admin-targeted events (auto-release, footprints, etc.)
+      const cronSecret = import.meta.env.VITE_CRON_SECRET || "";
+      socket.emit("join_admin", cronSecret);
     });
 
     socket.on("notification", () => {
@@ -175,6 +178,11 @@ const AdminPortal = () => {
     });
 
     socket.on("new_errand", () => {
+      fetchData();
+    });
+
+    socket.on("errand_auto_released", (data) => {
+      console.log("[Admin] Auto-release event:", data);
       fetchData();
     });
 

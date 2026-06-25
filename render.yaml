@@ -86,6 +86,10 @@ services:
     envVars:
       - key: VITE_ADMIN_API_URL
         value: https://leadcity-admin-service.onrender.com
+      - key: VITE_API_URL
+        value: https://leadcityerrands-prod.onrender.com
+      - key: VITE_CRON_SECRET
+        sync: false
     routes:
       - type: rewrite
         source: /*

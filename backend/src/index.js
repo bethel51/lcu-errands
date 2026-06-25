@@ -367,6 +367,14 @@ io.on("connection", (socket) => {
     }
   });
 
+  // Admin portal room — allows admin frontend to receive admin-targeted events
+  socket.on("join_admin", (secret) => {
+    if (secret === process.env.CRON_SECRET) {
+      socket.join("admin");
+      console.log(`[Socket] Admin portal joined admin room (${socket.id})`);
+    }
+  });
+
   socket.on("send_message", async (data) => {
     const userId = onlineUsers.get(socket.id);
     if (!userId) return; // Unauthenticated

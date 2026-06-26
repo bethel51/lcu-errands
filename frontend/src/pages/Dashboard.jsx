@@ -1103,9 +1103,9 @@ const Dashboard = () => {
               initial={{ opacity: 0, scale: 0.95, y: 10 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 10 }}
-              className="modal-container"
+              className="modal-container chat-modal-container"
               onClick={(e) => e.stopPropagation()}
-              style={{ maxWidth: 520, height: "min(720px, 86vh)", display: "flex", flexDirection: "column" }}
+              style={{ display: "flex", flexDirection: "column" }}
             >
               <div
                 style={{

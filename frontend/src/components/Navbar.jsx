@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Bell, CheckCircle, Info, MessageSquare, AlertCircle, RefreshCw, Wallet } from "lucide-react";
+import { Bell, CheckCircle, Info, MessageSquare, AlertCircle, RefreshCw, Wallet, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSocket } from "../context/SocketContext";
 import { PageImports } from "../App";
@@ -143,7 +143,8 @@ const Navbar = () => {
                 className="btn-icon"
                 aria-label="Notifications"
                 style={{ position: "relative" }}
-                onClick={() => {
+                onClick={(e) => {
+                  e.stopPropagation();
                   const next = !isDropdownOpen;
                   setIsDropdownOpen(next);
                   setIsProfileDropdownOpen(false);
@@ -172,6 +173,7 @@ const Navbar = () => {
                   />
                   <motion.div
                     className="notification-dropdown"
+                    onClick={(e) => e.stopPropagation()}
                     initial={isMobile ? { y: "100%" } : { opacity: 0, y: -8, scale: 0.97 }}
                     animate={isMobile ? { y: 0 } : { opacity: 1, y: 0, scale: 1 }}
                     exit={isMobile ? { y: "100%" } : { opacity: 0, y: -8, scale: 0.97 }}
@@ -188,7 +190,7 @@ const Navbar = () => {
                           </span>
                         )}
                       </div>
-                      <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                         {notifications.some((n) => !n.isRead) && (
                           <button onClick={markAllRead} style={{ fontSize: "0.68rem", color: "var(--blue-600)", background: "none", border: "none", fontWeight: 700, cursor: "pointer" }}>
                             Mark all read
@@ -201,6 +203,16 @@ const Navbar = () => {
                           title="Refresh"
                         >
                           <RefreshCw size={13} style={{ animation: notificationsLoading ? "spin 1s linear infinite" : "none" }} />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setIsDropdownOpen(false);
+                          }}
+                          style={{ background: "none", border: "none", cursor: "pointer", color: "var(--gray-400)", display: "flex", alignItems: "center", padding: 4 }}
+                          title="Close"
+                        >
+                          <X size={15} />
                         </button>
                       </div>
                     </div>

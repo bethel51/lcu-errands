@@ -64,10 +64,6 @@ export const SocketProvider = ({ children }) => {
       console.warn("[Socket] Connection error:", err.message);
     });
 
-    newSocket.on("notification", () => {
-      setHasNotification(true);
-    });
-
     newSocket.on("receive_message", (data) => {
       if (data.senderId !== currentUser?.id) {
         setHasNotification(true);

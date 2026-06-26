@@ -40,7 +40,6 @@ const Navbar = () => {
     if (socket) {
       socket.on("notification", (data) => {
         setNotifications((prev) => [data, ...prev]);
-        setHasNotification(true);
       });
       return () => { socket.off("notification"); };
     }
@@ -143,6 +142,7 @@ const Navbar = () => {
               <button
                 className="btn-icon"
                 aria-label="Notifications"
+                style={{ position: "relative" }}
                 onClick={() => {
                   const next = !isDropdownOpen;
                   setIsDropdownOpen(next);
@@ -154,8 +154,8 @@ const Navbar = () => {
                 }}
               >
                 <Bell size={18} />
-                {hasNotification && unreadCount > 0 && (
-                  <span className="notification-dot" style={{ width: unreadCount > 9 ? 22 : 18, height: 18, display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: "0.62rem", fontWeight: 900, color: "white", lineHeight: 1 }}>
+                {unreadCount > 0 && (
+                  <span style={{ position: "absolute", top: "-4px", right: "-4px", minWidth: "18px", height: "18px", padding: "0 5px", borderRadius: "10px", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: "0.62rem", fontWeight: 900, color: "white", lineHeight: 1, border: "2px solid white", background: "var(--red-500)" }}>
                     {unreadCount > 99 ? "99+" : unreadCount}
                   </span>
                 )}

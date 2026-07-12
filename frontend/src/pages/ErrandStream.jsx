@@ -65,6 +65,25 @@ const SenderAvatar = ({ picture, name }) => {
   );
 };
 
+const CATEGORIES = [
+  "All",
+  "Meals",
+  "Shopping",
+  "Academic",
+  "Delivery",
+  "Gates",
+  "Other",
+];
+
+const CATEGORY_EMOJI = {
+  Meals: "🍽️",
+  Shopping: "🛒",
+  Academic: "📚",
+  Delivery: "📦",
+  Gates: "🚪",
+  Other: "✨",
+};
+
 /* ─── Component ────────────────────────────────────────────────────── */
 const ErrandStream = () => {
   const navigate = useNavigate();
@@ -73,9 +92,21 @@ const ErrandStream = () => {
   const [errands, setErrands] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [activeCategory, setActiveCategory] = useState("All");
   const [processing, setProcessing] = useState(false);
   const [toast, setToast] = useState(null);
   const [acceptingErrand, setAcceptingErrand] = useState(null);
+
+  useEffect(() => {
+    if (acceptingErrand) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [acceptingErrand]);
 
   const userRole = localStorage.getItem("userRole") || "messenger";
   const cachedUserId = (() => {
@@ -170,13 +201,18 @@ const ErrandStream = () => {
     }
   };
 
-  const filteredErrands = errands.filter(
-    (e) =>
+  const filteredErrands = errands.filter((e) => {
+    const matchesSearch =
       e.title.toLowerCase().includes(search.toLowerCase()) ||
       e.description.toLowerCase().includes(search.toLowerCase()) ||
       e.category.toLowerCase().includes(search.toLowerCase()) ||
-      (e.location || "").toLowerCase().includes(search.toLowerCase())
-  );
+      (e.location || "").toLowerCase().includes(search.toLowerCase());
+      
+    const matchesCategory =
+      activeCategory === "All" || e.category.toLowerCase() === activeCategory.toLowerCase();
+      
+    return matchesSearch && matchesCategory;
+  });
 
   return (
     <div className="errand-stream-page">
@@ -236,6 +272,46 @@ const ErrandStream = () => {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
+        </div>
+
+        {/* Category Filter Pills */}
+        <div style={{
+          display: "flex",
+          gap: 8,
+          overflowX: "auto",
+          padding: "14px 0 4px",
+          scrollbarWidth: "none",
+          msOverflowStyle: "none",
+          WebkitOverflowScrolling: "touch",
+        }}>
+          {CATEGORIES.map((cat) => {
+            const isSelected = activeCategory === cat;
+            return (
+              <button
+                key={cat}
+                onClick={() => setActiveCategory(cat)}
+                style={{
+                  padding: "8px 16px",
+                  borderRadius: 20,
+                  border: isSelected ? "1px solid var(--blue-500)" : "1px solid var(--gray-200)",
+                  background: isSelected ? "var(--blue-500)" : "var(--white)",
+                  color: isSelected ? "#ffffff" : "var(--gray-700)",
+                  fontWeight: 600,
+                  fontSize: "0.82rem",
+                  cursor: "pointer",
+                  whiteSpace: "nowrap",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  transition: "all 0.2s ease",
+                  boxShadow: isSelected ? "0 4px 12px rgba(37,99,235,0.2)" : "none",
+                }}
+              >
+                {cat !== "All" && <span>{CATEGORY_EMOJI[cat]}</span>}
+                {cat}
+              </button>
+            );
+          })}
         </div>
       </div>
 

@@ -214,17 +214,17 @@ export const completeErrand = catchAsync(async (req, res) => {
   }
 
   const { proof } = req.body;
-  const errander = await User.findById(errand.erranderId);
-
-  if (!errander) {
-    res.status(404).json({ message: "Assigned messenger not found" });
-    return;
-  }
-
   const session = await mongoose.startSession();
   session.startTransaction();
 
   try {
+    const errander = await User.findById(errand.erranderId).session(session);
+    if (!errander) {
+      await session.abortTransaction();
+      res.status(404).json({ message: "Assigned messenger not found" });
+      return;
+    }
+
     const previousBalance = errander.balance;
     errander.balance += errand.fee;
     await errander.save({ session });
@@ -368,20 +368,20 @@ export const createErrand = catchAsync(async (req, res) => {
     fee,
     erranderId,
   } = req.body;
-  const posterId = req.user.id;
-  // Check if poster has sufficient balance
-  const user = await User.findById(posterId);
-  if (!user || user.balance < fee) {
-    res
-      .status(400)
-      .json({ message: "Insufficient wallet balance. Please top up." });
-    return;
-  }
-
   const session = await mongoose.startSession();
   session.startTransaction();
 
   try {
+    // Check if poster has sufficient balance
+    const user = await User.findById(posterId).session(session);
+    if (!user || user.balance < fee) {
+      await session.abortTransaction();
+      res
+        .status(400)
+        .json({ message: "Insufficient wallet balance. Please top up." });
+      return;
+    }
+
     const [newErrand] = await Errand.create(
       [
         {

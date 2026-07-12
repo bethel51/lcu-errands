@@ -23,8 +23,20 @@ export const SocketProvider = ({ children }) => {
       setIsAuth(localStorage.getItem("isAuthenticated") === "true");
     };
     window.addEventListener("storage", handleStorageChange);
-    return () => window.removeEventListener("storage", handleStorageChange);
-  }, []);
+
+    // Sync auth state locally within the tab for logout
+    const interval = setInterval(() => {
+      const auth = localStorage.getItem("isAuthenticated") === "true";
+      if (auth !== isAuth) {
+        setIsAuth(auth);
+      }
+    }, 1000);
+
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+      clearInterval(interval);
+    };
+  }, [isAuth]);
 
   useEffect(() => {
     if (!isAuth) {

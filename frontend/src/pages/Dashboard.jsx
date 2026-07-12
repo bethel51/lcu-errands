@@ -225,6 +225,18 @@ const Dashboard = () => {
   }, []);
 
   useEffect(() => {
+    const isAnyModalOpen = isPostModalOpen || isWithdrawModalOpen || !!acceptingErrand || !!activeChat || isReviewModalOpen;
+    if (isAnyModalOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [isPostModalOpen, isWithdrawModalOpen, acceptingErrand, activeChat, isReviewModalOpen]);
+
+  useEffect(() => {
     if (activeChat) {
       api.get(`/chat/${activeChat._id}`).then((res) => {
         setMessages(res.data);
@@ -246,6 +258,14 @@ const Dashboard = () => {
     if (match) {
       setActiveChat({ ...match, _id: match._id || match.id });
       window.history.replaceState({}, document.title);
+    } else {
+      api.get(`/errands/${openChatId}`).then((res) => {
+        const mapped = mapBackendToFrontend(res.data);
+        setActiveChat({ ...mapped, _id: mapped.id });
+        window.history.replaceState({}, document.title);
+      }).catch((err) => {
+        console.error("Failed to load chat details", err);
+      });
     }
   }, [location.state, activeRequests, activeChat]);
 
@@ -445,6 +465,16 @@ const Dashboard = () => {
       return matchesSearch && matchesCat && e.status === "open";
     });
   }, [errands, search, activeCategory]);
+
+  const filteredMessengers = useMemo(() => {
+    return messengers.filter((m) => {
+      const matchesSearch =
+        m.name.toLowerCase().includes(search.toLowerCase()) ||
+        (m.location || "").toLowerCase().includes(search.toLowerCase()) ||
+        (m.bio || "").toLowerCase().includes(search.toLowerCase());
+      return matchesSearch;
+    });
+  }, [messengers, search]);
 
   return (
     <div className="dashboard-page">
@@ -703,7 +733,18 @@ const Dashboard = () => {
           </div>
         )}
 
-        {/* ── Errand Feed ── */}
+        {/* ── Errand Feed / Messengers Feed ── */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16, marginTop: 12 }}>
+          <h2 style={{ fontSize: "1.1rem", fontWeight: 900, color: "var(--gray-900)" }}>
+            {userRole === "sender" ? "Available Messengers" : "Open Errands"}
+          </h2>
+          <span style={{ fontSize: "0.75rem", color: "var(--gray-400)", fontWeight: 700 }}>
+            {userRole === "sender" 
+              ? `${filteredMessengers.length} messenger${filteredMessengers.length === 1 ? "" : "s"} online/active`
+              : `${filteredErrands.length} open errand${filteredErrands.length === 1 ? "" : "s"}`}
+          </span>
+        </div>
+
         {loading ? (
           <div className="errand-grid">
             {[1, 2, 3].map((i) => (
@@ -715,6 +756,84 @@ const Dashboard = () => {
               </div>
             ))}
           </div>
+        ) : userRole === "sender" ? (
+          filteredMessengers.length === 0 ? (
+            <div className="empty-state">
+              <div className="empty-state-icon">
+                <Search size={36} />
+              </div>
+              <h3>No Messengers Found</h3>
+              <p>
+                {search
+                  ? "Try adjusting your search query."
+                  : "No messengers are currently active. Check back later!"}
+              </p>
+            </div>
+          ) : (
+            <div className="errand-grid">
+              {filteredMessengers.map((m) => (
+                <motion.div
+                  key={m._id}
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.25 }}
+                  className="card errand-card"
+                  style={{ border: m.isBoosted ? "2px solid var(--blue-100)" : "1px solid var(--gray-100)" }}
+                >
+                  <div className="card-body" style={{ padding: 18 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                      <SenderAvatar picture={m.profilePicture} name={m.name} />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: 800, fontSize: "1rem", color: "var(--gray-900)", display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                          {m.name}
+                          {m.isVerified && <span className="badge badge-green" style={{ padding: "2px 6px", fontSize: "0.65rem" }}>✓ Verified</span>}
+                          {m.isBoosted && <span className="badge badge-blue" style={{ padding: "2px 6px", fontSize: "0.65rem" }}>🚀 Top</span>}
+                          {m.isOnline && <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#10B981" }} title="Online" />}
+                        </div>
+                        <div style={{ fontSize: "0.8rem", color: "var(--gray-500)", display: "flex", alignItems: "center", gap: 8, marginTop: 4 }}>
+                          {m.location && <span>📍 {m.location}</span>}
+                          {m.rating > 0 && <span style={{ color: "var(--amber-500)", fontWeight: 700 }}>★ {m.rating.toFixed(1)}</span>}
+                        </div>
+                      </div>
+                    </div>
+                    {m.bio && (
+                      <p style={{ fontSize: "0.82rem", color: "var(--gray-600)", marginTop: 10, lineHeight: 1.4, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+                        {m.bio}
+                      </p>
+                    )}
+                    <div style={{ display: "flex", gap: 10, marginTop: 14, paddingTop: 12, borderTop: "1px solid var(--gray-100)" }}>
+                      <button
+                        className="btn btn-primary btn-sm"
+                        style={{ flex: 1 }}
+                        onClick={() => {
+                          setSelectedMessenger(m);
+                          setIsPostModalOpen(true);
+                        }}
+                      >
+                        Hire Directly
+                      </button>
+                      <button
+                        className="btn btn-outline btn-sm"
+                        onClick={async () => {
+                          try {
+                            setProcessing(true);
+                            const res = await api.post("/errands/inquiry", { messengerId: m._id });
+                            handleOpenChat(res.data);
+                          } catch (err) {
+                            showToast("Could not start chat.", "error");
+                          } finally {
+                            setProcessing(false);
+                          }
+                        }}
+                      >
+                        <MessageSquare size={14} /> Chat
+                      </button>
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          )
         ) : filteredErrands.length === 0 ? (
           <div className="empty-state">
             <div className="empty-state-icon">
@@ -726,15 +845,6 @@ const Dashboard = () => {
                 ? "Try adjusting your search or filters."
                 : "No open errands right now. Check back soon!"}
             </p>
-            {userRole === "sender" && (
-              <button
-                className="btn btn-primary"
-                style={{ marginTop: 24 }}
-                onClick={() => setIsPostModalOpen(true)}
-              >
-                <Plus size={16} /> Post the First Errand
-              </button>
-            )}
           </div>
         ) : (
           <div className="errand-grid">

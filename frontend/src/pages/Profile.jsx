@@ -52,6 +52,18 @@ const Profile = () => {
     fetchTransactions();
   }, []);
 
+  useEffect(() => {
+    const isAnyModalOpen = isTopUpModalOpen || isWithdrawModalOpen || isBoostModalOpen;
+    if (isAnyModalOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [isTopUpModalOpen, isWithdrawModalOpen, isBoostModalOpen]);
+
   async function fetchProfile() {
     try {
       const res = await api.get("/users/profile");

@@ -416,8 +416,9 @@ export const createErrand = catchAsync(async (req, res) => {
       { session },
     );
 
-    const ipAddress = req.ip || req.headers["x-forwarded-for"] || req.socket.remoteAddress || "127.0.0.1";
-    const deviceInfo = req.headers["user-agent"] || "Unknown Device";
+    const context = getRequestContext(req, dropoffLocation || "Campus");
+    const ipAddress = context.ipAddress;
+    const deviceInfo = context.deviceInfo;
 
     await DigitalFootprint.create(
       [

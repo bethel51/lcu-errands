@@ -576,13 +576,13 @@ const History = () => {
                       <Activity size={12} /> Intel
                     </button>
 
-                    {filterType === "posted" && item.status === "open" && (
+                    {filterType === "posted" && ["open", "assigned", "in_progress", "pending_sender_confirmation", "pending_confirmation"].includes(item.status) && (
                       <button
-                        onClick={() => handleCancelErrand(item.id)}
+                        onClick={() => handleDeleteFromHistory(item.id)}
                         className="btn btn-outline btn-sm"
                         style={{ borderColor: "var(--red-200)", color: "var(--red-600)" }}
                       >
-                        Cancel
+                        Delete Errand
                       </button>
                     )}
 

@@ -371,7 +371,6 @@ export const deleteFromHistory = catchAsync(async (req, res) => {
     return;
   }
 
-  // User must be the poster or the messenger to hide it
   const isPoster = errand.posterId.toString() === userId;
   const isMessenger = errand.erranderId?.toString() === userId;
 
@@ -380,17 +379,8 @@ export const deleteFromHistory = catchAsync(async (req, res) => {
     return;
   }
 
-  // Only allow hiding if errand is completed, cancelled, or the user is the poster and it's open
-  const hideable = ["confirmed_completed", "completed", "cancelled"].includes(errand.status) ||
-    (isPoster && errand.status === "open");
-
-  if (!hideable) {
-    res.status(400).json({ message: "You can only remove completed or cancelled errands from your history." });
-    return;
-  }
-
-  // If it's open and poster wants to cancel+delete, refund and hard delete
-  if (isPoster && errand.status === "open") {
+  // If the Sender is deleting an active errand (not completed yet), refund and cancel
+  if (isPoster && ["open", "assigned", "in_progress", "pending_sender_confirmation", "pending_confirmation"].includes(errand.status)) {
     const session = await mongoose.startSession();
     session.startTransaction();
     try {
@@ -403,9 +393,16 @@ export const deleteFromHistory = catchAsync(async (req, res) => {
           { session }
         );
       }
-      await Errand.findByIdAndDelete(id).session(session);
+      
+      // Update errand to cancelled and hide it for the sender
+      errand.status = "cancelled";
+      if (!errand.hiddenBy.includes(userId)) {
+        errand.hiddenBy.push(userId);
+      }
+      await errand.save({ session });
+      
       await session.commitTransaction();
-      res.json({ message: "Errand cancelled and removed from history. Funds refunded." });
+      res.json({ message: "Errand cancelled and removed from history. Funds refunded to your balance." });
     } catch (err) {
       await session.abortTransaction();
       throw err;
@@ -415,9 +412,57 @@ export const deleteFromHistory = catchAsync(async (req, res) => {
     return;
   }
 
-  // Otherwise just mark as hidden for this user
+  // Otherwise (completed, confirmed_completed, or cancelled, or it's the messenger doing the hiding)
+  // just add the user to the hiddenBy array so it disappears from their history list
   await Errand.findByIdAndUpdate(id, { $addToSet: { hiddenBy: userId } });
   res.json({ message: "Errand removed from your history." });
+});
+
+export const getErrandFootprint = catchAsync(async (req, res) => {
+  const { id } = req.params;
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    res.status(400).json({ message: "Invalid Errand ID" });
+    return;
+  }
+
+  let footprint = await DigitalFootprint.findOne({ errandId: id }).lean();
+  if (!footprint) {
+    const errand = await Errand.findById(id);
+    if (!errand) {
+      res.status(404).json({ message: "Errand not found" });
+      return;
+    }
+    try {
+      const created = await DigitalFootprint.create({
+        errandId: errand._id,
+        senderId: errand.posterId,
+        messengerId: errand.erranderId || undefined,
+        timePosted: errand.createdAt || new Date(),
+        status: ["completed", "confirmed_completed"].includes(errand.status) ? "released" : "held",
+        auditTrail: [
+          {
+            action: "POSTED",
+            timestamp: errand.createdAt || new Date(),
+            userId: errand.posterId,
+            actorName: "Sender",
+            actorRole: "sender",
+            actionTitle: "Errand Posted",
+            actionDescription: "Errand created.",
+            details: "Digital footprint backfilled.",
+          }
+        ]
+      });
+      footprint = created.toObject();
+    } catch (err) {
+      console.error("Failed to auto-create footprint", err);
+      footprint = {
+        errandId: errand._id,
+        senderId: errand.posterId,
+        auditTrail: []
+      };
+    }
+  }
+  res.json(footprint);
 });
 
 export const createErrand = catchAsync(async (req, res) => {
@@ -1034,36 +1079,3 @@ export const uploadProof = catchAsync(async (req, res) => {
 
   res.json({ message: "Proof uploaded successfully", proof: imageUrl });
 });
-
-export const getErrandFootprint = catchAsync(async (req, res) => {
-  const { id } = req.params;
-  const footprint = await DigitalFootprint.findOne({ errandId: id }).lean();
-  if (!footprint) {
-    const errand = await Errand.findById(id);
-    if (!errand) {
-      res.status(404).json({ message: "Errand not found" });
-      return;
-    }
-    const newFootprint = await DigitalFootprint.create({
-      errandId: errand._id,
-      senderId: errand.posterId,
-      messengerId: errand.erranderId,
-      timePosted: errand.createdAt,
-      status: errand.status === "completed" ? "released" : "held",
-      auditTrail: [
-        {
-          action: "POSTED",
-          timestamp: errand.createdAt,
-          userId: errand.posterId,
-          actionTitle: "Errand Posted",
-          actionDescription: "Errand created.",
-          details: "Digital footprint backfilled.",
-        }
-      ]
-    });
-    res.json(newFootprint);
-    return;
-  }
-  res.json(footprint);
-});
-

@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 import api from "../api";
 import ReviewModal from "../components/ReviewModal";
 import { useSocket } from "../context/SocketContext";
+import NotificationCenter from "../components/NotificationCenter";
 
 const History = () => {
   const navigate = useNavigate();
@@ -357,13 +358,16 @@ const History = () => {
           )}
         </AnimatePresence>
 
-        <div className="dashboard-header" style={{ marginBottom: 16 }}>
-          <div className="dashboard-title">
+        <div className="dashboard-header" style={{ marginBottom: 16, display: "flex", justifyContent: "space-between", alignItems: "flex-start", width: "100%" }}>
+          <div className="dashboard-title" style={{ flex: 1 }}>
             <h1>My Errands</h1>
             <p>
               History of your {filterType === "posted" ? "posted" : "accepted"}{" "}
               tasks.
             </p>
+          </div>
+          <div style={{ flexShrink: 0, marginTop: 4 }}>
+            <NotificationCenter />
           </div>
         </div>
 

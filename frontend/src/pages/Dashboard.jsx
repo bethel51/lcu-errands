@@ -19,6 +19,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import api from "../api";
 import ReviewModal from "../components/ReviewModal";
 import { useSocket } from "../context/SocketContext";
+import NotificationCenter from "../components/NotificationCenter";
 
 const CATEGORIES = [
   "All",
@@ -411,8 +412,8 @@ const Dashboard = () => {
 
       <div className="container">
         {/* ── Header ── */}
-        <div className="dashboard-header">
-          <div className="dashboard-title">
+        <div className="dashboard-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", width: "100%" }}>
+          <div className="dashboard-title" style={{ flex: 1 }}>
             <h1>
               Hello, {user?.name?.split(" ")[0] || "Student"}! 👋
             </h1>
@@ -432,16 +433,18 @@ const Dashboard = () => {
               )}
             </div>
           </div>
-
-          {userRole === "sender" && (
-            <button
-              className="btn btn-primary"
-              onClick={() => setIsPostModalOpen(true)}
-              style={{ flexShrink: 0 }}
-            >
-              <Plus size={18} /> Post Errand
-            </button>
-          )}
+          <div style={{ display: "flex", alignItems: "center", gap: 12, flexShrink: 0, marginTop: 4 }}>
+            <NotificationCenter />
+            {userRole === "sender" && (
+              <button
+                className="btn btn-primary"
+                onClick={() => setIsPostModalOpen(true)}
+                style={{ borderRadius: 12 }}
+              >
+                <Plus size={18} /> Post Errand
+              </button>
+            )}
+          </div>
         </div>
 
         {/* ── Wallet & Payouts Card ── */}

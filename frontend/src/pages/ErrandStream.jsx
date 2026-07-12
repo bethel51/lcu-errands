@@ -17,6 +17,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import api from "../api";
 import { useSocket } from "../context/SocketContext";
+import NotificationCenter from "../components/NotificationCenter";
 
 /* ─── Category colour map ──────────────────────────────────────────── */
 const CATEGORY_COLORS = {
@@ -258,13 +259,17 @@ const ErrandStream = () => {
               </p>
             </div>
           </div>
-          <button
-            onClick={() => { setLoading(true); fetchErrands(); }}
-            className="stream-refresh-btn"
-            title="Refresh feed"
-          >
-            <RefreshCw size={16} />
-          </button>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <NotificationCenter />
+            <button
+              onClick={() => { setLoading(true); fetchErrands(); }}
+              className="stream-refresh-btn"
+              title="Refresh feed"
+              style={{ display: "flex", alignItems: "center", justifyContent: "center" }}
+            >
+              <RefreshCw size={16} />
+            </button>
+          </div>
         </div>
 
         {/* Search bar inside hero */}

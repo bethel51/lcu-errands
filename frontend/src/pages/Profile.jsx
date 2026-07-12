@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import api from "../api";
+import NotificationCenter from "../components/NotificationCenter";
 
 const Profile = () => {
   const navigate = useNavigate();
@@ -316,12 +317,14 @@ const Profile = () => {
         )}
       </AnimatePresence>
 
-      <div className="dashboard-header" style={{ marginBottom: 32 }}>
-        <div className="dashboard-title">
+      <div className="dashboard-header" style={{ marginBottom: 32, display: "flex", justifyContent: "space-between", alignItems: "flex-start", width: "100%" }}>
+        <div className="dashboard-title" style={{ flex: 1 }}>
           <h1>My Profile</h1>
           <p>Manage your account and view your status.</p>
         </div>
-        {!isEditing ? (
+        <div style={{ display: "flex", alignItems: "center", gap: 12, flexShrink: 0, marginTop: 4 }}>
+          <NotificationCenter />
+          {!isEditing ? (
           <button
             onClick={() => setIsEditing(true)}
             className="btn btn-primary"
@@ -359,6 +362,7 @@ const Profile = () => {
           </div>
         )}
       </div>
+    </div>
 
       <div className="grid-responsive">
         {/* Profile Card */}

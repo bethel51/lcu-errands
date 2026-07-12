@@ -98,14 +98,7 @@ const ForgotPassword = () => {
         style={{ overflow: "hidden" }}
       >
         <div className="clean-auth-header">
-          <div className="clean-auth-logo">
-            <div className="clean-auth-logo-mark">
-              <span>LC</span>
-            </div>
-            <span className="clean-auth-logo-text">
-              LEADCITY <em>ERRANDS</em>
-            </span>
-          </div>
+          <img src="/logo.png" className="clean-auth-logo-img" alt="LCU Errands Logo" />
           
           {step === 1 && (
             <>

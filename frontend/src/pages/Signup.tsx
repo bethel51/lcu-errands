@@ -239,14 +239,7 @@ const Signup: React.FC = () => {
         style={{ maxWidth: step === 1 ? 500 : 420 }}
       >
         <div className="clean-auth-header">
-          <div className="clean-auth-logo">
-            <div className="clean-auth-logo-mark">
-              <span>LC</span>
-            </div>
-            <span className="clean-auth-logo-text">
-              LEADCITY <em>ERRANDS</em>
-            </span>
-          </div>
+          <img src="/logo.png" className="clean-auth-logo-img" alt="LCU Errands Logo" />
           <h1>{step === 1 ? "Create account" : "Verify your email"}</h1>
           <p>{step === 1 ? "Get started with LeadCity Errands" : `We sent a code to ${formData.email}`}</p>
         </div>

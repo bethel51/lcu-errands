@@ -2838,6 +2838,13 @@ input, select, textarea {
   margin-bottom: 20px;
 }
 
+.clean-auth-logo-img {
+  height: 42px;
+  width: auto;
+  object-fit: contain;
+  margin-bottom: 4px;
+}
+
 .clean-auth-logo-mark {
   width: 32px;
   height: 32px;

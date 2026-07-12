@@ -111,14 +111,7 @@ const Login: React.FC = () => {
         className="clean-auth-card"
       >
         <div className="clean-auth-header">
-          <div className="clean-auth-logo">
-            <div className="clean-auth-logo-mark">
-              <span>LC</span>
-            </div>
-            <span className="clean-auth-logo-text">
-              LEADCITY <em>ERRANDS</em>
-            </span>
-          </div>
+          <img src="/logo.png" className="clean-auth-logo-img" alt="LCU Errands Logo" />
           <h1>Welcome back</h1>
           <p>Access your campus errands account</p>
         </div>

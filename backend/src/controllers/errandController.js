@@ -379,41 +379,43 @@ export const deleteFromHistory = catchAsync(async (req, res) => {
     return;
   }
 
-  // If the Sender is deleting an active errand (not completed yet), refund and cancel
-  if (isPoster && ["open", "assigned", "in_progress", "pending_sender_confirmation", "pending_confirmation"].includes(errand.status)) {
-    const session = await mongoose.startSession();
-    session.startTransaction();
-    try {
-      const user = await User.findById(userId).session(session);
-      if (user && errand.fee > 0) {
-        user.balance += errand.fee;
-        await user.save({ session });
-        await Transaction.create(
-          [{ userId, amount: errand.fee, type: "credit", description: `Refund for cancelled errand: ${errand.title}`, errandId: errand._id }],
-          { session }
-        );
+  // If the Sender is deleting an active errand (not completed yet), refund them
+  if (isPoster) {
+    const isActive = ["open", "assigned", "in_progress", "pending_sender_confirmation", "pending_confirmation"].includes(errand.status);
+    
+    if (isActive) {
+      const session = await mongoose.startSession();
+      session.startTransaction();
+      try {
+        const user = await User.findById(userId).session(session);
+        if (user && errand.fee > 0) {
+          user.balance += errand.fee;
+          await user.save({ session });
+          await Transaction.create(
+            [{ userId, amount: errand.fee, type: "credit", description: `Refund for cancelled errand: ${errand.title}`, errandId: errand._id }],
+            { session }
+          );
+        }
+        
+        await Errand.findByIdAndDelete(errand._id).session(session);
+        await session.commitTransaction();
+        res.json({ message: "Errand cancelled and permanently deleted. Funds refunded to your balance." });
+      } catch (err) {
+        await session.abortTransaction();
+        throw err;
+      } finally {
+        session.endSession();
       }
-      
-      // Update errand to cancelled and hide it for the sender
-      errand.status = "cancelled";
-      if (!errand.hiddenBy.includes(userId)) {
-        errand.hiddenBy.push(userId);
-      }
-      await errand.save({ session });
-      
-      await session.commitTransaction();
-      res.json({ message: "Errand cancelled and removed from history. Funds refunded to your balance." });
-    } catch (err) {
-      await session.abortTransaction();
-      throw err;
-    } finally {
-      session.endSession();
+      return;
+    } else {
+      // Completed or cancelled errand being deleted by poster - no refund, just delete
+      await Errand.findByIdAndDelete(errand._id);
+      res.json({ message: "Errand permanently deleted from your history." });
+      return;
     }
-    return;
   }
 
-  // Otherwise (completed, confirmed_completed, or cancelled, or it's the messenger doing the hiding)
-  // just add the user to the hiddenBy array so it disappears from their history list
+  // If it's the messenger doing the hiding, just hide it for them
   await Errand.findByIdAndUpdate(id, { $addToSet: { hiddenBy: userId } });
   res.json({ message: "Errand removed from your history." });
 });

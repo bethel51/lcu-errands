@@ -455,37 +455,47 @@ export const sendOtpEmail = async (userEmail: string, userName: string, otp: str
 export const sendAccountVerificationOtpEmail = async (userEmail: string, userName: string, otp: string): Promise<boolean> => {
   const subject = "LCU Errands – Account Verification Badge OTP 🛡️";
   const html = `
-    <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 0; border: 1px solid #f0f0f0; border-radius: 16px; overflow: hidden; background-color: #ffffff;">
-      <div style="background: linear-gradient(135deg, #1E4DB7 0%, #0D3B8E 100%); padding: 40px 20px; text-align: center;">
-        <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -0.5px;">LCU ERRANDS</h1>
-        <p style="color: rgba(255,255,255,0.8); margin: 8px 0 0 0; font-size: 14px;">Official Student Errand Platform</p>
+    <div style="font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 0; border: 1px solid #E5E7EB; border-radius: 20px; overflow: hidden; background-color: #ffffff; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);">
+      <div style="background: #111827; padding: 48px 20px; text-align: center;">
+        <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 800; letter-spacing: -0.5px;">LCU ERRANDS</h1>
+        <p style="color: #9CA3AF; margin: 8px 0 0 0; font-size: 15px; font-weight: 500;">Official Student Marketplace</p>
       </div>
-      <div style="padding: 40px 30px;">
-        <div style="text-align: center; margin-bottom: 28px;">
-          <div style="display: inline-block; background: #EFF6FF; border-radius: 50%; width: 72px; height: 72px; line-height: 72px; font-size: 36px;">🛡️</div>
+      <div style="padding: 48px 40px;">
+        <div style="text-align: center; margin-bottom: 32px;">
+          <div style="display: inline-flex; align-items: center; justify-content: center; background: #F3F4F6; border-radius: 50%; width: 80px; height: 80px; font-size: 36px; border: 4px solid #ffffff; box-shadow: 0 0 0 4px #F3F4F6;">
+            🛡️
+          </div>
         </div>
-        <h2 style="color: #111827; margin: 0 0 12px 0; font-size: 22px; font-weight: 800; text-align: center;">Account Verification Code</h2>
-        <p style="color: #4B5563; font-size: 16px; line-height: 1.6; margin-bottom: 8px;">Hi <strong>${userName}</strong>,</p>
-        <p style="color: #4B5563; font-size: 16px; line-height: 1.6; margin-bottom: 28px;">
-          You requested to verify your LCU Errands messenger account. Enter the OTP code below to receive your <strong>Verified Badge ✅</strong> and start accepting errands.
+        <h2 style="color: #111827; margin: 0 0 16px 0; font-size: 24px; font-weight: 800; text-align: center;">Account Verification</h2>
+        <p style="color: #4B5563; font-size: 16px; line-height: 1.7; margin-bottom: 8px; text-align: center;">Hi <strong style="color: #111827;">${userName}</strong>,</p>
+        <p style="color: #4B5563; font-size: 16px; line-height: 1.7; margin-bottom: 36px; text-align: center;">
+          Enter the verification code below to confirm your identity and receive your <strong style="color: #111827;">Verified Messenger Badge ✅</strong>.
         </p>
         
-        <div style="background: linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%); padding: 28px 24px; border-radius: 16px; text-align: center; margin: 24px 0; border: 2px solid #BFDBFE;">
-          <p style="color: #1E4DB7; font-size: 13px; font-weight: 700; margin: 0 0 12px 0; letter-spacing: 1px; text-transform: uppercase;">Your OTP Code</p>
-          <span style="font-size: 42px; font-weight: 900; letter-spacing: 10px; color: #1E4DB7; font-family: 'Courier New', monospace;">${otp}</span>
-          <p style="color: #6B7280; font-size: 13px; margin: 12px 0 0 0;">⏱️ This code expires in <strong>10 minutes</strong></p>
+        <div style="text-align: center; margin: 36px 0;">
+          <p style="color: #6B7280; font-size: 12px; font-weight: 700; margin: 0 0 16px 0; letter-spacing: 2px; text-transform: uppercase;">Your Security Code</p>
+          <div style="display: inline-block; background: #F9FAFB; padding: 24px 32px; border-radius: 20px; border: 1px solid #E5E7EB; box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.03);">
+            <span style="font-size: 48px; font-weight: 800; letter-spacing: 16px; color: #111827; font-family: 'Inter', system-ui, sans-serif; display: block; margin-right: -16px;">
+              ${otp}
+            </span>
+          </div>
+          <p style="color: #9CA3AF; font-size: 14px; font-weight: 500; margin: 20px 0 0 0;">⏱️ Expires in <strong style="color: #4B5563;">10 minutes</strong></p>
         </div>
 
-        <div style="background: #FFFBEB; border: 1px solid #FDE68A; border-radius: 12px; padding: 16px 20px; margin-bottom: 28px;">
-          <p style="color: #92400E; font-size: 14px; margin: 0; font-weight: 600;">⚠️ Security Notice</p>
-          <p style="color: #92400E; font-size: 14px; margin: 6px 0 0 0;">Never share this code with anyone. LCU Errands will never ask for your OTP.</p>
+        <div style="background: #FFFBEB; border-left: 4px solid #F59E0B; border-radius: 0 12px 12px 0; padding: 20px 24px; margin-bottom: 32px;">
+          <p style="color: #92400E; font-size: 15px; margin: 0; font-weight: 700; display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 18px;">🔒</span> Security Notice
+          </p>
+          <p style="color: #B45309; font-size: 14px; line-height: 1.6; margin: 8px 0 0 0;">Never share this code with anyone. Our support team will never ask for your verification code.</p>
         </div>
 
-        <hr style="border: 0; border-top: 1px solid #F3F4F6; margin-bottom: 24px;" />
-        <p style="color: #9CA3AF; font-size: 13px; text-align: center; margin: 0;">This is an automated notification from Lead City University Errands.</p>
+        <hr style="border: 0; border-top: 1px solid #E5E7EB; margin-bottom: 32px;" />
+        <p style="color: #9CA3AF; font-size: 13px; text-align: center; margin: 0; line-height: 1.6;">
+          This is an automated security message from<br/>Lead City University Errands.
+        </p>
       </div>
     </div>
   `;
-  return await sendEmail(userEmail, subject, `Your LCU Errands account verification OTP is: ${otp}. Valid for 10 minutes.`, html);
+  return await sendEmail(userEmail, subject, \`Your LCU Errands account verification OTP is: \${otp}. Valid for 10 minutes.\`, html);
 };
 

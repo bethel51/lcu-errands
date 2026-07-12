@@ -3480,17 +3480,24 @@ input, select, textarea {
 .toast-error { background: var(--red-500); }
 
 /* ===== ERRAND ACCEPTANCE MODAL (MOBILE RESPONSIVE) ===== */
-.errand-accept-modal {
+.errand-accept-modal-wrapper {
   position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 90%;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9993;
+  padding: 16px;
+  pointer-events: none;
+}
+
+.errand-accept-modal {
+  pointer-events: auto;
+  width: 100%;
   max-width: 480px;
   background: var(--white);
   border-radius: 24px;
   box-shadow: 0 20px 40px rgba(0,0,0,0.15);
-  z-index: 9993;
   overflow: hidden;
   padding: 24px 20px;
   max-height: 90vh;
@@ -3501,7 +3508,6 @@ input, select, textarea {
 @media (max-width: 480px) {
   .errand-accept-modal {
     padding: 20px 16px;
-    width: 94%;
     border-radius: 20px;
     max-height: 85vh;
   }

@@ -55,6 +55,20 @@ const AppLayout = () => {
   );
 
   useEffect(() => {
+    const loader = document.getElementById("app-preloader");
+    if (loader) {
+      requestAnimationFrame(() => {
+        loader.style.transition = "opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1)";
+        loader.style.opacity = "0";
+        loader.style.pointerEvents = "none";
+        setTimeout(() => {
+          loader.remove();
+        }, 600);
+      });
+    }
+  }, []);
+
+  useEffect(() => {
     // Sync auth state whenever location changes
     setIsAuth(localStorage.getItem("isAuthenticated") === "true");
   }, [location.pathname]);

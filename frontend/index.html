@@ -75,16 +75,16 @@
     <div id="root"></div>
     <script type="module" src="src/main.jsx"></script>
     <script>
-      window.addEventListener('load', () => {
+      // Fallback loader removal in case React fails to load/initialize
+      setTimeout(() => {
         const loader = document.getElementById('app-preloader');
         if (loader) {
-          setTimeout(() => {
-            loader.style.opacity = '0';
-            loader.style.transition = 'opacity 0.5s ease';
-            setTimeout(() => loader.remove(), 500);
-          }, 800);
+          loader.style.transition = 'opacity 0.5s ease';
+          loader.style.opacity = '0';
+          loader.style.pointerEvents = 'none';
+          setTimeout(() => loader.remove(), 500);
         }
-      });
+      }, 5000);
     </script>
   </body>
 </html>

@@ -496,6 +496,6 @@ export const sendAccountVerificationOtpEmail = async (userEmail: string, userNam
       </div>
     </div>
   `;
-  return await sendEmail(userEmail, subject, \`Your LCU Errands account verification OTP is: \${otp}. Valid for 10 minutes.\`, html);
+  return await sendEmail(userEmail, subject, `Your LCU Errands account verification OTP is: ${otp}. Valid for 10 minutes.`, html);
 };
 

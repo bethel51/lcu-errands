@@ -468,6 +468,7 @@ export const getErrandFootprint = catchAsync(async (req, res) => {
 });
 
 export const createErrand = catchAsync(async (req, res) => {
+  const posterId = req.user.id;
   const {
     title,
     description,

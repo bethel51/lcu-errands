@@ -3492,7 +3492,10 @@ input, select, textarea {
   --gray-100: #1e293b;
   --gray-50: #0f172a;
 
-  --blue-50: #1e3a8a;
+  --blue-900: #60a5fa;
+  --blue-700: #93c5fd;
+  --blue-600: #3b82f6;
+  --blue-50: #1e3b8a;
   --blue-100: #1e293b;
   
   --gradient-page: linear-gradient(160deg, #0f172a 0%, #1e1b4b 50%, #030712 100%);
@@ -3506,27 +3509,74 @@ input, select, textarea {
   color: #F9FAFB;
 }
 
+/* Force high contrast text on elements that use inline styles with light theme colors */
+:root.dark [style*="color: #111827"],
+:root.dark [style*="color: rgb(17, 24, 39)"],
+:root.dark [style*="color: var(--gray-900)"] {
+  color: #F9FAFB !important;
+}
+
+:root.dark [style*="color: var(--blue-900)"],
+:root.dark [style*="color: #0C1E5B"],
+:root.dark [style*="color: rgb(12, 30, 91)"] {
+  color: #93c5fd !important;
+}
+
+:root.dark [style*="color: var(--gray-600)"],
+:root.dark [style*="color: #4B5563"],
+:root.dark [style*="color: rgb(75, 85, 99)"],
+:root.dark [style*="color: var(--gray-700)"],
+:root.dark [style*="color: #374151"] {
+  color: #D1D5DB !important;
+}
+
+:root.dark [style*="color: var(--gray-500)"],
+:root.dark [style*="color: #6B7280"],
+:root.dark [style*="color: rgb(107, 114, 128)"] {
+  color: #9CA3AF !important;
+}
+
+/* Clean up card backgrounds */
 :root.dark .card,
 :root.dark .errand-card,
+:root.dark .stream-card,
 :root.dark .modal-container,
 :root.dark .notification-dropdown,
 :root.dark .dropdown-menu {
-  background-color: #1e293b;
-  border-color: #374151;
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+  background-color: #1e293b !important;
+  border-color: #374151 !important;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.4) !important;
 }
 
+/* Standard elements high contrast */
+:root.dark h1,
+:root.dark h2,
+:root.dark h3,
+:root.dark h4,
+:root.dark h5,
+:root.dark h6 {
+  color: #FFFFFF !important;
+}
+
+:root.dark p,
+:root.dark span:not(.nav-live-text):not(.bottom-nav-dot),
+:root.dark label,
+:root.dark li {
+  color: #E5E7EB;
+}
+
+/* Form fields in dark mode */
 :root.dark input,
 :root.dark select,
 :root.dark textarea {
-  background-color: #0f172a;
-  border-color: #374151;
-  color: #F9FAFB;
+  background-color: #0f172a !important;
+  border-color: #374151 !important;
+  color: #F9FAFB !important;
 }
 
 :root.dark input::placeholder,
 :root.dark textarea::placeholder {
-  color: #6B7280;
+  color: #6B7280 !important;
 }
 
 :root.dark .nav-pill {

@@ -134,6 +134,21 @@ const History = () => {
     }
   };
 
+  const handleDeleteFromHistory = async (id) => {
+    if (!window.confirm("Remove this errand from your history permanently?")) return;
+    setProcessing(true);
+    try {
+      const res = await api.delete(`/errands/${id}/history`);
+      showToast(res.data?.message || "Removed from history.");
+      // Remove from local state immediately for snappy UX
+      setHistoryItems((prev) => prev.filter((item) => item.id !== id));
+    } catch (err) {
+      showToast(err.response?.data?.message || "Could not remove from history.", "error");
+    } finally {
+      setProcessing(false);
+    }
+  };
+
   const handleCompleteTask = async (id) => {
     setProcessing(true);
     try {
@@ -644,6 +659,25 @@ const History = () => {
                         }}
                       >
                         <Star size={12} fill="currentColor" /> Rate
+                      </button>
+                    )}
+
+                    {/* Delete from history button — available for completed or cancelled errands */}
+                    {["completed", "confirmed_completed", "cancelled"].includes(item.status) && (
+                      <button
+                        className="btn btn-outline btn-sm"
+                        style={{
+                          borderColor: "var(--red-200)",
+                          color: "var(--red-500)",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 4,
+                          padding: "5px 10px",
+                        }}
+                        title="Remove from history"
+                        onClick={() => handleDeleteFromHistory(item.id)}
+                      >
+                        <X size={12} /> Delete
                       </button>
                     )}
                   </div>

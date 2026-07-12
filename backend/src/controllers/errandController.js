@@ -349,13 +349,75 @@ export const getUserHistory = catchAsync(async (req, res) => {
   const userId = req.user.id;
   const errands = await Errand.find({
     $or: [{ posterId: userId }, { erranderId: userId }],
+    hiddenBy: { $ne: userId }, // exclude entries the user has hidden
   })
     .populate("posterId", "name profilePicture phoneNumber rating isVerified email department location")
     .populate("erranderId", "name profilePicture phoneNumber rating isVerified email department location")
+    .populate("candidates", "name profilePicture rating location department isVerified")
     .sort({ createdAt: -1 })
     .lean();
 
   res.json(errands);
+});
+
+// Permanently hide/delete an errand from a user's history view
+export const deleteFromHistory = catchAsync(async (req, res) => {
+  const { id } = req.params;
+  const userId = req.user.id;
+
+  const errand = await Errand.findById(id);
+  if (!errand) {
+    res.status(404).json({ message: "Errand not found" });
+    return;
+  }
+
+  // User must be the poster or the messenger to hide it
+  const isPoster = errand.posterId.toString() === userId;
+  const isMessenger = errand.erranderId?.toString() === userId;
+
+  if (!isPoster && !isMessenger) {
+    res.status(403).json({ message: "You are not authorized to remove this errand from your history" });
+    return;
+  }
+
+  // Only allow hiding if errand is completed, cancelled, or the user is the poster and it's open
+  const hideable = ["confirmed_completed", "completed", "cancelled"].includes(errand.status) ||
+    (isPoster && errand.status === "open");
+
+  if (!hideable) {
+    res.status(400).json({ message: "You can only remove completed or cancelled errands from your history." });
+    return;
+  }
+
+  // If it's open and poster wants to cancel+delete, refund and hard delete
+  if (isPoster && errand.status === "open") {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+    try {
+      const user = await User.findById(userId).session(session);
+      if (user && errand.fee > 0) {
+        user.balance += errand.fee;
+        await user.save({ session });
+        await Transaction.create(
+          [{ userId, amount: errand.fee, type: "credit", description: `Refund for cancelled errand: ${errand.title}`, errandId: errand._id }],
+          { session }
+        );
+      }
+      await Errand.findByIdAndDelete(id).session(session);
+      await session.commitTransaction();
+      res.json({ message: "Errand cancelled and removed from history. Funds refunded." });
+    } catch (err) {
+      await session.abortTransaction();
+      throw err;
+    } finally {
+      session.endSession();
+    }
+    return;
+  }
+
+  // Otherwise just mark as hidden for this user
+  await Errand.findByIdAndUpdate(id, { $addToSet: { hiddenBy: userId } });
+  res.json({ message: "Errand removed from your history." });
 });
 
 export const createErrand = catchAsync(async (req, res) => {
@@ -520,7 +582,7 @@ export const getErrands = catchAsync(async (req, res) => {
 
   const errands = await Errand.find(
     query,
-    "title description category fee pickupLocation dropoffLocation createdAt posterId erranderId status",
+    "title description category fee pickupLocation dropoffLocation createdAt posterId erranderId status candidates",
   )
     .populate({
       path: "posterId",
@@ -542,6 +604,7 @@ export const getErrandById = catchAsync(async (req, res) => {
   const errand = await Errand.findById(id)
     .populate("posterId", "name rating profilePicture isVerified")
     .populate("erranderId", "name rating profilePicture isVerified")
+    .populate("candidates", "name rating profilePicture isVerified department location")
     .lean();
 
   if (!errand) {
@@ -552,7 +615,7 @@ export const getErrandById = catchAsync(async (req, res) => {
   res.json(errand);
 });
 
-export const acceptErrand = catchAsync(async (req, res) => {
+export const applyForErrand = catchAsync(async (req, res) => {
   const { id } = req.params;
   const erranderId = req.user.id;
 
@@ -566,62 +629,99 @@ export const acceptErrand = catchAsync(async (req, res) => {
   // Check if the user is verified
   const user = await User.findById(erranderId);
   if (!user || !user.isVerified) {
-    res
-      .status(403)
-      .json({
-        message:
-          "Your account is not verified. Please contact admin for verification.",
-      });
+    res.status(403).json({
+      message: "Your account is not verified. Please contact admin for verification.",
+    });
     return;
   }
 
   if (existingErrand.status !== "open") {
-    res.status(400).json({ message: "Errand is no longer available" });
+    res.status(400).json({ message: "Errand is no longer open for applications" });
     return;
   }
 
   if (existingErrand.posterId.toString() === erranderId) {
-    res.status(400).json({ message: "You cannot accept your own errand" });
+    res.status(400).json({ message: "You cannot apply for your own errand" });
     return;
   }
 
-  // Security: If this errand was directly requested to a specific messenger, only they can accept it
-  if (existingErrand.erranderId && existingErrand.erranderId.toString() !== erranderId) {
-    res
-      .status(403)
-      .json({
-        message:
-          "This errand is exclusively requested to a different messenger",
-      });
-    return;
-  }
-
+  // Check if already applied
   const erranderObjectId = new mongoose.Types.ObjectId(erranderId);
-  const errand = await Errand.findOneAndUpdate(
-    {
-      _id: id,
-      status: "open",
-      posterId: { $ne: erranderObjectId },
-      $or: [
-        { erranderId: { $exists: false } },
-        { erranderId: null },
-        { erranderId: erranderObjectId },
-      ],
-    },
+  if (existingErrand.candidates.some(c => c.toString() === erranderId)) {
+    res.status(400).json({ message: "You have already requested to do this errand" });
+    return;
+  }
+
+  const errand = await Errand.findByIdAndUpdate(
+    id,
+    { $addToSet: { candidates: erranderObjectId } },
+    { new: true }
+  ).populate("candidates", "name profilePicture rating location");
+
+  // Send real-time notification to the poster
+  const io = req.io;
+  const notificationData = {
+    userId: errand.posterId,
+    title: "New Errand Application!",
+    message: `${user.name} has requested to do your errand "${errand.title}".`,
+    type: "errand_requested",
+    relatedId: errand._id,
+  };
+
+  await Notification.create(notificationData);
+  if (io) {
+    io.to(errand.posterId.toString()).emit("notification", notificationData);
+  }
+
+  res.json(errand);
+});
+
+export const selectMessenger = catchAsync(async (req, res) => {
+  const { id } = req.params;
+  const { messengerId } = req.body;
+  const userId = req.user.id;
+
+  if (!messengerId) {
+    res.status(400).json({ message: "Messenger ID is required" });
+    return;
+  }
+
+  const existingErrand = await Errand.findById(id);
+
+  if (!existingErrand) {
+    res.status(404).json({ message: "Errand not found" });
+    return;
+  }
+
+  // Security: Only the poster can select a messenger
+  if (existingErrand.posterId.toString() !== userId) {
+    res.status(403).json({ message: "You are not authorized to assign this errand" });
+    return;
+  }
+
+  if (existingErrand.status !== "open") {
+    res.status(400).json({ message: "Errand is no longer open" });
+    return;
+  }
+
+  // Check if candidate is in the list
+  if (!existingErrand.candidates.some(c => c.toString() === messengerId)) {
+    res.status(400).json({ message: "This messenger did not request to do this errand" });
+    return;
+  }
+
+  const erranderObjectId = new mongoose.Types.ObjectId(messengerId);
+  const errand = await Errand.findByIdAndUpdate(
+    id,
     {
       $set: {
         erranderId: erranderObjectId,
         status: "assigned",
         acceptedAt: new Date(),
-      },
+      }
     },
     { new: true }
   );
-
-  if (!errand) {
-    res.status(409).json({ message: "Errand is no longer available" });
-    return;
-  }
 
   // Capture user IP & Device info
   const acceptedContext = getRequestContext(req, errand.pickupLocation || "Campus");
@@ -629,10 +729,10 @@ export const acceptErrand = catchAsync(async (req, res) => {
     errand,
     action: "ACCEPTED",
     req,
-    userId: erranderId,
-    actionTitle: "Messenger Accepted ✅",
-    actionDescription: "Errand accepted and assigned to messenger.",
-    details: "Errand accepted by messenger.",
+    userId: messengerId,
+    actionTitle: "Messenger Selected ✅",
+    actionDescription: "Messenger selected by sender and assigned to the errand.",
+    details: "Errand assigned to messenger.",
     set: {
       messengerId: erranderObjectId,
       timeAccepted: new Date(),
@@ -644,31 +744,31 @@ export const acceptErrand = catchAsync(async (req, res) => {
 
   // Fire background email notification
   const triggerAcceptedNotification = async () => {
-    const poster = await User.findById(errand.posterId);
-    if (poster) {
+    const messenger = await User.findById(messengerId);
+    if (messenger) {
       sendErrandNotification(
-        poster.email,
-        poster.name,
-        "accepted",
+        messenger.email,
+        messenger.name,
+        "requested",
         errand.title,
       ).catch(console.error);
     }
   };
   triggerAcceptedNotification();
 
-  // Notify the poster that their errand was accepted
+  // Notify the messenger that they were selected
   const io = req.io;
   const notificationData = {
-    userId: errand.posterId,
-    title: "Errand Accepted!",
-    message: `Your errand "${errand.title}" has been accepted.`,
+    userId: messengerId,
+    title: "You've Been Selected! 🎉",
+    message: `You have been selected to do the errand "${errand.title}".`,
     type: "errand_accepted",
     relatedId: errand._id,
   };
 
   await Notification.create(notificationData);
   if (io) {
-    io.to(errand.posterId.toString()).emit("notification", notificationData);
+    io.to(messengerId.toString()).emit("notification", notificationData);
   }
 
   res.json(errand);

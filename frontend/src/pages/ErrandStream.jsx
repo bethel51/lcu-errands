@@ -141,6 +141,10 @@ const ErrandStream = () => {
     posterVerified: !!err.posterId?.isVerified,
     posterId: err.posterId?._id || err.posterId,
     createdAt: err.createdAt,
+    candidates: err.candidates || [],
+    hasApplied: Array.isArray(err.candidates)
+      ? err.candidates.some(c => (c._id || c) === cachedUserId)
+      : false,
     isNew: false,
   }), [cachedUserId]);
 
@@ -188,14 +192,15 @@ const ErrandStream = () => {
     };
   }, [socket, fetchErrands, mapBackendToFrontend]);
 
-  const handleAcceptErrand = async (id) => {
+  const handleApplyForErrand = async (id) => {
     setProcessing(true);
     try {
-      await api.patch(`/errands/${id}/accept`);
-      showToast("✅ Errand accepted! Check your active tasks.");
-      navigate("/history");
+      await api.patch(`/errands/${id}/apply`);
+      showToast("✅ Request sent! The sender will be notified and will select you if chosen.");
+      // Update local list to show applied state
+      setErrands((prev) => prev.map((e) => e.id === id ? { ...e, hasApplied: true } : e));
     } catch (err) {
-      showToast(err.response?.data?.message || "Could not accept errand.", "error");
+      showToast(err.response?.data?.message || "Could not send request.", "error");
     } finally {
       setProcessing(false);
     }
@@ -433,8 +438,17 @@ const ErrandStream = () => {
                       </div>
 
                       {userRole === "messenger" && !isOwner && (
-                        <button onClick={() => setAcceptingErrand(errand)} className="stream-accept-btn">
-                          Accept Task
+                        <button
+                          onClick={() => !errand.hasApplied && setAcceptingErrand(errand)}
+                          className={`stream-accept-btn ${errand.hasApplied ? "applied" : ""}`}
+                          style={{
+                            opacity: errand.hasApplied ? 0.7 : 1,
+                            pointerEvents: errand.hasApplied ? "none" : "auto",
+                            background: errand.hasApplied ? "var(--gray-300)" : "var(--blue-600)",
+                            color: errand.hasApplied ? "var(--gray-600)" : "#ffffff"
+                          }}
+                        >
+                          {errand.hasApplied ? "Requested" : "Request to Do"}
                           <ArrowRight size={14} />
                         </button>
                       )}
@@ -494,7 +508,7 @@ const ErrandStream = () => {
               }}
             >
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, borderBottom: "1px solid var(--gray-100)", paddingBottom: 12 }}>
-                <h3 style={{ fontWeight: 900, fontSize: "1.2rem", margin: 0, color: "var(--gray-900)" }}>Accept Errand Request</h3>
+                <h3 style={{ fontWeight: 900, fontSize: "1.2rem", margin: 0, color: "var(--gray-900)" }}>Request to Do Errand</h3>
                 <button
                   onClick={() => setAcceptingErrand(null)}
                   style={{ background: "none", border: "none", cursor: "pointer", color: "var(--gray-400)" }}
@@ -599,12 +613,12 @@ const ErrandStream = () => {
                   onClick={async () => {
                     const id = acceptingErrand.id || acceptingErrand._id;
                     setAcceptingErrand(null);
-                    await handleAcceptErrand(id);
+                    await handleApplyForErrand(id);
                   }}
                   className="btn btn-primary"
                   style={{ flex: 1, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}
                 >
-                  Accept Errand <ArrowRight size={14} />
+                  Send Request <ArrowRight size={14} />
                 </button>
               </div>
             </motion.div>

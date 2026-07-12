@@ -18,6 +18,10 @@ const errandSchema = new mongoose.Schema({
     required: true,
   },
   erranderId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+  candidates: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User"
+  }],
   isReviewedByPoster: { type: Boolean, default: false },
   isReviewedByErrander: { type: Boolean, default: false },
   completionProof: { type: String }, // Image URL
@@ -32,6 +36,7 @@ const errandSchema = new mongoose.Schema({
   paymentReleasedAt: { type: Date },
   paymentTransactionId: { type: String },
   autoReleased: { type: Boolean, default: false }, // true = released by 45min system timer
+  hiddenBy: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }], // users who removed from their history
 });
 
 errandSchema.pre("save", function (next) {

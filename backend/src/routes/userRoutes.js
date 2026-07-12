@@ -10,7 +10,8 @@ import {
   getMessengers,
   boostProfile,
   deleteAccount,
-  verifySelf,
+  requestVerificationOtp,
+  confirmVerificationOtp,
 } from "../controllers/userController.js";
 import { authMiddleware } from "../middleware/authMiddleware.js";
 import { uploadImage } from "../middleware/uploadMiddleware.js";
@@ -23,7 +24,9 @@ router.put("/profile", authMiddleware, updateProfile);
 router.delete("/profile", authMiddleware, deleteAccount);
 router.post("/top-up", authMiddleware, topUp);
 router.post("/boost-profile", authMiddleware, boostProfile);
-router.post("/verify", authMiddleware, verifySelf);
+// Two-step messenger verification: matric number check → OTP → verified badge
+router.post("/verify/request", authMiddleware, requestVerificationOtp);
+router.post("/verify/confirm", authMiddleware, confirmVerificationOtp);
 router.get("/transactions", authMiddleware, getTransactions);
 router.post(
   "/profile-picture",

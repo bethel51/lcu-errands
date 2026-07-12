@@ -2,7 +2,7 @@ import mongoose from "mongoose";
 import { User } from "../models/User.js";
 import { Transaction } from "../models/Transaction.js";
 import axios from "axios";
-import { sendTopUpNotification } from "../utils/mailService.js";
+import { sendTopUpNotification, sendAccountVerificationOtpEmail } from "../utils/mailService.js";
 import { catchAsync } from "./catchAsync.js";
 import crypto from "crypto";
 
@@ -297,30 +297,78 @@ export const uploadFile = catchAsync(async (req, res) => {
   }
 });
 
-export const verifySelf = catchAsync(async (req, res) => {
-  const { verificationProof } = req.body;
+// Step 1: Validate matric number and send OTP to the registered email
+export const requestVerificationOtp = catchAsync(async (req, res) => {
+  const { matricNumber } = req.body;
   const userId = req.user?.id;
-  if (!userId) {
-    res.status(401).json({ message: "Unauthorized" });
-    return;
-  }
-
-  if (!verificationProof) {
-    res.status(400).json({ message: "Verification proof image is required" });
-    return;
-  }
+  if (!userId) { res.status(401).json({ message: "Unauthorized" }); return; }
+  if (!matricNumber) { res.status(400).json({ message: "Matric number is required" }); return; }
 
   const user = await User.findById(userId);
-  if (!user) {
-    res.status(404).json({ message: "User not found" });
-    return;
+  if (!user) { res.status(404).json({ message: "User not found" }); return; }
+
+  if (user.isVerified) {
+    res.status(400).json({ message: "Your account is already verified." }); return;
   }
 
-  user.verificationStatus = "pending";
-  user.verificationProof = verificationProof;
-  await user.save();
+  // Validate matric number matches the one on file
+  const storedMatric = (user.matricNumber || "").trim().toLowerCase();
+  const providedMatric = (matricNumber || "").trim().toLowerCase();
+  if (!storedMatric) {
+    res.status(400).json({ message: "No matric number found on your account. Please update your profile first." }); return;
+  }
+  if (storedMatric !== providedMatric) {
+    res.status(400).json({ message: "Matric number does not match. Please enter the exact matric number used during registration." }); return;
+  }
 
-  res.json({ message: "Verification request submitted successfully", user });
+  // Generate 6-digit OTP
+  const otp = Math.floor(100000 + Math.random() * 900000).toString();
+  const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+  const { OTP } = await import("../models/OTP.js");
+  // Delete any existing verification OTPs for this user
+  await OTP.deleteMany({ email: user.email, formData: { type: "account_verification" } });
+  await OTP.create({ email: user.email, otp, expiresAt, formData: { type: "account_verification", userId } });
+
+  await sendAccountVerificationOtpEmail(user.email, user.name, otp).catch(console.error);
+
+  res.json({ message: `OTP sent to ${user.email}. Enter the code to complete verification.`, email: user.email });
+});
+
+// Step 2: Confirm the OTP to grant the verified badge
+export const confirmVerificationOtp = catchAsync(async (req, res) => {
+  const { otp } = req.body;
+  const userId = req.user?.id;
+  if (!userId) { res.status(401).json({ message: "Unauthorized" }); return; }
+  if (!otp) { res.status(400).json({ message: "OTP code is required" }); return; }
+
+  const user = await User.findById(userId);
+  if (!user) { res.status(404).json({ message: "User not found" }); return; }
+  if (user.isVerified) { res.status(400).json({ message: "Account is already verified." }); return; }
+
+  const { OTP } = await import("../models/OTP.js");
+  const otpRecord = await OTP.findOne({ email: user.email, formData: { type: "account_verification", userId: userId.toString() } });
+
+  if (!otpRecord) {
+    res.status(400).json({ message: "No pending OTP found. Please request a new code." }); return;
+  }
+
+  if (new Date() > otpRecord.expiresAt) {
+    await OTP.findByIdAndDelete(otpRecord._id);
+    res.status(400).json({ message: "OTP has expired. Please request a new code." }); return;
+  }
+
+  if (otpRecord.otp !== otp.trim()) {
+    res.status(400).json({ message: "Incorrect OTP code. Please try again." }); return;
+  }
+
+  // OTP valid — mark account as verified
+  user.isVerified = true;
+  user.verificationStatus = "verified";
+  await user.save();
+  await OTP.findByIdAndDelete(otpRecord._id);
+
+  res.json({ message: "✅ Account verified successfully! You can now accept and complete errands.", user });
 });
 
 export const deleteAccount = catchAsync(async (req, res) => {
@@ -344,7 +392,7 @@ export const deleteAccount = catchAsync(async (req, res) => {
     const { Errand } = await import("../models/Errand.js");
     const { Review } = await import("../models/Review.js");
     const { Notification } = await import("../models/Notification.js");
-    const { Message } = await import("../models/Message.js");
+    // const { Message } = await import("../models/Message.js"); // Chat removed
     const { OTP } = await import("../models/OTP.js");
     const { WithdrawalRequest } = await import("../models/WithdrawalRequest.js");
 
@@ -352,7 +400,7 @@ export const deleteAccount = catchAsync(async (req, res) => {
     await Transaction.deleteMany({ userId });
     await Notification.deleteMany({ userId });
     await Review.deleteMany({ $or: [{ reviewerId: userId }, { revieweeId: userId }] });
-    await Message.deleteMany({ senderId: userId });
+    // Message.deleteMany removed — chat system has been disabled
     await WithdrawalRequest.deleteMany({ userId });
     await OTP.deleteMany({ email: user.email });
   } catch (error) {

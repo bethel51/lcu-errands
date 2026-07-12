@@ -16,12 +16,12 @@ import authRoutes from "./routes/authRoutes.js";
 import errandRoutes from "./routes/errandRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
 import reviewRoutes from "./routes/reviewRoutes.js";
-import chatRoutes from "./routes/chatRoutes.js";
+
 import notificationRoutes from "./routes/notificationRoutes.js";
 import payoutRoutes from "./routes/payoutRoutes.js";
 import debugRoutes from "./routes/debugRoutes.js";
 import { errorHandler } from "./middleware/errorMiddleware.js";
-import { Message } from "./models/Message.js";
+
 import { User } from "./models/User.js";
 import { Notification } from "./models/Notification.js";
 import { Errand } from "./models/Errand.js";
@@ -132,7 +132,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/errands", errandRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/reviews", reviewRoutes);
-app.use("/api/chat", chatRoutes);
+
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/withdrawals", payoutRoutes);
 app.use("/api/debug", debugRoutes);
@@ -316,34 +316,11 @@ app.use((req, res) => {
 
 
 
-// Socket.io for Real-time chat & Online Status
+// Socket.io for Real-time Notifications & Online Status
 const onlineUsers = new Map(); // socketId -> userId
 
 io.on("connection", (socket) => {
   console.log("User connected:", socket.id);
-
-  socket.on("join_room", async (errandId) => {
-    const userId = onlineUsers.get(socket.id);
-    if (!userId) return;
-
-    try {
-      const errand = await Errand.findById(errandId);
-      if (!errand) return;
-
-      // Only allow participants to join the room
-      if (
-        errand.posterId.toString() !== userId &&
-        errand.erranderId?.toString() !== userId
-      ) {
-        return;
-      }
-
-      socket.join(errandId);
-      console.log(`User ${userId} joined errand room ${errandId}`);
-    } catch (err) {
-      console.error("Error joining room:", err);
-    }
-  });
 
   socket.on("join", async (userId) => {
     try {
@@ -372,79 +349,6 @@ io.on("connection", (socket) => {
     if (secret === process.env.CRON_SECRET) {
       socket.join("admin");
       console.log(`[Socket] Admin portal joined admin room (${socket.id})`);
-    }
-  });
-
-  socket.on("send_message", async (data) => {
-    const userId = onlineUsers.get(socket.id);
-    if (!userId) return; // Unauthenticated
-
-    try {
-      // Find errand to check auth and get recipient
-      const errand = await Errand.findById(data.room);
-      if (!errand) return;
-
-      // Check if user is part of the errand
-      if (
-        errand.posterId.toString() !== userId &&
-        errand.erranderId?.toString() !== userId
-      ) {
-        return; 
-      }
-
-      const newMessage = new Message({
-        errandId: data.room,
-        senderId: userId, // Use secure session ID, not client provided
-        text: data.text,
-        imageUrl: data.imageUrl,
-      });
-      await newMessage.save();
-
-      io.to(data.room).emit("receive_message", {
-        _id: newMessage._id,
-        room: data.room,
-        errandId: data.room,
-        senderId: userId,
-        text: data.text,
-        imageUrl: data.imageUrl,
-        isRead: false,
-        createdAt: newMessage.createdAt,
-      });
-
-      // Find the other person in the errand to notify them
-      const recipientId =
-        errand.posterId.toString() === userId
-          ? errand.erranderId
-          : errand.posterId;
-      
-      if (recipientId) {
-          const notificationData = {
-            userId: recipientId,
-            title: "New Message",
-            message: `You have a new message on errand: ${errand.title}`,
-            type: "message_received",
-            relatedId: errand._id,
-          };
-          await Notification.create(notificationData);
-          io.to(recipientId.toString()).emit("notification", notificationData);
-      }
-    } catch (error) {
-      console.error("Socket error saving message:", error);
-    }
-  });
-
-  // Read receipt: mark messages as read in a room
-  socket.on("read_receipt", async (data) => {
-    const userId = onlineUsers.get(socket.id);
-    if (!userId || !data?.errandId) return;
-    try {
-      await Message.updateMany(
-        { errandId: data.errandId, senderId: { $ne: userId }, isRead: false },
-        { $set: { isRead: true } }
-      );
-      io.to(data.errandId).emit("messages_read", { errandId: data.errandId, readBy: userId });
-    } catch (err) {
-      console.error("[Socket] read_receipt error:", err);
     }
   });
 

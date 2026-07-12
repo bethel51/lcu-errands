@@ -47,6 +47,14 @@ const Profile = () => {
   const [isBoostModalOpen, setIsBoostModalOpen] = useState(false);
   const [processing, setProcessing] = useState(false);
 
+  // Verification flow state
+  const [verifyStep, setVerifyStep] = useState(0); // 0=idle, 1=matric entry, 2=otp entry
+  const [verifyMatric, setVerifyMatric] = useState("");
+  const [verifyOtp, setVerifyOtp] = useState("");
+  const [verifyLoading, setVerifyLoading] = useState(false);
+  const [verifyError, setVerifyError] = useState("");
+  const [verifySuccessMsg, setVerifySuccessMsg] = useState("");
+
   useEffect(() => {
     fetchProfile();
     fetchTransactions();
@@ -232,42 +240,42 @@ const Profile = () => {
     }
   };
 
-  const handleVerifySelf = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setLoading(true);
+  // Step 1: Validate matric number, send OTP
+  const handleRequestVerifyOtp = async (e) => {
+    e.preventDefault();
+    if (!verifyMatric.trim()) { setVerifyError("Please enter your matric number."); return; }
+    setVerifyLoading(true);
+    setVerifyError("");
     try {
-      // Compress image
-      const options = {
-        maxSizeMB: 0.5,
-        maxWidthOrHeight: 1200,
-        useWebWorker: true,
-      };
-      const compressedFile = await imageCompression(file, options);
-      const uploadData = new FormData();
-      uploadData.append("image", compressedFile);
-
-      // Upload ID card
-      const uploadRes = await api.post("/users/upload", uploadData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
-
-      const imageUrl = uploadRes.data.url;
-      if (!imageUrl) {
-        throw new Error("Failed to get image URL from upload response");
-      }
-
-      // Submit verification request
-      const res = await api.post("/users/verify", { verificationProof: imageUrl });
-      setUser(res.data.user);
-      localStorage.setItem("user", JSON.stringify(res.data.user));
-      alert("✅ Verification request submitted to Admin! Under review.");
+      const res = await api.post("/users/verify/request", { matricNumber: verifyMatric.trim() });
+      setVerifySuccessMsg(res.data.message || "OTP sent to your email.");
+      setVerifyStep(2);
     } catch (err) {
-      console.error("Verification upload failed", err);
-      alert("❌ Verification failed. Please try again.");
+      setVerifyError(err.response?.data?.message || "Failed to send OTP. Please try again.");
     } finally {
-      setLoading(false);
+      setVerifyLoading(false);
+    }
+  };
+
+  // Step 2: Submit OTP to get verified
+  const handleConfirmVerifyOtp = async (e) => {
+    e.preventDefault();
+    if (!verifyOtp.trim()) { setVerifyError("Please enter the OTP code."); return; }
+    setVerifyLoading(true);
+    setVerifyError("");
+    try {
+      const res = await api.post("/users/verify/confirm", { otp: verifyOtp.trim() });
+      const updatedUser = res.data.user;
+      setUser(updatedUser);
+      localStorage.setItem("user", JSON.stringify(updatedUser));
+      setVerifyStep(0);
+      setVerifyMatric("");
+      setVerifyOtp("");
+      setVerifySuccessMsg("🎉 Account verified! Your verified badge is active.");
+    } catch (err) {
+      setVerifyError(err.response?.data?.message || "Incorrect OTP. Please try again.");
+    } finally {
+      setVerifyLoading(false);
     }
   };
 
@@ -488,44 +496,157 @@ const Profile = () => {
                 color={
                   user.isVerified
                     ? "var(--green-500)"
-                    : user.verificationStatus === "pending"
-                      ? "var(--amber-500)"
-                      : "var(--gray-300)"
+                    : "var(--gray-300)"
                 }
               />
               <span style={{ fontWeight: 600 }}>
-                {user.isVerified
-                  ? "Verified Account"
-                  : user.verificationStatus === "pending"
-                    ? "Verification Pending"
-                    : "Unverified Student"}
+                {user.isVerified ? "Verified Account ✅" : "Unverified Messenger"}
               </span>
-              {!user.isVerified && user.verificationStatus !== "pending" && (
-                <label
+              {!user.isVerified && verifyStep === 0 && (
+                <button
+                  onClick={() => { setVerifyStep(1); setVerifyError(""); setVerifySuccessMsg(""); }}
                   style={{
                     marginLeft: "auto",
                     padding: "6px 14px",
-                    background: "var(--green-500)",
+                    background: "linear-gradient(135deg, var(--blue-600), var(--blue-700))",
                     color: "white",
                     borderRadius: 8,
                     fontSize: "0.75rem",
-                    fontWeight: 600,
-                    cursor: loading ? "not-allowed" : "pointer",
+                    fontWeight: 700,
+                    cursor: "pointer",
                     border: "none",
-                    display: "inline-block",
+                    boxShadow: "0 2px 8px rgba(30,77,183,0.25)"
                   }}
                 >
-                  {loading ? "Uploading..." : "Upload ID"}
-                  <input
-                    type="file"
-                    hidden
-                    accept="image/*"
-                    onChange={handleVerifySelf}
-                    disabled={loading}
-                  />
-                </label>
+                  🛡️ Get Verified
+                </button>
               )}
             </div>
+
+            {/* ── Verification Success Banner ── */}
+            {verifySuccessMsg && !verifyStep && (
+              <div style={{
+                background: "linear-gradient(135deg, #ECFDF5, #D1FAE5)",
+                border: "1px solid #6EE7B7",
+                borderRadius: 12,
+                padding: "12px 16px",
+                fontSize: "0.85rem",
+                color: "#065F46",
+                fontWeight: 600,
+                marginTop: 8,
+              }}>
+                {verifySuccessMsg}
+              </div>
+            )}
+
+            {/* ── Verification Flow: Step 1 — Matric Number ── */}
+            {verifyStep === 1 && (
+              <motion.div
+                initial={{ opacity: 0, y: -8 }}
+                animate={{ opacity: 1, y: 0 }}
+                style={{
+                  background: "var(--gray-50)",
+                  border: "1px solid var(--blue-100)",
+                  borderRadius: 14,
+                  padding: 18,
+                  marginTop: 8,
+                }}
+              >
+                <div style={{ fontWeight: 800, fontSize: "0.9rem", color: "var(--blue-700)", marginBottom: 6 }}>🛡️ Verify Your Account — Step 1 of 2</div>
+                <p style={{ fontSize: "0.8rem", color: "var(--gray-600)", marginBottom: 14, lineHeight: 1.5 }}>
+                  Enter the matric number you used when you registered. If it matches, we'll send an OTP to your registered email.
+                </p>
+                <form onSubmit={handleRequestVerifyOtp} style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  <input
+                    type="text"
+                    placeholder="e.g. LCU/ND/22/01234"
+                    value={verifyMatric}
+                    onChange={e => setVerifyMatric(e.target.value)}
+                    style={{
+                      padding: "10px 14px",
+                      borderRadius: 10,
+                      border: "1.5px solid var(--blue-200)",
+                      fontSize: "0.9rem",
+                      fontWeight: 600,
+                      background: "var(--white)",
+                      color: "var(--gray-900)",
+                      outline: "none",
+                    }}
+                    autoFocus
+                  />
+                  {verifyError && <p style={{ color: "var(--red-600)", fontSize: "0.8rem", margin: 0 }}>{verifyError}</p>}
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button
+                      type="button"
+                      onClick={() => { setVerifyStep(0); setVerifyError(""); }}
+                      style={{ flex: 1, padding: "9px", borderRadius: 10, border: "1px solid var(--gray-200)", background: "var(--white)", cursor: "pointer", fontSize: "0.82rem", color: "var(--gray-600)", fontWeight: 600 }}
+                    >Cancel</button>
+                    <button
+                      type="submit"
+                      disabled={verifyLoading}
+                      style={{ flex: 2, padding: "9px", borderRadius: 10, background: "var(--blue-600)", color: "white", border: "none", cursor: verifyLoading ? "wait" : "pointer", fontSize: "0.82rem", fontWeight: 700 }}
+                    >{verifyLoading ? "Sending OTP..." : "Send OTP →"}</button>
+                  </div>
+                </form>
+              </motion.div>
+            )}
+
+            {/* ── Verification Flow: Step 2 — OTP Entry ── */}
+            {verifyStep === 2 && (
+              <motion.div
+                initial={{ opacity: 0, y: -8 }}
+                animate={{ opacity: 1, y: 0 }}
+                style={{
+                  background: "var(--gray-50)",
+                  border: "1px solid var(--green-100)",
+                  borderRadius: 14,
+                  padding: 18,
+                  marginTop: 8,
+                }}
+              >
+                <div style={{ fontWeight: 800, fontSize: "0.9rem", color: "var(--green-700)", marginBottom: 6 }}>📧 Enter OTP — Step 2 of 2</div>
+                <p style={{ fontSize: "0.8rem", color: "var(--gray-600)", marginBottom: 14, lineHeight: 1.5 }}>
+                  {verifySuccessMsg || "An OTP has been sent to your registered email. Enter it below to get your verified badge."}
+                </p>
+                <form onSubmit={handleConfirmVerifyOtp} style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={6}
+                    placeholder="000000"
+                    value={verifyOtp}
+                    onChange={e => setVerifyOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                    style={{
+                      padding: "12px 14px",
+                      borderRadius: 10,
+                      border: "1.5px solid var(--green-200)",
+                      fontSize: "1.4rem",
+                      fontWeight: 900,
+                      letterSpacing: 8,
+                      textAlign: "center",
+                      background: "var(--white)",
+                      color: "var(--blue-700)",
+                      fontFamily: "monospace",
+                      outline: "none",
+                    }}
+                    autoFocus
+                  />
+                  {verifyError && <p style={{ color: "var(--red-600)", fontSize: "0.8rem", margin: 0 }}>{verifyError}</p>}
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button
+                      type="button"
+                      onClick={() => { setVerifyStep(1); setVerifyOtp(""); setVerifyError(""); }}
+                      style={{ flex: 1, padding: "9px", borderRadius: 10, border: "1px solid var(--gray-200)", background: "var(--white)", cursor: "pointer", fontSize: "0.82rem", color: "var(--gray-600)", fontWeight: 600 }}
+                    >← Back</button>
+                    <button
+                      type="submit"
+                      disabled={verifyLoading || verifyOtp.length < 6}
+                      style={{ flex: 2, padding: "9px", borderRadius: 10, background: verifyOtp.length === 6 ? "var(--green-600)" : "var(--gray-300)", color: "white", border: "none", cursor: verifyLoading ? "wait" : "pointer", fontSize: "0.82rem", fontWeight: 700 }}
+                    >{verifyLoading ? "Verifying..." : "Confirm & Get Verified ✅"}</button>
+                  </div>
+                </form>
+              </motion.div>
+            )}
             {!isEditing && (
               <div
                 style={{

@@ -143,6 +143,7 @@ const Dashboard = () => {
       posterRating: err.posterId?.rating || 0,
       posterId: err.posterId?._id || err.posterId,
       erranderId: err.erranderId?._id || err.erranderId,
+      candidates: err.candidates || [],
       createdAt: err.createdAt,
       isReviewedByPoster: err.isReviewedByPoster || false,
       isReviewedByErrander: err.isReviewedByErrander || false,
@@ -429,14 +430,14 @@ const Dashboard = () => {
     }
   };
 
-  const handleAcceptErrand = async (id) => {
+  const handleApplyForErrand = async (id) => {
     setProcessing(true);
     try {
-      await api.patch(`/errands/${id}/accept`);
-      showToast("Errand accepted!");
-      navigate("/history");
+      await api.patch(`/errands/${id}/apply`);
+      showToast("✅ Request sent! The sender will be notified.");
+      loadDashboard();
     } catch (err) {
-      showToast(err.response?.data?.message || "Error accepting.", "info");
+      showToast(err.response?.data?.message || "Error sending request.", "error");
     } finally {
       setProcessing(false);
     }
@@ -682,26 +683,69 @@ const Dashboard = () => {
                     gap: 12,
                   }}
                 >
-                  <div style={{ minWidth: 0 }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
                     <div
-                      style={{
-                        fontWeight: 800,
-                        color: "var(--gray-900)",
-                        whiteSpace: "nowrap",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                      }}
-                    >
-                      {errand.title}
-                    </div>
-                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 5 }}>
-                      <span style={{ fontSize: "0.75rem", color: "var(--gray-500)", fontWeight: 700 }}>
-                        {errand.status?.replace("_", " ")}
-                      </span>
-                      <span style={{ fontSize: "0.75rem", color: "var(--blue-600)", fontWeight: 800 }}>
-                        ₦{errand.fee?.toLocaleString()}
-                      </span>
-                    </div>
+                       style={{
+                         fontWeight: 800,
+                         color: "var(--gray-900)",
+                         whiteSpace: "nowrap",
+                         overflow: "hidden",
+                         textOverflow: "ellipsis",
+                       }}
+                     >
+                       {errand.title}
+                     </div>
+                     <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 5 }}>
+                       <span style={{ fontSize: "0.75rem", color: "var(--gray-500)", fontWeight: 700 }}>
+                         {errand.status?.replace("_", " ")}
+                       </span>
+                       <span style={{ fontSize: "0.75rem", color: "var(--blue-600)", fontWeight: 800 }}>
+                         ₦{errand.fee?.toLocaleString()}
+                       </span>
+                     </div>
+
+                    {/* Render Candidates/Applicants list if status is open */}
+                    {userRole === "sender" && errand.status === "open" && errand.candidates && errand.candidates.length > 0 && (
+                      <div style={{ marginTop: 12, borderTop: "1px solid var(--gray-100)", paddingTop: 10 }}>
+                        <div style={{ fontSize: "0.78rem", fontWeight: 800, color: "var(--gray-500)", textTransform: "uppercase", marginBottom: 8 }}>
+                          Applicants ({errand.candidates.length})
+                        </div>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                          {errand.candidates.map((candidate) => (
+                            <div key={candidate._id} style={{ display: "flex", alignItems: "center", justifyBetween: "space-between", gap: 10, background: "var(--gray-50)", padding: 8, borderRadius: 12 }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                <SenderAvatar picture={candidate.profilePicture} name={candidate.name} />
+                                <div>
+                                  <div style={{ fontSize: "0.85rem", fontWeight: 700, color: "var(--gray-900)" }}>{candidate.name}</div>
+                                  <div style={{ fontSize: "0.72rem", color: "var(--gray-500)" }}>
+                                    {candidate.department && <span>{candidate.department} · </span>}
+                                    {candidate.rating > 0 && <span style={{ color: "var(--amber-500)" }}>★ {candidate.rating.toFixed(1)}</span>}
+                                  </div>
+                                </div>
+                              </div>
+                              <button
+                                className="btn btn-primary btn-sm"
+                                style={{ padding: "6px 12px", fontSize: "0.75rem", borderRadius: 8, marginLeft: "auto" }}
+                                onClick={async () => {
+                                  try {
+                                    setProcessing(true);
+                                    await api.post(`/errands/${errand.id}/select`, { messengerId: candidate._id });
+                                    showToast("🎉 Messenger hired successfully!");
+                                    loadDashboard();
+                                  } catch (err) {
+                                    showToast(err.response?.data?.message || "Could not hire messenger.", "error");
+                                  } finally {
+                                    setProcessing(false);
+                                  }
+                                }}
+                              >
+                                Hire
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                   <div style={{ display: "flex", gap: 8, alignItems: "center", flexShrink: 0 }}>
                     {userRole === "sender" && errand.posterId === cachedUserId && ["assigned", "in_progress", "pending_confirmation"].includes(errand.status) && (
@@ -720,12 +764,6 @@ const Dashboard = () => {
                         Confirm Delivery 🔔
                       </button>
                     )}
-                    <button
-                      className="btn btn-outline btn-sm"
-                      onClick={() => handleOpenChat(errand)}
-                    >
-                      <MessageSquare size={14} /> Chat
-                    </button>
                   </div>
                 </div>
               ))}
@@ -733,312 +771,248 @@ const Dashboard = () => {
           </div>
         )}
 
-        {/* ── Errand Feed / Messengers Feed ── */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16, marginTop: 12 }}>
-          <h2 style={{ fontSize: "1.1rem", fontWeight: 900, color: "var(--gray-900)" }}>
-            {userRole === "sender" ? "Available Messengers" : "Open Errands"}
-          </h2>
-          <span style={{ fontSize: "0.75rem", color: "var(--gray-400)", fontWeight: 700 }}>
-            {userRole === "sender" 
-              ? `${filteredMessengers.length} messenger${filteredMessengers.length === 1 ? "" : "s"} online/active`
-              : `${filteredErrands.length} open errand${filteredErrands.length === 1 ? "" : "s"}`}
-          </span>
-        </div>
+        {/* ── Errand Feed (Only for Messengers) ── */}
+        {userRole === "messenger" && (
+          <>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16, marginTop: 12 }}>
+              <h2 style={{ fontSize: "1.1rem", fontWeight: 900, color: "var(--gray-900)" }}>
+                Open Errands
+              </h2>
+              <span style={{ fontSize: "0.75rem", color: "var(--gray-400)", fontWeight: 700 }}>
+                {filteredErrands.length} open errand{filteredErrands.length === 1 ? "" : "s"}
+              </span>
+            </div>
 
-        {loading ? (
-          <div className="errand-grid">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="skeleton-card">
-                <div className="skeleton skeleton-line short" />
-                <div className="skeleton skeleton-line medium" style={{ height: 22 }} />
-                <div className="skeleton skeleton-line full" />
-                <div className="skeleton skeleton-line medium" />
+            {loading ? (
+              <div className="errand-grid">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="skeleton-card">
+                    <div className="skeleton skeleton-line short" />
+                    <div className="skeleton skeleton-line medium" style={{ height: 22 }} />
+                    <div className="skeleton skeleton-line full" />
+                    <div className="skeleton skeleton-line medium" />
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-        ) : userRole === "sender" ? (
-          filteredMessengers.length === 0 ? (
-            <div className="empty-state">
-              <div className="empty-state-icon">
-                <Search size={36} />
-              </div>
-              <h3>No Messengers Found</h3>
-              <p>
-                {search
-                  ? "Try adjusting your search query."
-                  : "No messengers are currently active. Check back later!"}
-              </p>
-            </div>
-          ) : (
-            <div className="errand-grid">
-              {filteredMessengers.map((m) => (
-                <motion.div
-                  key={m._id}
-                  initial={{ opacity: 0, y: 12 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.25 }}
-                  className="card errand-card"
-                  style={{ border: m.isBoosted ? "2px solid var(--blue-100)" : "1px solid var(--gray-100)" }}
-                >
-                  <div className="card-body" style={{ padding: 18 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                      <SenderAvatar picture={m.profilePicture} name={m.name} />
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontWeight: 800, fontSize: "1rem", color: "var(--gray-900)", display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-                          {m.name}
-                          {m.isVerified && <span className="badge badge-green" style={{ padding: "2px 6px", fontSize: "0.65rem" }}>✓ Verified</span>}
-                          {m.isBoosted && <span className="badge badge-blue" style={{ padding: "2px 6px", fontSize: "0.65rem" }}>🚀 Top</span>}
-                          {m.isOnline && <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#10B981" }} title="Online" />}
-                        </div>
-                        <div style={{ fontSize: "0.8rem", color: "var(--gray-500)", display: "flex", alignItems: "center", gap: 8, marginTop: 4 }}>
-                          {m.location && <span>📍 {m.location}</span>}
-                          {m.rating > 0 && <span style={{ color: "var(--amber-500)", fontWeight: 700 }}>★ {m.rating.toFixed(1)}</span>}
-                        </div>
-                      </div>
-                    </div>
-                    {m.bio && (
-                      <p style={{ fontSize: "0.82rem", color: "var(--gray-600)", marginTop: 10, lineHeight: 1.4, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
-                        {m.bio}
-                      </p>
-                    )}
-                    <div style={{ display: "flex", gap: 10, marginTop: 14, paddingTop: 12, borderTop: "1px solid var(--gray-100)" }}>
-                      <button
-                        className="btn btn-primary btn-sm"
-                        style={{ flex: 1 }}
-                        onClick={() => {
-                          setSelectedMessenger(m);
-                          setIsPostModalOpen(true);
-                        }}
-                      >
-                        Hire Directly
-                      </button>
-                      <button
-                        className="btn btn-outline btn-sm"
-                        onClick={async () => {
-                          try {
-                            setProcessing(true);
-                            const res = await api.post("/errands/inquiry", { messengerId: m._id });
-                            handleOpenChat(res.data);
-                          } catch (err) {
-                            showToast("Could not start chat.", "error");
-                          } finally {
-                            setProcessing(false);
-                          }
-                        }}
-                      >
-                        <MessageSquare size={14} /> Chat
-                      </button>
-                    </div>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-          )
-        ) : filteredErrands.length === 0 ? (
-          <div className="empty-state">
-            <div className="empty-state-icon">
-              <Search size={36} />
-            </div>
-            <h3>No Errands Found</h3>
-            <p>
-              {search || activeCategory !== "All"
-                ? "Try adjusting your search or filters."
-                : "No open errands right now. Check back soon!"}
-            </p>
-          </div>
-        ) : (
-          <div className="errand-grid">
-            {filteredErrands.map((errand) => (
-              <motion.div
-                key={errand.id}
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.25 }}
-                className="card errand-card"
-              >
-                <div className="card-body">
-                  {/* Card top */}
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "flex-start",
-                      marginBottom: 14,
-                    }}
-                  >
-                    <span
-                      style={{
-                        fontSize: "0.7rem",
-                        fontWeight: 800,
-                        padding: "4px 10px",
-                        borderRadius: "var(--radius-full)",
-                        textTransform: "uppercase",
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: 4,
-                        ...(CATEGORY_STYLES[errand.category] || {
-                          backgroundColor: "var(--gray-50)",
-                          color: "var(--gray-600)",
-                          border: "1px solid var(--gray-200)",
-                        })
-                      }}
-                    >
-                      {CATEGORY_EMOJI[errand.category] || "✨"} {errand.category}
-                    </span>
-                    <span
-                      style={{
-                        fontWeight: 900,
-                        fontSize: "1.15rem",
-                        color: "var(--blue-700)",
-                        letterSpacing: "-0.5px",
-                      }}
-                    >
-                      ₦{errand.fee?.toLocaleString()}
-                    </span>
-                  </div>
-
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 10,
-                      marginBottom: 12,
-                      minWidth: 0,
-                    }}
-                  >
-                    {errand.posterPicture ? (
-                      <img
-                        src={errand.posterPicture}
-                        alt={errand.posterName}
-                        style={{ width: 38, height: 38, borderRadius: 12, objectFit: "cover", flexShrink: 0 }}
-                      />
-                    ) : (
-                      <div
-                        style={{
-                          width: 38,
-                          height: 38,
-                          borderRadius: 12,
-                          background: "var(--blue-50)",
-                          color: "var(--blue-600)",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          fontWeight: 900,
-                          flexShrink: 0,
-                        }}
-                      >
-                        {(errand.posterName || "U").charAt(0).toUpperCase()}
-                      </div>
-                    )}
-                    <div style={{ minWidth: 0, flex: 1 }}>
-                      <div style={{ fontSize: "0.86rem", fontWeight: 900, color: "var(--gray-900)" }}>
-                        {errand.posterName}
-                      </div>
-                      <div
-                        style={{
-                          fontSize: "0.72rem",
-                          color: "var(--gray-500)",
-                          fontWeight: 600,
-                          whiteSpace: "nowrap",
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                        }}
-                      >
-                        {[errand.posterDepartment, errand.posterLocation].filter(Boolean).join(" • ") || "Student"}
-                      </div>
-                    </div>
-                    <span style={{ fontSize: "0.68rem", color: "var(--gray-400)", fontWeight: 700, flexShrink: 0 }}>
-                      {new Date(errand.createdAt).toLocaleDateString()}
-                    </span>
-                  </div>
-
-                  {/* Title */}
-                  <h3
-                    style={{
-                      fontWeight: 800,
-                      fontSize: "1rem",
-                      color: "var(--gray-900)",
-                      marginBottom: 8,
-                      lineHeight: 1.35,
-                    }}
-                  >
-                    {errand.title}
-                  </h3>
-
-                  {/* Description */}
-                  <p
-                    style={{
-                      fontSize: "0.85rem",
-                      color: "var(--gray-500)",
-                      marginBottom: 18,
-                      lineHeight: 1.55,
-                      display: "-webkit-box",
-                      WebkitLineClamp: 2,
-                      WebkitBoxOrient: "vertical",
-                      overflow: "hidden",
-                    }}
-                  >
-                    {errand.description}
-                  </p>
-
-                  {/* Footer */}
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      paddingTop: 14,
-                      borderTop: "1px solid var(--gray-100)",
-                    }}
-                  >
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 6,
-                        fontSize: "0.8rem",
-                        color: "var(--gray-500)",
-                        fontWeight: 500,
-                        minWidth: 0,
-                        overflow: "hidden",
-                      }}
-                    >
-                      <MapPin size={13} style={{ flexShrink: 0 }} />
-                      <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                        {errand.location || "Not specified"}
-                      </span>
-                    </div>
-
-                    {userRole === "messenger" && user?.isVerified && errand.posterId !== cachedUserId && (
-                      <button
-                        id={`accept-errand-${errand.id}`}
-                        onClick={() => setAcceptingErrand(errand)}
-                        className="btn btn-primary btn-sm"
-                        style={{ flexShrink: 0 }}
-                      >
-                        Accept <ArrowRight size={13} />
-                      </button>
-                    )}
-
-                    {errand.posterId === cachedUserId && (
-                      <span
-                        style={{
-                          fontSize: "0.72rem",
-                          fontWeight: 700,
-                          color: "var(--blue-500)",
-                          background: "var(--blue-50)",
-                          padding: "3px 10px",
-                          borderRadius: "var(--radius-full)",
-                        }}
-                      >
-                        Your Post
-                      </span>
-                    )}
-                  </div>
+            ) : filteredErrands.length === 0 ? (
+              <div className="empty-state">
+                <div className="empty-state-icon">
+                  <Search size={36} />
                 </div>
-              </motion.div>
-            ))}
-          </div>
+                <h3>No Errands Found</h3>
+                <p>
+                  {search || activeCategory !== "All"
+                    ? "Try adjusting your search or filters."
+                    : "No open errands right now. Check back soon!"}
+                </p>
+              </div>
+            ) : (
+              <div className="errand-grid">
+                {filteredErrands.map((errand) => {
+                  const catStyle = CATEGORY_STYLES[errand.category] || {
+                    backgroundColor: "var(--gray-50)",
+                    color: "var(--gray-600)",
+                    border: "1px solid var(--gray-200)",
+                  };
+                  return (
+                    <motion.div
+                      key={errand.id}
+                      initial={{ opacity: 0, y: 12 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.25 }}
+                      className="card errand-card"
+                    >
+                      <div className="card-body" style={{ padding: 18 }}>
+                        {/* Card top */}
+                        <div
+                          style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "flex-start",
+                            marginBottom: 14,
+                          }}
+                        >
+                          <span
+                            style={{
+                              fontSize: "0.7rem",
+                              fontWeight: 800,
+                              padding: "4px 10px",
+                              borderRadius: "var(--radius-full)",
+                              textTransform: "uppercase",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: 4,
+                              ...catStyle
+                            }}
+                          >
+                            {CATEGORY_EMOJI[errand.category] || "✨"} {errand.category}
+                          </span>
+                          <span
+                            style={{
+                              fontWeight: 900,
+                              fontSize: "1.15rem",
+                              color: "var(--blue-700)",
+                              letterSpacing: "-0.5px",
+                            }}
+                          >
+                            ₦{errand.fee?.toLocaleString()}
+                          </span>
+                        </div>
+
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 10,
+                            marginBottom: 12,
+                            minWidth: 0,
+                          }}
+                        >
+                          {errand.posterPicture ? (
+                            <img
+                              src={errand.posterPicture}
+                              alt={errand.posterName}
+                              style={{ width: 38, height: 38, borderRadius: 12, objectFit: "cover", flexShrink: 0 }}
+                            />
+                          ) : (
+                            <div
+                              style={{
+                                width: 38,
+                                height: 38,
+                                borderRadius: 12,
+                                background: "var(--blue-50)",
+                                color: "var(--blue-600)",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                fontWeight: 900,
+                                flexShrink: 0,
+                              }}
+                            >
+                              {(errand.posterName || "U").charAt(0).toUpperCase()}
+                            </div>
+                          )}
+                          <div style={{ minWidth: 0, flex: 1 }}>
+                            <div style={{ fontSize: "0.86rem", fontWeight: 900, color: "var(--gray-900)" }}>
+                              {errand.posterName}
+                            </div>
+                            <div
+                              style={{
+                                fontSize: "0.72rem",
+                                color: "var(--gray-500)",
+                                fontWeight: 600,
+                                whiteSpace: "nowrap",
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                              }}
+                            >
+                              {[errand.posterDepartment, errand.posterLocation].filter(Boolean).join(" • ") || "Student"}
+                            </div>
+                          </div>
+                          <span style={{ fontSize: "0.68rem", color: "var(--gray-400)", fontWeight: 700, flexShrink: 0 }}>
+                            {new Date(errand.createdAt).toLocaleDateString()}
+                          </span>
+                        </div>
+
+                        {/* Title */}
+                        <h3
+                          style={{
+                            fontWeight: 800,
+                            fontSize: "1rem",
+                            color: "var(--gray-900)",
+                            marginBottom: 8,
+                            lineHeight: 1.35,
+                          }}
+                        >
+                          {errand.title}
+                        </h3>
+
+                        {/* Description */}
+                        <p
+                          style={{
+                            fontSize: "0.85rem",
+                            color: "var(--gray-500)",
+                            marginBottom: 18,
+                            lineHeight: 1.55,
+                            display: "-webkit-box",
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: "vertical",
+                            overflow: "hidden",
+                          }}
+                        >
+                          {errand.description}
+                        </p>
+
+                        {/* Footer */}
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                            paddingTop: 14,
+                            borderTop: "1px solid var(--gray-100)",
+                          }}
+                        >
+                          <div
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 6,
+                              fontSize: "0.8rem",
+                              color: "var(--gray-500)",
+                              fontWeight: 500,
+                              minWidth: 0,
+                              overflow: "hidden",
+                            }}
+                          >
+                            <MapPin size={13} style={{ flexShrink: 0 }} />
+                            <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                              {errand.location || "Not specified"}
+                            </span>
+                          </div>
+
+                          {userRole === "messenger" && user?.isVerified && errand.posterId !== cachedUserId && (() => {
+                            const hasApplied = errand.candidates && errand.candidates.some(c => (c._id || c) === cachedUserId);
+                            return (
+                              <button
+                                id={`accept-errand-${errand.id}`}
+                                onClick={() => !hasApplied && setAcceptingErrand(errand)}
+                                className="btn btn-primary btn-sm"
+                                style={{
+                                  flexShrink: 0,
+                                  opacity: hasApplied ? 0.7 : 1,
+                                  pointerEvents: hasApplied ? "none" : "auto",
+                                  background: hasApplied ? "var(--gray-300)" : "var(--blue-600)",
+                                  color: hasApplied ? "var(--gray-600)" : "#ffffff"
+                                }}
+                              >
+                                {hasApplied ? "Requested" : "Apply"} <ArrowRight size={13} />
+                              </button>
+                            );
+                          })()}
+
+                          {errand.posterId === cachedUserId && (
+                            <span
+                              style={{
+                                fontSize: "0.72rem",
+                                fontWeight: 700,
+                                color: "var(--blue-500)",
+                                background: "var(--blue-50)",
+                                padding: "3px 10px",
+                                borderRadius: "var(--radius-full)",
+                              }}
+                            >
+                              Your Post
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            )}
+          </>
         )}
       </div>
 
@@ -1083,7 +1057,7 @@ const Dashboard = () => {
               }}
             >
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, borderBottom: "1px solid var(--gray-100)", paddingBottom: 12 }}>
-                <h3 style={{ fontWeight: 900, fontSize: "1.2rem", margin: 0, color: "var(--gray-900)" }}>Accept Errand Request</h3>
+                <h3 style={{ fontWeight: 900, fontSize: "1.2rem", margin: 0, color: "var(--gray-900)" }}>Request to Do Errand</h3>
                 <button
                   onClick={() => setAcceptingErrand(null)}
                   style={{ background: "none", border: "none", cursor: "pointer", color: "var(--gray-400)" }}
@@ -1188,12 +1162,12 @@ const Dashboard = () => {
                   onClick={async () => {
                     const id = acceptingErrand.id || acceptingErrand._id;
                     setAcceptingErrand(null);
-                    await handleAcceptErrand(id);
+                    await handleApplyForErrand(id);
                   }}
                   className="btn btn-primary"
                   style={{ flex: 1, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}
                 >
-                  Accept Errand <ArrowRight size={14} />
+                  Send Request <ArrowRight size={14} />
                 </button>
               </div>
             </motion.div>

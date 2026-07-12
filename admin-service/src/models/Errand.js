@@ -18,6 +18,10 @@ const errandSchema = new mongoose.Schema({
     required: true,
   },
   erranderId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+  candidates: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User"
+  }],
   isReviewedByPoster: { type: Boolean, default: false },
   isReviewedByErrander: { type: Boolean, default: false },
   completionProof: { type: String }, // Image URL

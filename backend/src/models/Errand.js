@@ -39,12 +39,11 @@ const errandSchema = new mongoose.Schema({
   hiddenBy: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }], // users who removed from their history
 });
 
-errandSchema.pre("save", function (next) {
+errandSchema.pre("save", function () {
   if (!this.trackingId) {
     const random = Math.floor(100000 + Math.random() * 900000);
     this.trackingId = `ERR-${random}`;
   }
-  next();
 });
 
 errandSchema.index({ status: 1 });

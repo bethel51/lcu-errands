@@ -127,6 +127,7 @@ const Navbar = () => {
         <div className="nav-center">
           <Link to="/" className={`nav-pill ${isActive("/") ? "active" : ""}`} onMouseEnter={() => prefetch(PageImports.Home)}>Home</Link>
           <Link to="/dashboard" className={`nav-pill ${isActive("/dashboard") ? "active" : ""}`} onMouseEnter={() => prefetch(PageImports.Dashboard)}>Marketplace</Link>
+          <Link to="/stream" className={`nav-pill ${isActive("/stream") ? "active" : ""}`} onMouseEnter={() => prefetch(PageImports.ErrandStream)}>Errand Stream</Link>
           <Link to="/history" className={`nav-pill ${isActive("/history") ? "active" : ""}`} onMouseEnter={() => prefetch(PageImports.History)}>My Errands</Link>
         </div>
 

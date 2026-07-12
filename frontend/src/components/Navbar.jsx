@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Bell, CheckCircle, Info, MessageSquare, AlertCircle, RefreshCw, Wallet, X } from "lucide-react";
+import { Bell, CheckCircle, Info, MessageSquare, AlertCircle, RefreshCw, Wallet, X, Sun, Moon } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSocket } from "../context/SocketContext";
 import { PageImports } from "../App";
@@ -19,9 +19,24 @@ const Navbar = () => {
   const [notificationsLoading, setNotificationsLoading] = useState(false);
   const [notificationsError, setNotificationsError] = useState(false);
   const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 768);
+  const [isDark, setIsDark] = useState(() => {
+    const saved = localStorage.getItem("theme");
+    if (saved) return saved === "dark";
+    return window.matchMedia?.("(prefers-color-scheme: dark)").matches || false;
+  });
   const notificationsRef = useRef(notifications);
   const abortControllerRef = useRef(null);
   const unreadCount = notifications.filter((n) => !n.isRead).length;
+
+  // Apply dark mode class on mount and when toggled
+  useEffect(() => {
+    if (isDark) {
+      document.documentElement.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+    }
+    localStorage.setItem("theme", isDark ? "dark" : "light");
+  }, [isDark]);
 
   // Keep ref in sync — avoids stale closure in onClick handlers
   useEffect(() => { notificationsRef.current = notifications; }, [notifications]);
@@ -134,6 +149,22 @@ const Navbar = () => {
         <div className="nav-actions">
           <div className="nav-bell-wrapper">
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <button
+                className="btn-icon"
+                aria-label="Toggle dark mode"
+                onClick={() => setIsDark((prev) => !prev)}
+                style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}
+              >
+                <motion.div
+                  key={isDark ? "moon" : "sun"}
+                  initial={{ rotate: -90, opacity: 0 }}
+                  animate={{ rotate: 0, opacity: 1 }}
+                  exit={{ rotate: 90, opacity: 0 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  {isDark ? <Sun size={18} /> : <Moon size={18} />}
+                </motion.div>
+              </button>
               {socket?.connected && (
                 <div className="nav-live-pill">
                   <span className="nav-live-dot" />

@@ -494,23 +494,7 @@ const ErrandStream = () => {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
               transition={{ type: "spring", damping: 25, stiffness: 220 }}
-              style={{
-                position: "fixed",
-                top: "50%",
-                left: "50%",
-                transform: "translate(-50%, -50%)",
-                width: "90%",
-                maxWidth: 480,
-                background: "var(--white)",
-                borderRadius: 24,
-                boxShadow: "0 20px 40px rgba(0,0,0,0.15)",
-                zIndex: 9993,
-                overflow: "hidden",
-                padding: "24px 20px",
-                maxHeight: "90vh",
-                display: "flex",
-                flexDirection: "column"
-              }}
+              className="errand-accept-modal"
             >
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, borderBottom: "1px solid var(--gray-100)", paddingBottom: 12 }}>
                 <h3 style={{ fontWeight: 900, fontSize: "1.2rem", margin: 0, color: "var(--gray-900)" }}>Request to Do Errand</h3>
@@ -580,7 +564,7 @@ const ErrandStream = () => {
                     <p style={{ margin: 0, fontSize: "0.88rem", color: "var(--gray-600)", lineHeight: 1.5 }}>{acceptingErrand.description}</p>
                   </div>
 
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 8 }}>
+                  <div className="accept-modal-grid">
                     <div style={{ background: "var(--blue-50)", border: "1px solid var(--blue-100)", padding: 10, borderRadius: 12 }}>
                       <span style={{ display: "block", fontSize: "0.65rem", color: "var(--blue-500)", fontWeight: 800, textTransform: "uppercase", marginBottom: 2 }}>Category</span>
                       <span style={{ fontSize: "0.85rem", color: "var(--blue-900)", fontWeight: 700 }}>{acceptingErrand.category}</span>
@@ -606,7 +590,7 @@ const ErrandStream = () => {
                 </div>
               </div>
 
-              <div style={{ display: "flex", gap: 12, marginTop: 24, borderTop: "1px solid var(--gray-100)", paddingTop: 16 }}>
+              <div className="accept-modal-actions">
                 <button
                   onClick={() => setAcceptingErrand(null)}
                   className="btn btn-outline"

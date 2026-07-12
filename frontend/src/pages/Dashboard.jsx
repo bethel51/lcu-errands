@@ -288,7 +288,7 @@ const Dashboard = () => {
       await fetchWalletData();
       showToast("Withdrawal request submitted successfully!");
     } catch (err) {
-      showToast(err.response?.data?.message || "Withdrawal failed", "error");
+      showToast(err.response?.data?.message || "Failed to post errand", "error");
     } finally {
       setProcessing(false);
     }

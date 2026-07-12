@@ -172,17 +172,16 @@ const autoReleaseStalePendingErrands = async () => {
 
   let released = 0;
   for (const errand of staleErrands) {
-    const session = await mongoose.startSession();
-    session.startTransaction();
+    const session = null; // No-op: standalone MongoDB doesn't support transactions
     try {
-      const errander = await User.findById(errand.erranderId).session(session);
-      if (!errander) { await session.abortTransaction(); session.endSession(); continue; }
+      const errander = await User.findById(errand.erranderId);
+      if (!errander) continue;
 
       const previousBalance = errander.balance;
       errander.balance += errand.fee;
-      await errander.save({ session });
+      await errander.save();
 
-      const [tx] = await Transaction.create([{
+      const tx = await Transaction.create({
         userId: errander._id,
         amount: errand.fee,
         type: "errand_earning",
@@ -191,14 +190,14 @@ const autoReleaseStalePendingErrands = async () => {
         senderId: errand.posterId,
         messengerId: errander._id,
         status: "completed",
-      }], { session });
+      });
 
       errand.status = "confirmed_completed";
       errand.paymentReleased = true;
       errand.paymentReleasedAt = new Date();
       errand.paymentTransactionId = tx._id.toString();
       errand.autoReleased = true;
-      await errand.save({ session });
+      await errand.save();
 
       await DigitalFootprint.findOneAndUpdate(
         { errandId: errand._id },
@@ -223,14 +222,12 @@ const autoReleaseStalePendingErrands = async () => {
               newBalance: errander.balance,
             },
           },
-        },
-        { session }
+        }
       );
 
-      await session.commitTransaction();
       released++;
 
-      // Notify both parties after commit
+      // Notify both parties
       const notifications = [
         {
           userId: errand.posterId.toString(),
@@ -253,10 +250,7 @@ const autoReleaseStalePendingErrands = async () => {
 
       console.log(`[AutoRelease] ✅ Errand ${errand._id} (₦${errand.fee}) auto-released to ${errander.name}`);
     } catch (err) {
-      await session.abortTransaction();
       console.error(`[AutoRelease] ❌ Failed for errand ${errand._id}:`, err.message);
-    } finally {
-      session.endSession();
     }
   }
 
@@ -452,6 +446,15 @@ mongoose
   .catch((err) => {
     console.error("❌ MongoDB connection error:", err);
   });
+
+// Global Error Handler
+app.use((err, req, res, next) => {
+  console.error("🔥 [EXPRESS ERROR]:", err);
+  res.status(err.status || 500).json({
+    message: err.message || "Internal Server Error",
+    stack: process.env.NODE_ENV === "development" ? err.stack : undefined,
+  });
+});
 
 // Export app for Vercel serverless functions
 export default app;

@@ -214,37 +214,37 @@ export const completeErrand = catchAsync(async (req, res) => {
   }
 
   const { proof } = req.body;
-  const session = await mongoose.startSession();
-  session.startTransaction();
-
   try {
-    const errander = await User.findById(errand.erranderId).session(session);
+    const errander = await User.findById(errand.erranderId);
     if (!errander) {
-      await session.abortTransaction();
       res.status(404).json({ message: "Assigned messenger not found" });
       return;
     }
 
     const previousBalance = errander.balance;
     errander.balance += errand.fee;
-    await errander.save({ session });
+    await errander.save();
 
-    // Log earnings transaction
-    const [tx] = await Transaction.create(
-      [
-        {
-          userId: errander._id,
-          amount: errand.fee,
-          type: "errand_earning",
-          description: `Payment for completed errand: ${errand.title}`,
-          errandId: errand._id,
-          senderId: errand.posterId,
-          messengerId: errander._id,
-          status: "completed",
-        },
-      ],
-      { session },
-    );
+    let tx;
+    try {
+      // Log earnings transaction
+      const created = await Transaction.create({
+        userId: errander._id,
+        amount: errand.fee,
+        type: "errand_earning",
+        description: `Payment for completed errand: ${errand.title}`,
+        errandId: errand._id,
+        senderId: errand.posterId,
+        messengerId: errander._id,
+        status: "completed",
+      });
+      tx = created;
+    } catch (txErr) {
+      // Rollback balance if transaction record fails
+      errander.balance -= errand.fee;
+      await errander.save();
+      throw txErr;
+    }
 
     errand.status = "confirmed_completed";
     errand.senderConfirmedAt = new Date();
@@ -252,7 +252,7 @@ export const completeErrand = catchAsync(async (req, res) => {
     errand.paymentReleasedAt = new Date();
     errand.paymentTransactionId = tx._id.toString();
     if (proof) errand.completionProof = proof;
-    await errand.save({ session });
+    await errand.save();
 
     // Capture user IP & Device info
     const confirmedContext = getRequestContext(req, errand.dropoffLocation || "Campus");
@@ -282,12 +282,9 @@ export const completeErrand = catchAsync(async (req, res) => {
         previousBalance,
         newBalance: errander.balance,
       },
-      session,
     });
 
-    await session.commitTransaction();
-
-    // Fire notifications in parallel after successful commit
+    // Fire notifications in parallel
     const triggerNotifications = async () => {
       const poster = await User.findById(errand.posterId);
       if (poster) {
@@ -338,10 +335,7 @@ export const completeErrand = catchAsync(async (req, res) => {
 
     res.json(errand);
   } catch (error) {
-    await session.abortTransaction();
     throw error;
-  } finally {
-    session.endSession();
   }
 });
 
@@ -384,28 +378,14 @@ export const deleteFromHistory = catchAsync(async (req, res) => {
     const isActive = ["open", "assigned", "in_progress", "pending_sender_confirmation", "pending_confirmation"].includes(errand.status);
     
     if (isActive) {
-      const session = await mongoose.startSession();
-      session.startTransaction();
-      try {
-        const user = await User.findById(userId).session(session);
-        if (user && errand.fee > 0) {
-          user.balance += errand.fee;
-          await user.save({ session });
-          await Transaction.create(
-            [{ userId, amount: errand.fee, type: "credit", description: `Refund for cancelled errand: ${errand.title}`, errandId: errand._id }],
-            { session }
-          );
-        }
-        
-        await Errand.findByIdAndDelete(errand._id).session(session);
-        await session.commitTransaction();
-        res.json({ message: "Errand cancelled and permanently deleted. Funds refunded to your balance." });
-      } catch (err) {
-        await session.abortTransaction();
-        throw err;
-      } finally {
-        session.endSession();
+      const user = await User.findById(userId);
+      if (user && errand.fee > 0) {
+        user.balance += errand.fee;
+        await user.save();
+        await Transaction.create({ userId, amount: errand.fee, type: "credit", description: `Refund for cancelled errand: ${errand.title}`, errandId: errand._id });
       }
+      await Errand.findByIdAndDelete(errand._id);
+      res.json({ message: "Errand cancelled and permanently deleted. Funds refunded to your balance." });
       return;
     } else {
       // Completed or cancelled errand being deleted by poster - no refund, just delete
@@ -478,100 +458,85 @@ export const createErrand = catchAsync(async (req, res) => {
     fee,
     erranderId,
   } = req.body;
-  const session = await mongoose.startSession();
-  session.startTransaction();
-
   try {
     // Check if poster has sufficient balance
-    const user = await User.findById(posterId).session(session);
-    if (!user || user.balance < fee) {
-      await session.abortTransaction();
-      res
-        .status(400)
-        .json({ message: "Insufficient wallet balance. Please top up." });
+    const user = await User.findById(posterId);
+    if (!user) {
+      res.status(404).json({ message: "User account not found." });
+      return;
+    }
+    if (user.balance < fee) {
+      res.status(400).json({ message: "Insufficient wallet balance. Please top up." });
       return;
     }
 
-    const [newErrand] = await Errand.create(
-      [
-        {
-          title,
-          description,
-          category,
-          pickupLocation,
-          dropoffLocation,
-          fee,
-          posterId,
-          erranderId: erranderId || undefined,
-          status: "open",
-        },
-      ],
-      { session },
-    );
+    // Create the errand first
+    const newErrand = await Errand.create({
+      title,
+      description,
+      category,
+      pickupLocation,
+      dropoffLocation,
+      fee,
+      posterId,
+      erranderId: erranderId || undefined,
+      status: "open",
+    });
 
-    // Deduct balance from poster and create transaction
+    // Deduct balance from poster
+    const previousBalance = user.balance;
     user.balance -= fee;
-    await user.save({ session });
+    await user.save();
 
-    await Transaction.create(
-      [
-        {
-          userId: posterId,
-          amount: fee,
-          type: "debit",
-          description: `Payment for errand: ${title}`,
-          errandId: newErrand._id,
-        },
-      ],
-      { session },
-    );
+    // Log the transaction
+    await Transaction.create({
+      userId: posterId,
+      amount: fee,
+      type: "debit",
+      description: `Payment for errand: ${title}`,
+      errandId: newErrand._id,
+    });
 
+    // Create digital footprint
     const context = getRequestContext(req, dropoffLocation || "Campus");
     const ipAddress = context.ipAddress;
     const deviceInfo = context.deviceInfo;
 
-    await DigitalFootprint.create(
-      [
+    await DigitalFootprint.create({
+      errandId: newErrand._id,
+      senderId: posterId,
+      timePosted: new Date(),
+      deviceInfo: { posted: deviceInfo },
+      ipAddress: { posted: ipAddress },
+      locationData: { posted: dropoffLocation || "Campus" },
+      status: "held",
+      walletMovementLogs: [
         {
-          errandId: newErrand._id,
-          senderId: posterId,
-          timePosted: new Date(),
-          deviceInfo: { posted: deviceInfo },
-          ipAddress: { posted: ipAddress },
-          locationData: { posted: dropoffLocation || "Campus" },
-          status: "held",
-          walletMovementLogs: [
-            {
-              timestamp: new Date(),
-              userId: posterId,
-              action: "DEBIT_ESCROW",
-              amount: fee,
-              previousBalance: user.balance + fee,
-              newBalance: user.balance,
-            },
-          ],
-          auditTrail: [
-            {
-              action: "POSTED",
-              timestamp: new Date(),
-              userId: posterId,
-              actorName: user.name,
-              actorRole: "sender",
-              actionTitle: "Errand Posted",
-              actionDescription: `Errand posted. ₦${fee} moved to Escrow.`,
-              ipAddress,
-              deviceInfo,
-              details: `Errand posted. ₦${fee} moved to Escrow.`,
-            },
-          ],
+          timestamp: new Date(),
+          userId: posterId,
+          action: "DEBIT_ESCROW",
+          amount: fee,
+          previousBalance,
+          newBalance: user.balance,
         },
       ],
-      { session },
-    );
+      auditTrail: [
+        {
+          action: "POSTED",
+          timestamp: new Date(),
+          userId: posterId,
+          actorName: user.name,
+          actorRole: "sender",
+          actionTitle: "Errand Posted",
+          actionDescription: `Errand posted. ₦${fee} moved to Escrow.`,
+          ipAddress,
+          deviceInfo,
+          details: `Errand posted. ₦${fee} moved to Escrow.`,
+        },
+      ],
+    });
 
-    await session.commitTransaction();
-
-    // Notify the messenger if it's a direct hire, else notify all
+    // Notify the messenger if it's a direct hire, else broadcast
     const io = req.io;
     if (erranderId) {
       const handleDirectHire = async () => {
@@ -582,33 +547,20 @@ export const createErrand = catchAsync(async (req, res) => {
           type: "errand_requested",
           relatedId: newErrand._id,
         };
-
         await Notification.create(notificationData);
-        if (io)
-          io.to(erranderId.toString()).emit("notification", notificationData);
-
+        if (io) io.to(erranderId.toString()).emit("notification", notificationData);
         const messenger = await User.findById(erranderId);
         if (messenger)
-          sendErrandNotification(
-            messenger.email,
-            messenger.name,
-            "requested",
-            title,
-          ).catch(console.error);
+          sendErrandNotification(messenger.email, messenger.name, "requested", title).catch(console.error);
       };
       handleDirectHire();
     } else {
-      if (io) {
-        io.emit("new_errand", newErrand);
-      }
+      if (io) io.emit("new_errand", newErrand);
     }
 
     res.status(201).json(newErrand);
   } catch (error) {
-    await session.abortTransaction();
     throw error;
-  } finally {
-    session.endSession();
   }
 });
 
@@ -852,28 +804,19 @@ export const deleteErrand = catchAsync(async (req, res) => {
     return;
   }
 
-  const session = await mongoose.startSession();
-  session.startTransaction();
-
   try {
     // Refund the poster
-    const user = await User.findById(userId).session(session);
+    const user = await User.findById(userId);
     if (user) {
       user.balance += errand.fee;
-      await user.save({ session });
-
-      await Transaction.create(
-        [
-          {
-            userId: userId,
-            amount: errand.fee,
-            type: "credit",
-            description: `Refund for cancelled errand: ${errand.title}`,
-            errandId: errand._id,
-          },
-        ],
-        { session }
-      );
+      await user.save();
+      await Transaction.create({
+        userId,
+        amount: errand.fee,
+        type: "credit",
+        description: `Refund for cancelled errand: ${errand.title}`,
+        errandId: errand._id,
+      });
     }
 
     const footprint = await DigitalFootprint.findOneAndUpdate(
@@ -884,7 +827,7 @@ export const deleteErrand = catchAsync(async (req, res) => {
           auditTrail: {
             action: "REJECTED",
             timestamp: new Date(),
-            userId: userId,
+            userId,
             actorName: user?.name || "Sender",
             actorRole: "sender",
             actionTitle: "Errand Cancelled ❌",
@@ -893,22 +836,17 @@ export const deleteErrand = catchAsync(async (req, res) => {
           },
         },
       },
-      { session, new: true }
+      { new: true }
     );
     if (footprint && req.io) {
       req.io.to(id.toString()).emit("footprint_updated", footprint);
       req.io.to("admin").emit("footprint_updated", footprint);
     }
 
-    await Errand.findByIdAndDelete(id).session(session);
-    
-    await session.commitTransaction();
+    await Errand.findByIdAndDelete(id);
     res.json({ message: "Errand cancelled and funds refunded successfully" });
   } catch (error) {
-    await session.abortTransaction();
     throw error;
-  } finally {
-    session.endSession();
   }
 });
 

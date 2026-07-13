@@ -122,8 +122,10 @@ export const topUp = catchAsync(async (req, res) => {
     return;
   }
 
-  // IF PAYSTACK KEY IS NOT SET, FALLBACK TO MOCK TOP-UP FOR TESTING
-  if (!process.env.PAYSTACK_SECRET_KEY) {
+  // IF PAYSTACK KEY IS NOT SET OR IS STILL THE DEFAULT PLACEHOLDER, FALLBACK TO MOCK TOP-UP FOR TESTING
+  const paystackKey = process.env.PAYSTACK_SECRET_KEY;
+  const isTestMode = !paystackKey || paystackKey === "your_paystack_secret_key" || paystackKey.startsWith("your_");
+  if (isTestMode) {
     const user = await User.findById(userId);
     if (!user) {
       res.status(404).json({ message: "User not found" });

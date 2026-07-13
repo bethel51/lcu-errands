@@ -181,7 +181,10 @@ export const createInquiry = catchAsync(async (req, res) => {
 
 export const completeErrand = catchAsync(async (req, res) => {
   const { id } = req.params;
-  const userId = req.user.id;
+  // Support both id and _id formats from JWT decode
+  const userId = (req.user.id || req.user._id || "").toString();
+
+  console.log(`[completeErrand] errandId=${id} userId=${userId}`);
 
   const errand = await Errand.findById(id);
 
@@ -190,8 +193,11 @@ export const completeErrand = catchAsync(async (req, res) => {
     return;
   }
 
+  console.log(`[completeErrand] errand.posterId=${errand.posterId} status=${errand.status} erranderId=${errand.erranderId}`);
+
   // Security: Only the poster can complete the errand
   if (errand.posterId.toString() !== userId) {
+    console.warn(`[completeErrand] 403 - posterId=${errand.posterId} !== userId=${userId}`);
     res
       .status(403)
       .json({ message: "You are not authorized to complete this errand" });
@@ -336,6 +342,7 @@ export const completeErrand = catchAsync(async (req, res) => {
 
     res.json(errand);
   } catch (error) {
+    console.error("[completeErrand] Unhandled error:", error?.message || error);
     throw error;
   }
 });

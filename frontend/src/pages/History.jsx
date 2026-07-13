@@ -461,9 +461,8 @@ const History = () => {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 className="history-item-card"
-                style={{ display: "flex", flexDirection: "column", padding: 18, borderRadius: 20, background: "var(--white)", border: "1px solid var(--gray-100)", boxShadow: "var(--shadow-sm)" }}
               >
-                <div className="history-item-content" style={{ display: "flex", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
+                <div className="history-item-content">
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div
                       style={{
@@ -546,23 +545,8 @@ const History = () => {
                     </div>
                   </div>
 
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 16,
-                      flexWrap: "wrap",
-                      alignSelf: "flex-start",
-                      flexShrink: 0
-                    }}
-                  >
-                    <span
-                      style={{
-                        fontWeight: 900,
-                        fontSize: "1.25rem",
-                        color: "var(--blue-700)",
-                      }}
-                    >
+                  <div className="history-card-actions">
+                    <span className="history-fee-badge">
                       ₦{item.fee.toLocaleString()}
                     </span>
 
@@ -768,19 +752,7 @@ const History = () => {
 
                 {/* ── Pending Confirmation Alert banner ── */}
                 {filterType === "posted" && ["pending_confirmation", "pending_sender_confirmation"].includes(item.status) && (
-                  <div style={{
-                    background: "rgba(245, 158, 11, 0.08)",
-                    border: "1px solid rgba(245, 158, 11, 0.25)",
-                    borderRadius: 16,
-                    padding: "12px 14px",
-                    marginTop: 12,
-                    fontSize: "0.82rem",
-                    color: "var(--amber-700)",
-                    fontWeight: 700,
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: 8,
-                  }}>
+                  <div className="history-pending-banner">
                     <span>⚠️ Messenger marked this errand as completed. Please confirm.</span>
                     <button
                       onClick={() => {
@@ -792,9 +764,8 @@ const History = () => {
                         background: "var(--blue-600)",
                         borderColor: "var(--blue-600)",
                         color: "var(--white)",
-                        alignSelf: "flex-start",
-                        boxShadow: "0 0 10px rgba(37, 99, 235, 0.15)",
                         animation: "pulse 2s infinite",
+                        whiteSpace: "nowrap",
                       }}
                     >
                       Confirm Errand Completed
@@ -830,20 +801,17 @@ const History = () => {
                   transition={{ type: "spring", damping: 25, stiffness: 220 }}
                   className="confirm-completion-modal"
                 >
-                  <h3 style={{ fontWeight: 900, fontSize: "1.25rem", margin: "0 0 12px 0", color: "var(--gray-900)" }}>
-                    Confirm completion?
-                  </h3>
-                  <p style={{ fontSize: "0.9rem", color: "var(--gray-600)", lineHeight: 1.5, margin: "0 0 24px 0" }}>
+                  <h3>Confirm completion?</h3>
+                  <p>
                     Confirm that the messenger successfully completed this errand. Once confirmed, the errand payment will be released to the messenger wallet.
                   </p>
-                  <div className="btn-group" style={{ display: "flex", gap: 12 }}>
+                  <div className="btn-group">
                     <button
                       onClick={() => {
                         setConfirmModalOpen(false);
                         setConfirmErrandId(null);
                       }}
                       className="btn btn-outline"
-                      style={{ flex: 1, borderRadius: 12 }}
                     >
                       Cancel
                     </button>
@@ -855,7 +823,7 @@ const History = () => {
                         await handleCompleteTask(id);
                       }}
                       className="btn btn-primary"
-                      style={{ flex: 1, borderRadius: 12, background: "var(--blue-600)", borderColor: "var(--blue-600)" }}
+                      style={{ background: "var(--blue-600)", borderColor: "var(--blue-600)" }}
                     >
                       Confirm & Release
                     </button>

@@ -842,15 +842,27 @@ const History = () => {
                   padding: 0,
                 }}
               >
+                <style>{`
+                  @media (max-width: 480px) {
+                    .release-funds-card {
+                      padding: 24px 16px 32px !important;
+                      border-radius: 20px 20px 0 0 !important;
+                      gap: 16px !important;
+                    }
+                  }
+                `}</style>
                 <motion.div
                   initial={{ y: "100%", opacity: 0 }}
                   animate={{ y: 0, opacity: 1 }}
                   exit={{ y: "100%", opacity: 0 }}
                   transition={{ type: "spring", damping: 28, stiffness: 260 }}
                   onClick={e => e.stopPropagation()}
+                  className="release-funds-card"
                   style={{
                     width: "100%",
                     maxWidth: 520,
+                    maxHeight: "90vh",
+                    overflowY: "auto",
                     background: "#fff",
                     borderRadius: "28px 28px 0 0",
                     padding: "32px 24px 40px",

@@ -219,7 +219,7 @@ export const completeErrand = catchAsync(async (req, res) => {
     return;
   }
 
-  const { proof } = req.body;
+  const { proof } = req.body || {};
   try {
     const errander = await User.findById(errand.erranderId);
     if (!errander) {

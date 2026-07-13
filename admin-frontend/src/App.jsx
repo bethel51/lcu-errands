@@ -939,7 +939,7 @@ const AdminPortal = () => {
               >
                 <StatCard
                   label="Users"
-                  value={users.length}
+                  value={stats?.totalUsers ?? users.length}
                   icon={<Users size={18} />}
                   color="#2563EB"
                 />
@@ -1331,7 +1331,7 @@ const AdminPortal = () => {
                     }}
                   >
                     <option value="all">All Roles</option>
-                    <option value="student">Students</option>
+                    <option value="sender">Senders</option>
                     <option value="messenger">Messengers</option>
                   </select>
                 )}
@@ -1351,6 +1351,25 @@ const AdminPortal = () => {
                     <option value="active">Active Only</option>
                     <option value="suspended">Suspended</option>
                     <option value="unverified">Unverified</option>
+                  </select>
+                )}
+                {activeTab === "errands" && (
+                  <select
+                    value={errandStatusFilter}
+                    onChange={(e) => { setErrandStatusFilter(e.target.value); setActiveFilterLabel(""); }}
+                    style={{
+                      padding: 10,
+                      borderRadius: 10,
+                      border: "1px solid #E2E8F0",
+                      flexShrink: 0,
+                      color: "#1E293B",
+                    }}
+                  >
+                    <option value="all">All Statuses</option>
+                    <option value="active">Active (Open / In Progress)</option>
+                    <option value="pending">Pending Confirmation</option>
+                    <option value="completed">Completed</option>
+                    <option value="failed">Cancelled / Failed</option>
                   </select>
                 )}
               </div>

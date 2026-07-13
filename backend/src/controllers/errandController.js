@@ -268,7 +268,7 @@ export const completeErrand = catchAsync(async (req, res) => {
       errand,
       action: "CONFIRMED",
       req,
-      userId: req.user.id,
+      userId,
       actionTitle: "Payment Released ✅",
       actionDescription: `Sender confirmed delivery. ₦${errand.fee} released to messenger wallet.`,
       details: `Errand confirmation. Funds ₦${errand.fee} released to messenger wallet.`,

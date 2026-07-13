@@ -8,6 +8,22 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
+      // Force new service worker to take over immediately without user having to close the app
+      workbox: {
+        skipWaiting: true,
+        clientsClaim: true,
+        // Never cache API calls - always go to network
+        runtimeCaching: [
+          {
+            urlPattern: /^\/api\/.*/i,
+            handler: 'NetworkOnly',
+          },
+          {
+            urlPattern: /^https:\/\/leadcityerrands-prod\.onrender\.com\/api\/.*/i,
+            handler: 'NetworkOnly',
+          },
+        ],
+      },
       manifest: {
         name: 'LeadCity Errands',
         short_name: 'LCU Errands',

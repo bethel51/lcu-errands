@@ -122,9 +122,11 @@ export const topUp = catchAsync(async (req, res) => {
     return;
   }
 
-  // IF PAYSTACK KEY IS NOT SET OR IS STILL THE DEFAULT PLACEHOLDER, FALLBACK TO MOCK TOP-UP FOR TESTING
-  const paystackKey = process.env.PAYSTACK_SECRET_KEY;
-  const isTestMode = !paystackKey || paystackKey === "your_paystack_secret_key" || paystackKey.startsWith("your_");
+  // Use mock top-up unless a REAL valid Paystack key is configured (must start with sk_test_ or sk_live_)
+  const paystackKey = process.env.PAYSTACK_SECRET_KEY || "";
+  const hasRealKey = (paystackKey.startsWith("sk_test_") || paystackKey.startsWith("sk_live_")) && paystackKey.length > 20;
+  const isTestMode = !hasRealKey || process.env.PAYMENT_TEST_MODE === "true";
+  console.log(`[topUp] paystackKey set=${!!paystackKey} hasRealKey=${hasRealKey} isTestMode=${isTestMode}`);
   if (isTestMode) {
     const user = await User.findById(userId);
     if (!user) {

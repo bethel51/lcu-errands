@@ -157,16 +157,13 @@ const Profile = () => {
         window.location.href = res.data.checkout_url;
         return;
       }
-      const updatedUser = res.data.user || res.data;
-      setUser(updatedUser);
-      localStorage.setItem("user", JSON.stringify(updatedUser));
+      // Mock/dev mode — refresh profile from server to show new balance
+      await fetchProfile();
+      await fetchTransactions();
       setIsTopUpModalOpen(false);
-      fetchTransactions();
-      alert(
-        `✅ ₦${Number(topUpAmount).toLocaleString()} added to your wallet!`,
-      );
+      alert(`✅ ₦${Number(topUpAmount).toLocaleString()} added to your wallet!`);
     } catch (err) {
-      alert(`❌ ${err.response?.data?.message || "Payment failed"}`);
+      alert(`❌ ${err.response?.data?.message || "Payment failed. Please try again."}`);
     } finally {
       setProcessing(false);
     }

@@ -93,6 +93,12 @@ app.use(compression());
 app.use(express.json());
 app.use(morgan("dev"));
 
+// Serve uploaded files statically
+app.use(
+  "/uploads",
+  express.static(path.join(process.cwd(), "uploads"), { maxAge: "30d" }),
+);
+
 // Rate Limiting
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -287,12 +293,6 @@ cron.schedule("*/5 * * * *", async () => {
 
 // Global Error Handler (Must be at the end)
 app.use(errorHandler);
-
-// Serve uploaded files statically
-app.use(
-  "/uploads",
-  express.static(path.join(process.cwd(), "uploads"), { maxAge: "30d" }),
-);
 
 // Root welcome route
 app.get("/", (req, res) => {

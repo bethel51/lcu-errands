@@ -266,8 +266,31 @@ export const uploadProfilePicture = catchAsync(async (req, res) => {
   }
 
   try {
-    const { uploadToCloudinary } = await import("../utils/cloudinaryUpload.js");
-    const imageUrl = await uploadToCloudinary(req.file.buffer, "profile_pics");
+    let imageUrl;
+    try {
+      const { uploadToCloudinary } = await import("../utils/cloudinaryUpload.js");
+      imageUrl = await uploadToCloudinary(req.file.buffer, "profile_pics");
+    } catch (cloudinaryErr) {
+      console.warn("Cloudinary upload failed, using local storage fallback:", cloudinaryErr);
+      const fs = await import("fs");
+      const path = await import("path");
+      const crypto = await import("crypto");
+      
+      const uploadsDir = path.join(process.cwd(), "uploads");
+      if (!fs.existsSync(uploadsDir)) {
+        fs.mkdirSync(uploadsDir, { recursive: true });
+      }
+      
+      const ext = path.extname(req.file.originalname || "") || ".jpg";
+      const filename = `${crypto.randomBytes(16).toString("hex")}${ext}`;
+      const filepath = path.join(uploadsDir, filename);
+      
+      await fs.promises.writeFile(filepath, req.file.buffer);
+      
+      const protocol = req.headers["x-forwarded-proto"] || req.protocol;
+      const host = req.headers["x-forwarded-host"] || req.get("host");
+      imageUrl = `${protocol}://${host}/uploads/${filename}`;
+    }
     
     const user = await User.findByIdAndUpdate(
       userId,
@@ -277,7 +300,7 @@ export const uploadProfilePicture = catchAsync(async (req, res) => {
 
     res.json(user);
   } catch (err) {
-    console.error("Cloudinary upload error:", err);
+    console.error("Local/Cloudinary upload error:", err);
     res.status(500).json({ message: "Failed to upload profile picture" });
   }
 });
@@ -288,11 +311,34 @@ export const uploadFile = catchAsync(async (req, res) => {
   }
 
   try {
-    const { uploadToCloudinary } = await import("../utils/cloudinaryUpload.js");
-    const fileUrl = await uploadToCloudinary(req.file.buffer, "misc_files");
+    let fileUrl;
+    try {
+      const { uploadToCloudinary } = await import("../utils/cloudinaryUpload.js");
+      fileUrl = await uploadToCloudinary(req.file.buffer, "misc_files");
+    } catch (cloudinaryErr) {
+      console.warn("Cloudinary upload failed, using local storage fallback:", cloudinaryErr);
+      const fs = await import("fs");
+      const path = await import("path");
+      const crypto = await import("crypto");
+      
+      const uploadsDir = path.join(process.cwd(), "uploads");
+      if (!fs.existsSync(uploadsDir)) {
+        fs.mkdirSync(uploadsDir, { recursive: true });
+      }
+      
+      const ext = path.extname(req.file.originalname || "") || ".jpg";
+      const filename = `${crypto.randomBytes(16).toString("hex")}${ext}`;
+      const filepath = path.join(uploadsDir, filename);
+      
+      await fs.promises.writeFile(filepath, req.file.buffer);
+      
+      const protocol = req.headers["x-forwarded-proto"] || req.protocol;
+      const host = req.headers["x-forwarded-host"] || req.get("host");
+      fileUrl = `${protocol}://${host}/uploads/${filename}`;
+    }
     res.json({ url: fileUrl });
   } catch (err) {
-    console.error("Cloudinary upload error:", err);
+    console.error("Local/Cloudinary upload error:", err);
     res.status(500).json({ message: "File upload failed" });
   }
 });

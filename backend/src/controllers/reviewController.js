@@ -18,21 +18,18 @@ export const createReview = catchAsync(async (req, res) => {
     return;
   }
 
-  // Determine who is being reviewed (if reviewer is poster, reviewee is errander, and vice versa)
-  let revieweeId;
-  if (errand.posterId.toString() === reviewerId) {
-    revieweeId = errand.erranderId;
-  } else if (errand.erranderId?.toString() === reviewerId) {
-    revieweeId = errand.posterId;
-  } else {
-    res.status(403).json({ message: "You are not part of this errand" });
+  // Only the sender (poster) can leave a rating — for the messenger (errander)
+  if (errand.posterId.toString() !== reviewerId) {
+    res.status(403).json({ message: "Only the sender can rate the messenger" });
     return;
   }
 
-  if (!revieweeId) {
-    res.status(400).json({ message: "No reviewee found for this errand" });
+  if (!errand.erranderId) {
+    res.status(400).json({ message: "No messenger assigned to this errand" });
     return;
   }
+
+  const revieweeId = errand.erranderId;
 
   const newReview = new Review({
     errandId,
@@ -44,14 +41,10 @@ export const createReview = catchAsync(async (req, res) => {
 
   await newReview.save();
 
-  // Update Errand review flag
-  if (errand.posterId.toString() === reviewerId) {
-    await Errand.findByIdAndUpdate(errandId, { isReviewedByPoster: true });
-  } else {
-    await Errand.findByIdAndUpdate(errandId, { isReviewedByErrander: true });
-  }
+  // Mark the errand as reviewed by the sender
+  await Errand.findByIdAndUpdate(errandId, { isReviewedByPoster: true });
 
-  // Update User's average rating and ratingCount
+  // Recalculate the messenger's average rating and count
   const reviews = await Review.find({ revieweeId: revieweeId.toString() });
   const ratingCount = reviews.length;
   const averageRating =
@@ -66,6 +59,7 @@ export const createReview = catchAsync(async (req, res) => {
 
   res.status(201).json(newReview);
 });
+
 
 export const getReviewsForUser = catchAsync(async (req, res) => {
   const { userId } = req.params;

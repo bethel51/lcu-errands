@@ -645,7 +645,7 @@ const Dashboard = () => {
                     )}
                   </div>
                   <div style={{ display: "flex", gap: 8, alignItems: "center", flexShrink: 0 }}>
-                    {userRole === "sender" && errand.posterId === cachedUserId && ["assigned", "in_progress", "pending_confirmation"].includes(errand.status) && (
+                    {userRole === "sender" && errand.posterId?.toString() === cachedUserId && ["assigned", "in_progress", "pending_confirmation", "pending_sender_confirmation"].includes(errand.status) && (
                       <button
                         onClick={() => handleCompleteTask(errand.id)}
                         className="btn btn-primary btn-sm"
@@ -655,7 +655,7 @@ const Dashboard = () => {
                           color: "var(--white)",
                           fontWeight: 750,
                           boxShadow: "0 0 10px rgba(37, 99, 235, 0.2)",
-                          animation: errand.status === "pending_confirmation" ? "pulse 2s infinite" : "none"
+                          animation: ["pending_confirmation", "pending_sender_confirmation"].includes(errand.status) ? "pulse 2s infinite" : "none"
                         }}
                       >
                         Confirm Delivery 🔔

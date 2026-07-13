@@ -291,6 +291,9 @@ cron.schedule("*/5 * * * *", async () => {
 });
 // ===================================================
 
+// Global Error Handler (Must be at the end, after all routes)
+app.use(errorHandler);
+
 // Root welcome route
 app.get("/", (req, res) => {
   res.json({
@@ -300,13 +303,10 @@ app.get("/", (req, res) => {
   });
 });
 
-// Fallback for unknown API routes
+// Fallback for unknown routes
 app.use((req, res) => {
   res.status(404).json({ error: "API Endpoint not found" });
 });
-
-// Global Error Handler — must be registered AFTER all routes
-app.use(errorHandler);
 
 // Socket.io for Real-time Notifications & Online Status
 const onlineUsers = new Map(); // socketId -> userId
@@ -445,6 +445,8 @@ mongoose
     console.error("❌ MongoDB connection error:", err);
   });
 
+// NOTE: The primary error handler is registered above (after routes).
+// This secondary handler is intentionally removed to avoid duplicate responses.
 
 
 // Export app for Vercel serverless functions

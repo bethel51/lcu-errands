@@ -831,6 +831,7 @@ const History = () => {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
+                className="release-funds-overlay"
                 style={{
                   position: "fixed", inset: 0,
                   background: "rgba(15,23,42,0.75)",
@@ -840,6 +841,7 @@ const History = () => {
                   alignItems: "flex-end",
                   justifyContent: "center",
                   padding: 0,
+                  overflowY: "auto",
                 }}
               >
                 <style>{`
@@ -848,6 +850,15 @@ const History = () => {
                       padding: 24px 16px 32px !important;
                       border-radius: 20px 20px 0 0 !important;
                       gap: 16px !important;
+                    }
+                  }
+                  @media (max-height: 620px) {
+                    .release-funds-overlay {
+                      align-items: flex-start !important;
+                      padding: 20px 10px !important;
+                    }
+                    .release-funds-card {
+                      border-radius: 20px !important;
                     }
                   }
                 `}</style>
@@ -902,8 +913,8 @@ const History = () => {
                     display: "flex", alignItems: "center", gap: 10,
                     fontSize: "0.82rem", color: "#15803d"
                   }}>
-                    <span style={{ fontSize: "1.2rem" }}>✅</span>
-                    <span>Once confirmed, payment is <strong>immediately released</strong> and cannot be reversed.</span>
+                    <span style={{ fontSize: "1.2rem", flexShrink: 0 }}>✅</span>
+                    <span style={{ flex: 1, textAlign: "left", lineHeight: 1.4 }}>Once confirmed, payment is <strong>immediately released</strong> and cannot be reversed.</span>
                   </div>
 
                   {/* Actions */}

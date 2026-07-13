@@ -3499,6 +3499,13 @@ input, select, textarea {
   z-index: 9993;
   padding: 16px;
   pointer-events: none;
+  box-sizing: border-box;
+}
+
+@media (max-width: 480px) {
+  .errand-accept-modal-wrapper {
+    padding: 8px; /* Give more screen space to the modal content */
+  }
 }
 
 .errand-accept-modal {
@@ -3513,13 +3520,21 @@ input, select, textarea {
   max-height: 90vh;
   display: flex;
   flex-direction: column;
+  box-sizing: border-box;
 }
 
 @media (max-width: 480px) {
   .errand-accept-modal {
     padding: 20px 16px;
     border-radius: 20px;
-    max-height: 85vh;
+    max-height: 92vh; /* Use more available screen height on mobile */
+  }
+}
+
+@media (max-height: 670px) {
+  .errand-accept-modal {
+    max-height: 96vh; /* Ensure it fits on short screens like iPhone SE */
+    padding: 16px 12px;
   }
 }
 

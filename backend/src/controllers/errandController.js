@@ -323,7 +323,8 @@ export const completeErrand = catchAsync(async (req, res) => {
       },
     ];
 
-    await Notification.insertMany(notifications);
+    const validNotifications = notifications.filter(n => n.userId !== null);
+    await Notification.insertMany(validNotifications);
 
     if (io) {
       notifications.forEach((n) => {

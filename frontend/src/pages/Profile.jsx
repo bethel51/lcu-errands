@@ -38,6 +38,7 @@ const Profile = () => {
   const [isTopUpModalOpen, setIsTopUpModalOpen] = useState(false);
   const [topUpAmount, setTopUpAmount] = useState("1000");
   const [transactions, setTransactions] = useState([]);
+  const [reviews, setReviews] = useState([]);
   const [isWithdrawModalOpen, setIsWithdrawModalOpen] = useState(false);
   const [withdrawData, setWithdrawData] = useState({
     amount: "1000",
@@ -59,6 +60,7 @@ const Profile = () => {
   useEffect(() => {
     fetchProfile();
     fetchTransactions();
+    fetchMyReviews();
   }, []);
 
   useEffect(() => {
@@ -94,6 +96,15 @@ const Profile = () => {
       setTransactions(res.data);
     } catch (err) {
       console.error("Failed to fetch transactions", err);
+    }
+  }
+
+  async function fetchMyReviews() {
+    try {
+      const res = await api.get("/reviews/me");
+      setReviews(Array.isArray(res.data) ? res.data : []);
+    } catch (err) {
+      console.error("Failed to fetch reviews", err);
     }
   }
 
@@ -454,7 +465,9 @@ const Profile = () => {
             }}
           >
             <Star size={16} fill="var(--amber-400)" color="var(--amber-400)" />{" "}
-            {user.rating?.toFixed(1) || "No ratings"}
+            {user.rating > 0
+              ? `${user.rating.toFixed(1)} (${user.ratingCount || reviews.length} review${(user.ratingCount || reviews.length) !== 1 ? "s" : ""})`
+              : "No ratings yet"}
           </div>
           <div
             style={{
@@ -1032,6 +1045,160 @@ const Profile = () => {
                               : "Complete verification to accept high-value errands!"}
                       </p>
                     </div>
+                  </div>
+                )}
+              </div>
+
+              {/* ── Reviews Received ── */}
+              <div
+                style={{
+                  background: "white",
+                  border: "1px solid var(--gray-100)",
+                  borderRadius: 24,
+                  padding: 24,
+                  marginBottom: 0,
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 12,
+                    marginBottom: 20,
+                  }}
+                >
+                  <Star size={20} color="var(--amber-500)" fill="var(--amber-400)" />
+                  <h3 style={{ fontSize: "1.1rem", fontWeight: 800 }}>
+                    Reviews Received
+                  </h3>
+                  {reviews.length > 0 && (
+                    <span
+                      style={{
+                        marginLeft: "auto",
+                        background: "var(--amber-50)",
+                        color: "var(--amber-600)",
+                        borderRadius: 99,
+                        padding: "2px 10px",
+                        fontSize: "0.78rem",
+                        fontWeight: 700,
+                      }}
+                    >
+                      {reviews.length} review{reviews.length !== 1 ? "s" : ""}
+                    </span>
+                  )}
+                </div>
+
+                {reviews.length === 0 ? (
+                  <div
+                    style={{
+                      textAlign: "center",
+                      padding: "32px 0",
+                      color: "var(--gray-400)",
+                    }}
+                  >
+                    <Star size={40} style={{ opacity: 0.3, marginBottom: 12 }} />
+                    <p style={{ fontWeight: 600, fontSize: "0.9rem" }}>
+                      No reviews yet
+                    </p>
+                    <p style={{ fontSize: "0.8rem", marginTop: 4 }}>
+                      Reviews will appear here after completing errands.
+                    </p>
+                  </div>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                    {reviews.map((review) => (
+                      <div
+                        key={review._id}
+                        style={{
+                          background: "var(--gray-50)",
+                          borderRadius: 16,
+                          padding: "16px 18px",
+                          border: "1px solid var(--gray-100)",
+                        }}
+                      >
+                        {/* Reviewer row */}
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 10,
+                            marginBottom: 10,
+                          }}
+                        >
+                          {review.reviewerId?.profilePicture ? (
+                            <img
+                              src={review.reviewerId.profilePicture}
+                              alt={review.reviewerId.name}
+                              style={{
+                                width: 36,
+                                height: 36,
+                                borderRadius: "50%",
+                                objectFit: "cover",
+                                border: "2px solid var(--gray-200)",
+                              }}
+                            />
+                          ) : (
+                            <div
+                              style={{
+                                width: 36,
+                                height: 36,
+                                borderRadius: "50%",
+                                background: "linear-gradient(135deg, var(--blue-400), var(--blue-600))",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                color: "white",
+                                fontWeight: 800,
+                                fontSize: "0.85rem",
+                              }}
+                            >
+                              {(review.reviewerId?.name || "?")[0].toUpperCase()}
+                            </div>
+                          )}
+                          <div style={{ flex: 1 }}>
+                            <p style={{ fontWeight: 700, fontSize: "0.88rem", color: "var(--gray-800)" }}>
+                              {review.reviewerId?.name || "Anonymous"}
+                            </p>
+                            <p style={{ fontSize: "0.74rem", color: "var(--gray-400)", marginTop: 1 }}>
+                              {new Date(review.createdAt).toLocaleDateString("en-US", {
+                                year: "numeric",
+                                month: "short",
+                                day: "numeric",
+                              })}
+                            </p>
+                          </div>
+                          {/* Star row */}
+                          <div style={{ display: "flex", gap: 2 }}>
+                            {[1, 2, 3, 4, 5].map((s) => (
+                              <Star
+                                key={s}
+                                size={14}
+                                fill={s <= review.rating ? "var(--amber-400)" : "none"}
+                                color={s <= review.rating ? "var(--amber-400)" : "var(--gray-300)"}
+                                strokeWidth={2}
+                              />
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Comment */}
+                        {review.comment && (
+                          <p
+                            style={{
+                              fontSize: "0.85rem",
+                              color: "var(--gray-600)",
+                              lineHeight: 1.55,
+                              fontStyle: "italic",
+                              borderLeft: "3px solid var(--amber-200)",
+                              paddingLeft: 10,
+                              margin: 0,
+                            }}
+                          >
+                            "{review.comment}"
+                          </p>
+                        )}
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>

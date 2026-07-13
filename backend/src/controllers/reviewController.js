@@ -51,20 +51,34 @@ export const createReview = catchAsync(async (req, res) => {
     await Errand.findByIdAndUpdate(errandId, { isReviewedByErrander: true });
   }
 
-  // Update User's average rating
+  // Update User's average rating and ratingCount
   const reviews = await Review.find({ revieweeId: revieweeId.toString() });
+  const ratingCount = reviews.length;
   const averageRating =
-    reviews.length > 0
-      ? reviews.reduce((acc, curr) => acc + curr.rating, 0) / reviews.length
+    ratingCount > 0
+      ? reviews.reduce((acc, curr) => acc + curr.rating, 0) / ratingCount
       : 0;
 
-  await User.findByIdAndUpdate(revieweeId, { rating: averageRating });
+  await User.findByIdAndUpdate(revieweeId, {
+    rating: averageRating,
+    ratingCount,
+  });
 
   res.status(201).json(newReview);
 });
 
 export const getReviewsForUser = catchAsync(async (req, res) => {
   const { userId } = req.params;
+  const reviews = await Review.find({ revieweeId: userId })
+    .populate("reviewerId", "name profilePicture")
+    .sort({ createdAt: -1 });
+
+  res.json(reviews);
+});
+
+// Fetch reviews for the currently authenticated user
+export const getMyReviews = catchAsync(async (req, res) => {
+  const userId = req.user.id;
   const reviews = await Review.find({ revieweeId: userId })
     .populate("reviewerId", "name profilePicture")
     .sort({ createdAt: -1 });

@@ -62,6 +62,7 @@ const History = () => {
       const data = Array.isArray(res.data) ? res.data : [];
       const formatted = data.map((errand) => {
         const posterIdStr = errand.posterId?._id ? errand.posterId._id.toString() : errand.posterId?.toString();
+        const isPosted = posterIdStr === userId;
         return {
           id: errand._id,
           title: errand.title,
@@ -71,11 +72,15 @@ const History = () => {
           dropoffLocation: errand.dropoffLocation,
           fee: errand.fee,
           date: new Date(errand.createdAt).toLocaleDateString(),
-          type: posterIdStr === userId ? "posted" : "accepted",
+          type: isPosted ? "posted" : "accepted",
           status: errand.status,
           completionRequested: !!errand.completionRequested,
           poster: errand.posterId,
           errander: errand.erranderId,
+          // Track whether this user has already submitted a review
+          hasReviewed: isPosted
+            ? !!errand.isReviewedByPoster
+            : !!errand.isReviewedByErrander,
         };
       });
       setHistoryItems(formatted);
@@ -618,22 +623,40 @@ const History = () => {
                     )}
 
                     {["completed", "confirmed_completed"].includes(item.status) && (
-                      <button
-                        className="btn btn-outline btn-sm"
-                        style={{
-                          borderColor: "var(--amber-200)",
-                          color: "var(--amber-600)",
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 6,
-                        }}
-                        onClick={() => {
-                          setSelectedErrandId(item.id);
-                          setIsReviewModalOpen(true);
-                        }}
-                      >
-                        <Star size={12} fill="currentColor" /> Rate
-                      </button>
+                      item.hasReviewed ? (
+                        <span
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 5,
+                            fontSize: "0.78rem",
+                            fontWeight: 600,
+                            color: "var(--amber-500)",
+                            padding: "5px 10px",
+                            background: "var(--amber-50)",
+                            borderRadius: 8,
+                          }}
+                        >
+                          <Star size={12} fill="currentColor" /> Reviewed
+                        </span>
+                      ) : (
+                        <button
+                          className="btn btn-outline btn-sm"
+                          style={{
+                            borderColor: "var(--amber-200)",
+                            color: "var(--amber-600)",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 6,
+                          }}
+                          onClick={() => {
+                            setSelectedErrandId(item.id);
+                            setIsReviewModalOpen(true);
+                          }}
+                        >
+                          <Star size={12} fill="currentColor" /> Rate
+                        </button>
+                      )
                     )}
 
                     {/* Delete from history button — available for completed or cancelled errands */}

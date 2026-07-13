@@ -18,6 +18,7 @@ const userSchema = new mongoose.Schema(
     isVerified: { type: Boolean, default: false },
     profilePicture: { type: String },
     rating: { type: Number, default: 0 },
+    ratingCount: { type: Number, default: 0 },
     resetPasswordToken: { type: String },
     resetPasswordExpires: { type: Date },
     isBoosted: { type: Boolean, default: false },

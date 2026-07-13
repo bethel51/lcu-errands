@@ -343,7 +343,11 @@ export const completeErrand = catchAsync(async (req, res) => {
     }
 
     // ── SUCCESS RESPONSE ──
-    res.json(errand);
+    res.json({
+      success: true,
+      message: `Delivery confirmed! ₦${errand.fee.toLocaleString()} has been released to the messenger.`,
+      errand,
+    });
   } catch (error) {
     console.error("[completeErrand] Unhandled error:", error?.message || error);
     throw error;

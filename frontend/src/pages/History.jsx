@@ -902,13 +902,14 @@ const History = () => {
                         const id = confirmErrandId;
                         setProcessing(true);
                         try {
-                          await api.patch(`/errands/${id}/complete`);
+                          const res = await api.patch(`/errands/${id}/complete`);
                           setConfirmModalOpen(false);
                           setConfirmErrandId(null);
-                          showToast("✅ Payment released! Messenger has been paid.");
+                          const msg = res.data?.message || "✅ Payment released! Messenger has been paid.";
+                          showToast(msg);
                           setTimeout(() => window.location.reload(), 1200);
                         } catch (err) {
-                          const msg = err.response?.data?.message || "Request failed. Please try again.";
+                          const msg = err.response?.data?.message || err.message || "Request failed. Please try again.";
                           showToast(`❌ ${msg}`, "error");
                           // Keep modal open so user can retry
                         } finally {

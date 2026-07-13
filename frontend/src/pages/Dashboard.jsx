@@ -339,17 +339,21 @@ const Dashboard = () => {
   };
 
   const handleCompleteTask = async (id) => {
+    if (!window.confirm("Are you sure you want to confirm delivery and release funds to the messenger? This cannot be undone.")) return;
     setProcessing(true);
     try {
-      await api.patch(`/errands/${id}/complete`);
-      showToast("✅ Delivery confirmed! Payment released to messenger.");
-      window.location.reload();
+      const res = await api.patch(`/errands/${id}/complete`);
+      const msg = res.data?.message || "✅ Delivery confirmed! Payment released to messenger.";
+      showToast(msg);
+      loadDashboard();
     } catch (err) {
-      showToast(err.response?.data?.message || "Failed to confirm delivery.", "error");
+      const msg = err.response?.data?.message || err.message || "Failed to confirm delivery. Please try again.";
+      showToast(`❌ ${msg}`, "error");
     } finally {
       setProcessing(false);
     }
   };
+
 
   const filteredErrands = useMemo(() => {
     return errands.filter((e) => {
@@ -645,7 +649,7 @@ const Dashboard = () => {
                     )}
                   </div>
                   <div style={{ display: "flex", gap: 8, alignItems: "center", flexShrink: 0 }}>
-                    {userRole === "sender" && errand.posterId?.toString() === cachedUserId && ["assigned", "in_progress", "pending_confirmation", "pending_sender_confirmation"].includes(errand.status) && (
+                    {userRole === "sender" && errand.posterId?.toString() === cachedUserId && ["pending_confirmation", "pending_sender_confirmation"].includes(errand.status) && (
                       <button
                         onClick={() => handleCompleteTask(errand.id)}
                         className="btn btn-primary btn-sm"
@@ -655,7 +659,7 @@ const Dashboard = () => {
                           color: "var(--white)",
                           fontWeight: 750,
                           boxShadow: "0 0 10px rgba(37, 99, 235, 0.2)",
-                          animation: ["pending_confirmation", "pending_sender_confirmation"].includes(errand.status) ? "pulse 2s infinite" : "none"
+                          animation: "pulse 2s infinite"
                         }}
                       >
                         Confirm Delivery 🔔

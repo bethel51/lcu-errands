@@ -3497,14 +3497,16 @@ input, select, textarea {
   align-items: center;
   justify-content: center;
   z-index: 9993;
-  padding: 16px;
+  padding: 24px 16px;
   pointer-events: none;
+  overflow-y: auto; /* Enable outer scroll if modal exceeds height */
   box-sizing: border-box;
 }
 
 @media (max-width: 480px) {
   .errand-accept-modal-wrapper {
-    padding: 8px; /* Give more screen space to the modal content */
+    padding: 0;
+    align-items: flex-end; /* Bottom sheet design on mobile */
   }
 }
 
@@ -3517,24 +3519,18 @@ input, select, textarea {
   box-shadow: 0 20px 40px rgba(0,0,0,0.15);
   overflow: hidden;
   padding: 24px 20px;
-  max-height: 90vh;
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
+  margin: auto; /* Centers modal in scrollable viewport */
 }
 
 @media (max-width: 480px) {
   .errand-accept-modal {
-    padding: 20px 16px;
-    border-radius: 20px;
-    max-height: 92vh; /* Use more available screen height on mobile */
-  }
-}
-
-@media (max-height: 670px) {
-  .errand-accept-modal {
-    max-height: 96vh; /* Ensure it fits on short screens like iPhone SE */
-    padding: 16px 12px;
+    margin: 0; /* Align directly to bottom */
+    border-radius: 24px 24px 0 0; /* Only top corners rounded on mobile */
+    padding: 20px 16px 32px 16px; /* Extra bottom padding for home indicator bars */
+    max-height: 88vh;
   }
 }
 
@@ -3562,8 +3558,8 @@ input, select, textarea {
 
 @media (max-width: 480px) {
   .accept-modal-actions {
-    flex-direction: column-reverse;
-    gap: 8px;
+    flex-direction: row; /* Keep side-by-side or stacked cleanly */
+    gap: 10px;
     margin-top: 16px;
     padding-top: 12px;
   }

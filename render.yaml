@@ -10,6 +10,8 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
+      - key: PAYMENT_TEST_MODE
+        value: "true"
       - key: MONGODB_URI
         fromConfig: true
       - key: JWT_SECRET

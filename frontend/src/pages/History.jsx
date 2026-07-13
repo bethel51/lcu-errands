@@ -570,13 +570,33 @@ const History = () => {
                     </button>
 
                     {filterType === "posted" && ["open", "assigned", "in_progress", "pending_sender_confirmation", "pending_confirmation"].includes(item.status) && (
-                      <button
-                        onClick={() => handleDeleteFromHistory(item.id)}
-                        className="btn btn-outline btn-sm"
-                        style={{ borderColor: "var(--red-200)", color: "var(--red-600)" }}
-                      >
-                        Delete Errand
-                      </button>
+                      <div style={{ display: "flex", gap: 8, width: "100%", justifyContent: "flex-end" }}>
+                        {["pending_sender_confirmation", "pending_confirmation"].includes(item.status) && (
+                          <button
+                            onClick={() => {
+                              setConfirmErrandId(item.id);
+                              setConfirmModalOpen(true);
+                            }}
+                            className="btn btn-primary btn-sm"
+                            style={{
+                              background: "var(--blue-600)",
+                              borderColor: "var(--blue-600)",
+                              color: "var(--white)",
+                              fontWeight: 750,
+                              boxShadow: "0 0 10px rgba(37, 99, 235, 0.2)"
+                            }}
+                          >
+                            Confirm Delivery 🔔
+                          </button>
+                        )}
+                        <button
+                          onClick={() => handleDeleteFromHistory(item.id)}
+                          className="btn btn-outline btn-sm"
+                          style={{ borderColor: "var(--red-200)", color: "var(--red-600)" }}
+                        >
+                          Delete Errand
+                        </button>
+                      </div>
                     )}
 
 

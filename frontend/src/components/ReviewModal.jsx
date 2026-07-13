@@ -10,7 +10,7 @@ const ReviewModal = ({
   onSuccess,
   onReviewComplete,
 }) => {
-  const [rating, setRating] = useState(5);
+  const [rating, setRating] = useState(4);
   const [hoverRating, setHoverRating] = useState(0);
   const [comment, setComment] = useState("");
   const [loading, setLoading] = useState(false);
@@ -113,7 +113,7 @@ const ReviewModal = ({
                 <div
                   style={{ display: "flex", justifyContent: "center", gap: 12 }}
                 >
-                  {[1, 2, 3, 4, 5].map((star) => (
+                  {[1, 2, 3, 4].map((star) => (
                     <button
                       key={star}
                       type="button"

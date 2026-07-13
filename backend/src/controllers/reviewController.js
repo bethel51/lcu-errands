@@ -29,7 +29,17 @@ export const createReview = catchAsync(async (req, res) => {
     return;
   }
 
+  if (rating < 1 || rating > 4) {
+    res.status(400).json({ message: "Rating must be between 1 and 4" });
+    return;
+  }
+
   const revieweeId = errand.erranderId;
+  const reviewee = await User.findById(revieweeId);
+  if (!reviewee || reviewee.role !== "messenger") {
+    res.status(400).json({ message: "You can only rate a messenger" });
+    return;
+  }
 
   const newReview = new Review({
     errandId,

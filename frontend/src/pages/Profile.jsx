@@ -1427,7 +1427,7 @@ const Profile = () => {
               <button
                 onClick={handleTopUp}
                 className="btn"
-                disabled={loading || !topUpAmount || Number(topUpAmount) < 100}
+                disabled={processing || !topUpAmount || Number(topUpAmount) < 100}
                 style={{
                   width: "100%",
                   background: "var(--blue-600)",
@@ -1436,7 +1436,7 @@ const Profile = () => {
                   fontWeight: 800,
                 }}
               >
-                {loading
+                {processing
                   ? "Processing..."
                   : `Deposit ₦${Number(topUpAmount || 0).toLocaleString()}`}
               </button>

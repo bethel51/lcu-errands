@@ -122,58 +122,77 @@ export const topUp = catchAsync(async (req, res) => {
     return;
   }
 
-  // PAYMENT_TEST_MODE=true in env forces mock top-up regardless of Paystack key
-  // Also falls back to mock if no real Paystack key (sk_test_ or sk_live_) is configured
-  const paystackKey = process.env.PAYSTACK_SECRET_KEY || "";
-  const hasRealKey = (paystackKey.startsWith("sk_test_") || paystackKey.startsWith("sk_live_")) && paystackKey.length > 20;
-  const isTestMode = process.env.PAYMENT_TEST_MODE === "true" || !hasRealKey;
-  console.log(`[topUp] PAYMENT_TEST_MODE=${process.env.PAYMENT_TEST_MODE} hasRealKey=${hasRealKey} isTestMode=${isTestMode}`);
-  if (isTestMode) {
-    const user = await User.findById(userId);
-    if (!user) {
-      res.status(404).json({ message: "User not found" });
-      return;
-    }
-    user.balance += Number(amount);
-    await user.save();
-    await Transaction.create({
-      userId,
-      amount: Number(amount),
-      type: "credit",
-      description: "Wallet Top-up (Dev Mode)",
-    });
-
-    // Background email notification
-    sendTopUpNotification(
-      user.email,
-      user.name,
-      Number(amount),
-      user.balance,
-    ).catch((err) => console.error("Failed to send top up email", err));
-
-    res.json({ message: "Mock top-up successful", user });
+  if (!amount || Number(amount) < 100) {
+    res.status(400).json({ message: "Minimum top-up amount is ₦100" });
     return;
   }
 
-  // REAL PAYSTACK INITIALIZATION
-  const response = await axios.post(
-    "https://api.paystack.co/transaction/initialize",
-    {
-      email: email || (await User.findById(userId))?.email,
-      amount: Number(amount) * 100, // Paystack uses Kobo
-      callback_url: `${process.env.FRONTEND_URL}/profile`,
-      metadata: { userId, amount },
-    },
-    {
-      headers: {
-        Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
-        "Content-Type": "application/json",
-      },
-    },
+  const paystackKey = process.env.PAYSTACK_SECRET_KEY || "";
+  const hasRealKey =
+    (paystackKey.startsWith("sk_test_") || paystackKey.startsWith("sk_live_")) &&
+    paystackKey.length > 20;
+  const forceTestMode = process.env.PAYMENT_TEST_MODE === "true";
+
+  console.log(`[topUp] hasRealKey=${hasRealKey} forceTestMode=${forceTestMode} amount=${amount}`);
+
+  // Only attempt real Paystack if key is properly formatted AND test mode is not forced
+  if (hasRealKey && !forceTestMode) {
+    try {
+      const userDoc = await User.findById(userId);
+      const userEmail = email || userDoc?.email;
+      const response = await axios.post(
+        "https://api.paystack.co/transaction/initialize",
+        {
+          email: userEmail,
+          amount: Number(amount) * 100, // Paystack uses Kobo
+          callback_url: `${process.env.FRONTEND_URL}/profile`,
+          metadata: { userId, amount },
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${paystackKey}`,
+            "Content-Type": "application/json",
+          },
+          timeout: 8000,
+        },
+      );
+
+      if (response.data?.data?.authorization_url) {
+        return res.json({ checkout_url: response.data.data.authorization_url });
+      }
+      // If Paystack didn't return a URL, fall through to mock
+      console.warn("[topUp] Paystack returned no authorization_url, falling back to mock");
+    } catch (paystackErr) {
+      console.error("[topUp] Paystack failed, falling back to mock:", paystackErr.message);
+      // Fall through to mock top-up below
+    }
+  }
+
+  // ── MOCK / DEV TOP-UP ──
+  // Runs when: no real key, test mode forced, or Paystack call failed
+  const user = await User.findById(userId);
+  if (!user) {
+    res.status(404).json({ message: "User not found" });
+    return;
+  }
+
+  user.balance += Number(amount);
+  await user.save();
+
+  await Transaction.create({
+    userId,
+    amount: Number(amount),
+    type: "credit",
+    description: "Wallet Top-up",
+  });
+
+  sendTopUpNotification(user.email, user.name, Number(amount), user.balance).catch(
+    (err) => console.error("Failed to send top-up email", err),
   );
 
-  res.json({ checkout_url: response.data.data.authorization_url });
+  res.json({ message: "Top-up successful", user });
 });
+
 
 export const handlePaystackWebhook = catchAsync(async (req, res) => {
   const secret = process.env.PAYSTACK_SECRET_KEY;

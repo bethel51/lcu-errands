@@ -260,86 +260,89 @@ export const completeErrand = catchAsync(async (req, res) => {
     if (proof) errand.completionProof = proof;
     await errand.save();
 
-    // Capture user IP & Device info
-    const confirmedContext = getRequestContext(req, errand.dropoffLocation || "Campus");
-    const txRef = `TX-${tx._id}`;
+    // ── ALL SECONDARY OPERATIONS ──────────────────────────────────
+    // Errand is saved and payment released. Now do notifications.
+    // Wrap everything so a failure here does NOT block the 200 response.
+    try {
+      // Capture user IP & Device info
+      const confirmedContext = getRequestContext(req, errand.dropoffLocation || "Campus");
+      const txRef = `TX-${tx._id}`;
 
-    await updateDigitalFootprint({
-      errand,
-      action: "CONFIRMED",
-      req,
-      userId,
-      actionTitle: "Payment Released ✅",
-      actionDescription: `Sender confirmed delivery. ₦${errand.fee} released to messenger wallet.`,
-      details: `Errand confirmation. Funds ₦${errand.fee} released to messenger wallet.`,
-      set: {
-        messengerId: errander._id,
-        timeConfirmed: new Date(),
-        "deviceInfo.confirmed": confirmedContext.deviceInfo,
-        "ipAddress.confirmed": confirmedContext.ipAddress,
-        "locationData.confirmed": confirmedContext.locationData,
-        transactionReference: txRef,
-        status: "released",
-      },
-      walletMovementLog: {
-        userId: errander._id,
-        action: "CREDIT_WALLET",
-        amount: errand.fee,
-        previousBalance,
-        newBalance: errander.balance,
-      },
-    });
+      await updateDigitalFootprint({
+        errand,
+        action: "CONFIRMED",
+        req,
+        userId,
+        actionTitle: "Payment Released ✅",
+        actionDescription: `Sender confirmed delivery. ₦${errand.fee} released to messenger wallet.`,
+        details: `Errand confirmation. Funds ₦${errand.fee} released to messenger wallet.`,
+        set: {
+          messengerId: errander._id,
+          timeConfirmed: new Date(),
+          "deviceInfo.confirmed": confirmedContext.deviceInfo,
+          "ipAddress.confirmed": confirmedContext.ipAddress,
+          "locationData.confirmed": confirmedContext.locationData,
+          transactionReference: txRef,
+          status: "released",
+        },
+        walletMovementLog: {
+          userId: errander._id,
+          action: "CREDIT_WALLET",
+          amount: errand.fee,
+          previousBalance,
+          newBalance: errander.balance,
+        },
+      });
+    } catch (fpErr) {
+      console.error("[completeErrand] Digital footprint update failed (non-fatal):", fpErr.message);
+    }
 
-    // Fire notifications in parallel
+    // Fire email notifications in background
     const triggerNotifications = async () => {
-      const poster = await User.findById(errand.posterId);
-      if (poster) {
-        sendErrandNotification(
-          poster.email,
-          poster.name,
-          "completed",
-          errand.title,
-        ).catch(console.error);
+      try {
+        const poster = await User.findById(errand.posterId);
+        if (poster) {
+          sendErrandNotification(poster.email, poster.name, "completed", errand.title).catch(console.error);
+        }
+        sendErrandNotification(errander.email, errander.name, "completed_errander", errand.title).catch(console.error);
+      } catch (e) {
+        console.error("[completeErrand] triggerNotifications failed:", e.message);
       }
-      sendErrandNotification(
-        errander.email,
-        errander.name,
-        "completed_errander",
-        errand.title,
-      ).catch(console.error);
     };
     triggerNotifications();
 
-    // Notify both parties that the errand is complete
-    const io = req.io;
-    const notifications = [
-      {
-        userId: errand.posterId.toString(),
-        title: "Payment Released! ✅",
-        message: `You confirmed delivery of "${errand.title}". Funds have been released to the messenger.`,
-        type: "payment_released",
-        relatedId: errand._id.toString(),
-      },
-      {
-        userId: errand.erranderId ? errand.erranderId.toString() : null,
-        title: "Wallet Credited! 💰",
-        message: `Your payment for "${errand.title}" has been released to your wallet.`,
-        type: "wallet_credited",
-        relatedId: errand._id.toString(),
-      },
-    ];
+    // In-app notifications (non-fatal)
+    try {
+      const io = req.io;
+      const notifications = [
+        {
+          userId: errand.posterId,
+          title: "Payment Released! ✅",
+          message: `You confirmed delivery of "${errand.title}". Funds have been released to the messenger.`,
+          type: "payment_released",
+          relatedId: errand._id,
+        },
+        ...(errand.erranderId ? [{
+          userId: errand.erranderId,
+          title: "Wallet Credited! 💰",
+          message: `Your payment for "${errand.title}" has been released to your wallet.`,
+          type: "wallet_credited",
+          relatedId: errand._id,
+        }] : []),
+      ];
 
-    const validNotifications = notifications.filter(n => n.userId !== null);
-    await Notification.insertMany(validNotifications);
+      await Notification.insertMany(notifications);
 
-    if (io) {
-      notifications.forEach((n) => {
-        if (n.userId) {
-          io.to(n.userId).emit("notification", n);
-        }
-      });
+      if (io) {
+        notifications.forEach((n) => {
+          if (n.userId) io.to(n.userId.toString()).emit("notification", n);
+        });
+      }
+    } catch (notifErr) {
+      console.error("[completeErrand] Notification insertion failed (non-fatal):", notifErr.message);
     }
 
+    // ── SUCCESS RESPONSE ──
     res.json(errand);
   } catch (error) {
     console.error("[completeErrand] Unhandled error:", error?.message || error);

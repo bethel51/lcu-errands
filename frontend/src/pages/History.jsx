@@ -590,21 +590,7 @@ const History = () => {
                       </button>
                     )}
 
-                    {filterType === "posted" && ["pending_confirmation", "pending_sender_confirmation"].includes(item.status) && (
-                      <button
-                        onClick={() => {
-                          setConfirmErrandId(item.id);
-                          setConfirmModalOpen(true);
-                        }}
-                        className="btn btn-primary btn-sm"
-                        style={{
-                          boxShadow: "0 0 14px var(--blue-600)",
-                          animation: "pulse 1.8s infinite",
-                        }}
-                      >
-                        Confirm Errand Completed
-                      </button>
-                    )}
+
 
                     {filterType === "accepted" && item.status === "assigned" && (
                       <button
@@ -836,56 +822,46 @@ const History = () => {
                 }}
                 style={{ position: "fixed", inset: 0, background: "rgba(15,23,42,0.6)", backdropFilter: "blur(4px)", zIndex: 9994 }}
               />
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                transition={{ type: "spring", damping: 25, stiffness: 220 }}
-                style={{
-                  position: "fixed",
-                  top: "50%",
-                  left: "50%",
-                  transform: "translate(-50%, -50%)",
-                  width: "90%",
-                  maxWidth: 440,
-                  background: "var(--white)",
-                  borderRadius: 24,
-                  padding: 24,
-                  boxShadow: "0 20px 40px rgba(0,0,0,0.15)",
-                  zIndex: 9995,
-                }}
-              >
-                <h3 style={{ fontWeight: 900, fontSize: "1.25rem", margin: "0 0 12px 0", color: "var(--gray-900)" }}>
-                  Confirm completion?
-                </h3>
-                <p style={{ fontSize: "0.9rem", color: "var(--gray-600)", lineHeight: 1.5, margin: "0 0 24px 0" }}>
-                  Confirm that the messenger successfully completed this errand. Once confirmed, the errand payment will be released to the messenger wallet.
-                </p>
-                <div style={{ display: "flex", gap: 12 }}>
-                  <button
-                    onClick={() => {
-                      setConfirmModalOpen(false);
-                      setConfirmErrandId(null);
-                    }}
-                    className="btn btn-outline"
-                    style={{ flex: 1, borderRadius: 12 }}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={async () => {
-                      const id = confirmErrandId;
-                      setConfirmModalOpen(false);
-                      setConfirmErrandId(null);
-                      await handleCompleteTask(id);
-                    }}
-                    className="btn btn-primary"
-                    style={{ flex: 1, borderRadius: 12, background: "var(--blue-600)", borderColor: "var(--blue-600)" }}
-                  >
-                    Confirm & Release Payment
-                  </button>
-                </div>
-              </motion.div>
+              <div className="modal-flex-wrapper">
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                  transition={{ type: "spring", damping: 25, stiffness: 220 }}
+                  className="confirm-completion-modal"
+                >
+                  <h3 style={{ fontWeight: 900, fontSize: "1.25rem", margin: "0 0 12px 0", color: "var(--gray-900)" }}>
+                    Confirm completion?
+                  </h3>
+                  <p style={{ fontSize: "0.9rem", color: "var(--gray-600)", lineHeight: 1.5, margin: "0 0 24px 0" }}>
+                    Confirm that the messenger successfully completed this errand. Once confirmed, the errand payment will be released to the messenger wallet.
+                  </p>
+                  <div className="btn-group" style={{ display: "flex", gap: 12 }}>
+                    <button
+                      onClick={() => {
+                        setConfirmModalOpen(false);
+                        setConfirmErrandId(null);
+                      }}
+                      className="btn btn-outline"
+                      style={{ flex: 1, borderRadius: 12 }}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={async () => {
+                        const id = confirmErrandId;
+                        setConfirmModalOpen(false);
+                        setConfirmErrandId(null);
+                        await handleCompleteTask(id);
+                      }}
+                      className="btn btn-primary"
+                      style={{ flex: 1, borderRadius: 12, background: "var(--blue-600)", borderColor: "var(--blue-600)" }}
+                    >
+                      Confirm & Release
+                    </button>
+                  </div>
+                </motion.div>
+              </div>
             </>
           )}
         </AnimatePresence>

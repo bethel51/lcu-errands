@@ -3551,3 +3551,39 @@ input, select, textarea {
   }
 }
 
+/* ===== GENERAL MODAL FLEX WRAPPER & CONFIRM COMPLETION CARD ===== */
+.modal-flex-wrapper {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9995;
+  padding: 16px;
+  pointer-events: none;
+}
+
+.confirm-completion-modal {
+  pointer-events: auto;
+  width: 100%;
+  max-width: 440px;
+  background: var(--white);
+  border-radius: 24px;
+  padding: 24px;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+  display: flex;
+  flex-direction: column;
+}
+
+@media (max-width: 480px) {
+  .confirm-completion-modal {
+    padding: 20px 16px;
+    border-radius: 20px;
+    max-width: 94%;
+  }
+  .confirm-completion-modal .btn-group {
+    flex-direction: column-reverse;
+    gap: 8px;
+  }
+}
+

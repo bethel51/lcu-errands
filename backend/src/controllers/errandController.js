@@ -784,6 +784,8 @@ export const selectMessenger = catchAsync(async (req, res) => {
   await Notification.create(notificationData);
   if (io) {
     io.to(messengerId.toString()).emit("notification", notificationData);
+    // Broadcast to ALL connected clients so the ErrandStream removes this card immediately
+    io.emit("errand_removed", { errandId: errand._id.toString(), reason: "assigned" });
   }
 
   res.json(errand);
@@ -859,6 +861,10 @@ export const deleteErrand = catchAsync(async (req, res) => {
     }
 
     await Errand.findByIdAndDelete(id);
+    // Broadcast to ALL connected clients so the ErrandStream removes this card immediately
+    if (req.io) {
+      req.io.emit("errand_removed", { errandId: id, reason: "cancelled" });
+    }
     res.json({ message: "Errand cancelled and funds refunded successfully" });
   } catch (error) {
     throw error;

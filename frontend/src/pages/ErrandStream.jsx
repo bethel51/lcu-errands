@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Search,
@@ -66,15 +66,7 @@ const SenderAvatar = ({ picture, name }) => {
   );
 };
 
-const CATEGORIES = [
-  "All",
-  "Meals",
-  "Shopping",
-  "Academic",
-  "Delivery",
-  "Gates",
-  "Other",
-];
+const CATEGORIES = ["All", "Meals", "Shopping", "Academic", "Delivery", "Gates", "Other"];
 
 const CATEGORY_EMOJI = {
   Meals: "🍽️",
@@ -85,6 +77,15 @@ const CATEGORY_EMOJI = {
   Other: "✨",
 };
 
+/* ─── Helpers ───────────────────────────────────────────────────────── */
+const getUserId = () => {
+  try {
+    return JSON.parse(localStorage.getItem("user") || "{}").id || "";
+  } catch {
+    return "";
+  }
+};
+
 /* ─── Component ────────────────────────────────────────────────────── */
 const ErrandStream = () => {
   const navigate = useNavigate();
@@ -92,11 +93,17 @@ const ErrandStream = () => {
 
   const [errands, setErrands] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [search, setSearch] = useState("");
   const [activeCategory, setActiveCategory] = useState("All");
   const [processing, setProcessing] = useState(false);
   const [toast, setToast] = useState(null);
   const [acceptingErrand, setAcceptingErrand] = useState(null);
+  const pollingRef = useRef(null);
+
+  // Keep userId fresh without causing re-renders
+  const userIdRef = useRef(getUserId());
+  const userRole = localStorage.getItem("userRole") || "messenger";
 
   useEffect(() => {
     if (acceptingErrand) {
@@ -104,102 +111,155 @@ const ErrandStream = () => {
     } else {
       document.body.style.overflow = "";
     }
-    return () => {
-      document.body.style.overflow = "";
-    };
+    return () => { document.body.style.overflow = ""; };
   }, [acceptingErrand]);
-
-  const userRole = localStorage.getItem("userRole") || "messenger";
-  const cachedUserId = (() => {
-    try {
-      return JSON.parse(localStorage.getItem("user") || "{}").id || "";
-    } catch {
-      return "";
-    }
-  })();
 
   const showToast = (message, type = "success") => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 3500);
   };
 
-  const mapBackendToFrontend = useCallback((err) => ({
-    id: err._id,
-    title: err.title,
-    description: err.description,
-    category: err.category,
-    pickupLocation: err.pickupLocation,
-    dropoffLocation: err.dropoffLocation,
-    location: err.dropoffLocation,
-    fee: err.fee,
-    status: err.status,
-    trackingId: err.trackingId,
-    posterName: err.posterId?._id === cachedUserId ? "You" : err.posterId?.name || "User",
-    posterPicture: err.posterId?.profilePicture || null,
-    posterDepartment: err.posterId?.department || null,
-    posterLocation: err.posterId?.location || null,
-    posterRating: err.posterId?.rating || 0,
-    posterVerified: !!err.posterId?.isVerified,
-    posterId: err.posterId?._id || err.posterId,
-    createdAt: err.createdAt,
-    candidates: err.candidates || [],
-    hasApplied: Array.isArray(err.candidates)
-      ? err.candidates.some(c => (c._id || c) === cachedUserId)
-      : false,
-    isNew: false,
-  }), [cachedUserId]);
+  const mapBackendToFrontend = useCallback((err) => {
+    const uid = userIdRef.current;
+    const posterIdStr = err.posterId?._id || err.posterId;
+    return {
+      id: err._id,
+      title: err.title,
+      description: err.description,
+      category: err.category,
+      pickupLocation: err.pickupLocation,
+      dropoffLocation: err.dropoffLocation,
+      location: err.dropoffLocation,
+      fee: err.fee,
+      status: err.status,
+      trackingId: err.trackingId,
+      posterName: posterIdStr === uid ? "You" : err.posterId?.name || "User",
+      posterPicture: err.posterId?.profilePicture || null,
+      posterDepartment: err.posterId?.department || null,
+      posterLocation: err.posterId?.location || null,
+      posterRating: err.posterId?.rating || 0,
+      posterVerified: !!err.posterId?.isVerified,
+      posterId: posterIdStr,
+      createdAt: err.createdAt,
+      candidates: err.candidates || [],
+      hasApplied: Array.isArray(err.candidates)
+        ? err.candidates.some((c) => (c._id || c) === uid)
+        : false,
+      isNew: false,
+    };
+  }, []);
 
-  const fetchErrands = useCallback(async () => {
+  // Deduplicated merge: always keep local hasApplied if already true
+  const mergeErrands = useCallback((incoming) => {
+    setErrands((prev) => {
+      const prevMap = new Map(prev.map((e) => [e.id, e]));
+      const result = incoming.map((e) => {
+        const existing = prevMap.get(e.id);
+        return existing
+          ? { ...e, hasApplied: existing.hasApplied || e.hasApplied, isNew: existing.isNew }
+          : e;
+      });
+      return result;
+    });
+  }, []);
+
+  const fetchErrands = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const res = await api.get("/errands");
       const data = Array.isArray(res.data) ? res.data : [];
       const open = data.filter((e) => e.status === "open");
-      setErrands(open.map(mapBackendToFrontend));
+      const mapped = open.map(mapBackendToFrontend);
+      mergeErrands(mapped);
     } catch (err) {
       console.error("Failed to fetch errands for stream", err);
-      setErrands([]);
+      if (!silent) setErrands([]);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
-  }, [mapBackendToFrontend]);
+  }, [mapBackendToFrontend, mergeErrands]);
 
+  // Initial load
   useEffect(() => {
     fetchErrands();
   }, [fetchErrands]);
 
+  // 60-second polling fallback (in case socket misses events)
+  useEffect(() => {
+    pollingRef.current = setInterval(() => {
+      fetchErrands(true); // silent = no loading spinner
+    }, 60_000);
+    return () => clearInterval(pollingRef.current);
+  }, [fetchErrands]);
+
+  // Socket event listeners
   useEffect(() => {
     if (!socket) return;
 
-    socket.on("new_errand", (newErrand) => {
+    // New errand posted — add to top
+    const handleNewErrand = (newErrand) => {
       const mapped = { ...mapBackendToFrontend(newErrand), isNew: true };
-      if (mapped.status === "open") {
-        setErrands((prev) => [mapped, ...prev]);
-        showToast(`🆕 "${mapped.title}" just landed!`, "info");
-        setTimeout(() => {
-          setErrands((prev) =>
-            prev.map((e) => (e.id === mapped.id ? { ...e, isNew: false } : e))
-          );
-        }, 4000);
-      }
-    });
+      if (mapped.status !== "open") return;
 
-    socket.on("notification", () => {
-      fetchErrands();
-    });
+      setErrands((prev) => {
+        // Deduplicate: don't add if already exists
+        if (prev.some((e) => e.id === mapped.id)) return prev;
+        return [mapped, ...prev];
+      });
+      showToast(`🆕 "${mapped.title}" just landed!`, "info");
+
+      // Clear the "NEW" ribbon after 4s
+      setTimeout(() => {
+        setErrands((prev) =>
+          prev.map((e) => (e.id === mapped.id ? { ...e, isNew: false } : e))
+        );
+      }, 4000);
+    };
+
+    // Errand taken/cancelled — remove from stream instantly
+    const handleErrandRemoved = ({ errandId }) => {
+      setErrands((prev) => prev.filter((e) => e.id !== errandId));
+    };
+
+    // A candidate applied — update candidate count on the card
+    const handleErrandUpdated = (updatedErrand) => {
+      if (!updatedErrand) return;
+      const mapped = mapBackendToFrontend(updatedErrand);
+      if (mapped.status !== "open") {
+        // If no longer open, remove it
+        setErrands((prev) => prev.filter((e) => e.id !== mapped.id));
+        return;
+      }
+      setErrands((prev) =>
+        prev.map((e) =>
+          e.id === mapped.id
+            ? { ...mapped, isNew: e.isNew, hasApplied: e.hasApplied || mapped.hasApplied }
+            : e
+        )
+      );
+    };
+
+    socket.on("new_errand", handleNewErrand);
+    socket.on("errand_removed", handleErrandRemoved);
+    socket.on("errand_updated", handleErrandUpdated);
 
     return () => {
-      socket.off("new_errand");
-      socket.off("notification");
+      socket.off("new_errand", handleNewErrand);
+      socket.off("errand_removed", handleErrandRemoved);
+      socket.off("errand_updated", handleErrandUpdated);
     };
-  }, [socket, fetchErrands, mapBackendToFrontend]);
+  }, [socket, mapBackendToFrontend]);
 
   const handleApplyForErrand = async (id) => {
     setProcessing(true);
     try {
       await api.patch(`/errands/${id}/apply`);
       showToast("✅ Request sent! The sender will be notified and will select you if chosen.");
-      // Update local list to show applied state
-      setErrands((prev) => prev.map((e) => e.id === id ? { ...e, hasApplied: true } : e));
+      // Optimistic update — mark as applied immediately without refetch
+      setErrands((prev) =>
+        prev.map((e) => (e.id === id ? { ...e, hasApplied: true } : e))
+      );
     } catch (err) {
       showToast(err.response?.data?.message || "Could not send request.", "error");
     } finally {
@@ -207,16 +267,25 @@ const ErrandStream = () => {
     }
   };
 
+  const handleManualRefresh = () => {
+    setRefreshing(true);
+    fetchErrands();
+  };
+
   const filteredErrands = errands.filter((e) => {
+    const q = search.toLowerCase();
     const matchesSearch =
-      e.title.toLowerCase().includes(search.toLowerCase()) ||
-      e.description.toLowerCase().includes(search.toLowerCase()) ||
-      e.category.toLowerCase().includes(search.toLowerCase()) ||
-      (e.location || "").toLowerCase().includes(search.toLowerCase());
-      
+      !q ||
+      e.title.toLowerCase().includes(q) ||
+      (e.description || "").toLowerCase().includes(q) ||
+      e.category.toLowerCase().includes(q) ||
+      (e.pickupLocation || "").toLowerCase().includes(q) ||
+      (e.dropoffLocation || "").toLowerCase().includes(q) ||
+      (e.location || "").toLowerCase().includes(q);
+
     const matchesCategory =
       activeCategory === "All" || e.category.toLowerCase() === activeCategory.toLowerCase();
-      
+
     return matchesSearch && matchesCategory;
   });
 
@@ -237,7 +306,7 @@ const ErrandStream = () => {
           >
             <div className="loader" style={{ width: 44, height: 44 }} />
             <div style={{ fontWeight: 700, color: "#111827", fontSize: "0.8rem", letterSpacing: "0.15em", textTransform: "uppercase" }}>
-              Accepting Task...
+              Sending Request...
             </div>
           </motion.div>
         )}
@@ -254,20 +323,19 @@ const ErrandStream = () => {
             <div>
               <h1 className="stream-hero-title">Errand Stream</h1>
               <p className="stream-hero-sub">
-                {filteredErrands.length} open task
-                {filteredErrands.length !== 1 ? "s" : ""} on campus right now
+                {loading ? "Loading…" : `${filteredErrands.length} open task${filteredErrands.length !== 1 ? "s" : ""} on campus right now`}
               </p>
             </div>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <NotificationCenter />
             <button
-              onClick={() => { setLoading(true); fetchErrands(); }}
+              onClick={handleManualRefresh}
               className="stream-refresh-btn"
               title="Refresh feed"
               style={{ display: "flex", alignItems: "center", justifyContent: "center" }}
             >
-              <RefreshCw size={16} />
+              <RefreshCw size={16} style={{ animation: refreshing ? "spin 0.8s linear infinite" : "none" }} />
             </button>
           </div>
         </div>
@@ -282,6 +350,15 @@ const ErrandStream = () => {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
+          {search && (
+            <button
+              onClick={() => setSearch("")}
+              style={{ background: "none", border: "none", cursor: "pointer", color: "var(--gray-400)", padding: 0, display: "flex" }}
+              title="Clear search"
+            >
+              <X size={14} />
+            </button>
+          )}
         </div>
 
         {/* Category Filter Pills */}
@@ -343,14 +420,15 @@ const ErrandStream = () => {
             <AnimatePresence initial={false}>
               {filteredErrands.map((errand) => {
                 const catStyle = getCategoryStyle(errand.category);
-                const isOwner = errand.posterId === cachedUserId;
+                const isOwner = errand.posterId === userIdRef.current;
                 return (
                   <motion.div
                     key={errand.id}
+                    layout
                     initial={{ opacity: 0, y: -16 }}
                     animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.97 }}
-                    transition={{ type: "spring", stiffness: 460, damping: 28 }}
+                    exit={{ opacity: 0, scale: 0.97, height: 0, marginBottom: 0 }}
+                    transition={{ type: "spring", stiffness: 420, damping: 30 }}
                     className={`stream-card${errand.isNew ? " stream-card--new" : ""}`}
                   >
                     {errand.isNew && <div className="stream-card-new-ribbon">NEW</div>}
@@ -392,11 +470,6 @@ const ErrandStream = () => {
                               <Home size={11} /> {errand.posterLocation}
                             </span>
                           )}
-                          {errand.posterRating > 0 && (
-                            <span style={{ display: "flex", alignItems: "center", gap: 3, fontSize: "0.72rem", color: "#D97706", fontWeight: 700 }}>
-                              <Star size={10} fill="#D97706" color="#D97706" /> {errand.posterRating.toFixed(1)}
-                            </span>
-                          )}
                         </div>
                       </div>
                       {errand.trackingId && (
@@ -419,6 +492,14 @@ const ErrandStream = () => {
                             <Clock size={11} />
                             {timeAgo(errand.createdAt)}
                           </span>
+                          {Array.isArray(errand.candidates) && errand.candidates.length > 0 && (
+                            <>
+                              <span className="stream-meta-dot">·</span>
+                              <span className="stream-meta-item" style={{ color: "var(--amber-600)", fontWeight: 700 }}>
+                                {errand.candidates.length} request{errand.candidates.length !== 1 ? "s" : ""}
+                              </span>
+                            </>
+                          )}
                         </div>
                       </div>
                       <div className="stream-fee-badge">₦{errand.fee.toLocaleString()}</div>
@@ -453,8 +534,8 @@ const ErrandStream = () => {
                             color: errand.hasApplied ? "var(--gray-600)" : "#ffffff"
                           }}
                         >
-                          {errand.hasApplied ? "Requested" : "Request to Do"}
-                          <ArrowRight size={14} />
+                          {errand.hasApplied ? "Requested ✓" : "Request to Do"}
+                          {!errand.hasApplied && <ArrowRight size={14} />}
                         </button>
                       )}
 
@@ -579,12 +660,12 @@ const ErrandStream = () => {
                     <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 8 }}>
                       {acceptingErrand.pickupLocation && (
                         <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.8rem", color: "var(--gray-600)" }}>
-                          <span style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--green-500)" }} />
+                          <span style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--green-500)", flexShrink: 0 }} />
                           <span><strong>Pick Up:</strong> {acceptingErrand.pickupLocation}</span>
                         </div>
                       )}
                       <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.8rem", color: "var(--gray-600)" }}>
-                        <span style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--blue-500)" }} />
+                        <span style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--blue-500)", flexShrink: 0 }} />
                         <span><strong>Drop Off:</strong> {acceptingErrand.location || "Not specified"}</span>
                       </div>
                     </div>

@@ -3456,16 +3456,16 @@ input, select, textarea {
   bottom: 90px; /* above bottom nav */
   left: 50%;
   transform: translateX(-50%);
-  padding: 12px 24px;
-  border-radius: var(--radius-full);
+  padding: 12px 20px;
+  border-radius: 12px;
   font-weight: 700;
-  font-size: 0.9rem;
+  font-size: 0.88rem;
   z-index: 10000;
   box-shadow: var(--shadow-xl);
   color: var(--white);
   text-align: center;
-  width: max-content;
-  max-width: calc(100vw - 40px);
+  width: calc(100% - 32px);
+  max-width: 450px;
   white-space: normal;
   word-break: break-word;
   box-sizing: border-box;

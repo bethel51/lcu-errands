@@ -132,7 +132,7 @@ const History = () => {
     try {
       await api.delete(`/errands/${id}`);
       showToast("Errand cancelled. Funds refunded to your wallet.");
-      window.location.reload();
+      fetchHistory();
     } catch (err) {
       showToast(err.response?.data?.message || "Failed to cancel. It might have been accepted already.", "error");
     } finally {
@@ -160,7 +160,7 @@ const History = () => {
     try {
       await api.patch(`/errands/${id}/complete`);
       showToast("✅ Delivery confirmed! Payment released to messenger.");
-      window.location.reload();
+      fetchHistory();
     } catch (err) {
       showToast(err.response?.data?.message || "Failed to confirm delivery.", "error");
     } finally {
@@ -173,7 +173,7 @@ const History = () => {
     try {
       await api.patch(`/errands/${id}/request-completion`);
       showToast("Completion requested! Waiting for sender to confirm.");
-      window.location.reload();
+      fetchHistory();
     } catch (err) {
       showToast(err.response?.data?.message || "Failed to request completion.", "error");
     } finally {
@@ -186,7 +186,7 @@ const History = () => {
     try {
       await api.patch(`/errands/${id}/start`);
       showToast("🚀 Errand started! Go ahead and complete the task.");
-      window.location.reload();
+      fetchHistory();
     } catch (err) {
       showToast(err.response?.data?.message || "Failed to start errand.", "error");
     } finally {
@@ -228,7 +228,7 @@ const History = () => {
       setProofModalOpen(false);
       setProofText("");
       setProofImage("");
-      window.location.reload();
+      fetchHistory();
     } catch (err) {
       showToast("Failed to upload proof.", "error");
     } finally {
@@ -930,7 +930,7 @@ const History = () => {
                           setConfirmErrandId(null);
                           const msg = res.data?.message || "✅ Payment released! Messenger has been paid.";
                           showToast(msg);
-                          setTimeout(() => window.location.reload(), 1200);
+                          fetchHistory();
                         } catch (err) {
                           const msg = err.response?.data?.message || err.message || "Request failed. Please try again.";
                           showToast(`❌ ${msg}`, "error");
@@ -1004,7 +1004,7 @@ const History = () => {
             errandId={selectedErrandId}
             isOpen={isReviewModalOpen}
             onClose={() => setIsReviewModalOpen(false)}
-            onSuccess={() => window.location.reload()}
+            onSuccess={() => fetchHistory()}
           />
         )}
 

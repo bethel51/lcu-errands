@@ -4,16 +4,31 @@ import { motion, AnimatePresence } from "framer-motion";
 import api from "../api";
 import { useSocket } from "../context/SocketContext";
 
+// Module-level cache: shared across all mounts, survives re-renders
+// Avoids re-fetching on every tab switch / page navigation
+let notifCache = [];
+let lastFetchedAt = 0;
+const CACHE_TTL_MS = 30_000; // 30 seconds
+
 const NotificationCenter = () => {
   const { socket } = useSocket();
-  const [notifications, setNotifications] = useState([]);
+  const [notifications, setNotifications] = useState(notifCache);
   const [isOpen, setIsOpen] = useState(false);
   const panelRef = useRef(null);
 
-  const fetchNotifications = async () => {
+  const fetchNotifications = async (force = false) => {
+    const now = Date.now();
+    if (!force && now - lastFetchedAt < CACHE_TTL_MS && notifCache.length > 0) {
+      // Use cached data — no network call needed
+      setNotifications(notifCache);
+      return;
+    }
     try {
       const res = await api.get("/notifications");
-      setNotifications(Array.isArray(res.data) ? res.data : []);
+      const data = Array.isArray(res.data) ? res.data : [];
+      notifCache = data;
+      lastFetchedAt = Date.now();
+      setNotifications(data);
     } catch (err) {
       console.error("Failed to load notifications", err);
     }
@@ -27,8 +42,12 @@ const NotificationCenter = () => {
     if (!socket) return;
 
     const handleNewNotification = (data) => {
-      // Add new notification at the top
-      setNotifications((prev) => [data, ...prev]);
+      // Add new notification at the top and update cache
+      setNotifications((prev) => {
+        const updated = [data, ...prev];
+        notifCache = updated;
+        return updated;
+      });
     };
 
     socket.on("notification", handleNewNotification);
@@ -62,9 +81,11 @@ const NotificationCenter = () => {
   const handleMarkAsRead = async (id) => {
     try {
       await api.patch(`/notifications/${id}/read`);
-      setNotifications((prev) =>
-        prev.map((n) => (n._id === id ? { ...n, isRead: true } : n))
-      );
+      setNotifications((prev) => {
+        const updated = prev.map((n) => (n._id === id ? { ...n, isRead: true } : n));
+        notifCache = updated;
+        return updated;
+      });
     } catch (err) {
       console.error("Failed to mark as read", err);
     }
@@ -73,7 +94,11 @@ const NotificationCenter = () => {
   const handleMarkAllRead = async () => {
     try {
       await api.patch("/notifications/read-all");
-      setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+      setNotifications((prev) => {
+        const updated = prev.map((n) => ({ ...n, isRead: true }));
+        notifCache = updated;
+        return updated;
+      });
     } catch (err) {
       console.error("Failed to mark all as read", err);
     }

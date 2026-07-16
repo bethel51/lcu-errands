@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useContext, useEffect, useRef, useState } from "react";
 import { io } from "socket.io-client";
 
 const SocketContext = createContext(undefined);
@@ -16,27 +16,31 @@ export const SocketProvider = ({ children }) => {
   const [isAuth, setIsAuth] = useState(
     localStorage.getItem("isAuthenticated") === "true",
   );
+  // Track last auth value without triggering re-renders in the interval
+  const isAuthRef = useRef(isAuth);
+  useEffect(() => { isAuthRef.current = isAuth; }, [isAuth]);
 
   useEffect(() => {
-    // Listen for storage changes (for multi-tab sync or login/logout)
-    const handleStorageChange = () => {
-      setIsAuth(localStorage.getItem("isAuthenticated") === "true");
+    // Listen for cross-tab login/logout via storage events
+    const handleStorageChange = (e) => {
+      if (e.key === "isAuthenticated" || e.key === null) {
+        const auth = localStorage.getItem("isAuthenticated") === "true";
+        if (auth !== isAuthRef.current) setIsAuth(auth);
+      }
     };
     window.addEventListener("storage", handleStorageChange);
 
-    // Sync auth state locally within the tab for logout
+    // Poll only every 5s (instead of 1s) to catch same-tab logout
     const interval = setInterval(() => {
       const auth = localStorage.getItem("isAuthenticated") === "true";
-      if (auth !== isAuth) {
-        setIsAuth(auth);
-      }
-    }, 1000);
+      if (auth !== isAuthRef.current) setIsAuth(auth);
+    }, 5000);
 
     return () => {
       window.removeEventListener("storage", handleStorageChange);
       clearInterval(interval);
     };
-  }, [isAuth]);
+  }, []); // run once on mount only
 
   useEffect(() => {
     if (!isAuth) {
@@ -59,8 +63,9 @@ export const SocketProvider = ({ children }) => {
       ? import.meta.env.VITE_API_URL.replace("/api", "")
       : window.location.origin;
 
+    // websocket-first: skip the polling upgrade round-trip for faster connect
     const newSocket = io(backendUrl, {
-      transports: ["polling", "websocket"],
+      transports: ["websocket", "polling"],
       reconnectionAttempts: 5,
       reconnectionDelay: 2000,
       timeout: 10000,

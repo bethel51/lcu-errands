@@ -46,10 +46,14 @@ errandSchema.pre("save", function () {
   }
 });
 
-errandSchema.index({ status: 1 });
-errandSchema.index({ posterId: 1 });
-errandSchema.index({ erranderId: 1 });
+// Single-field indexes
 errandSchema.index({ category: 1 });
-errandSchema.index({ createdAt: -1 });
+// Compound indexes for most common query patterns
+errandSchema.index({ status: 1, createdAt: -1 });   // open errand feed
+errandSchema.index({ posterId: 1, status: 1 });      // sender history & active requests
+errandSchema.index({ erranderId: 1, status: 1 });    // messenger history & active errands
+errandSchema.index({ posterId: 1, createdAt: -1 });  // sender history sorted
+errandSchema.index({ erranderId: 1, createdAt: -1 }); // messenger history sorted
+errandSchema.index({ status: 1, messengerCompletedAt: 1 }); // auto-release cron query
 
 export const Errand = mongoose.model("Errand", errandSchema);

@@ -356,6 +356,9 @@ export const completeErrand = catchAsync(async (req, res) => {
 
 export const getUserHistory = catchAsync(async (req, res) => {
   const userId = req.user.id;
+  const { page = 1, limit = 50 } = req.query;
+  const skip = (Number(page) - 1) * Number(limit);
+
   const errands = await Errand.find({
     $or: [{ posterId: userId }, { erranderId: userId }],
     hiddenBy: { $ne: userId }, // exclude entries the user has hidden
@@ -364,6 +367,8 @@ export const getUserHistory = catchAsync(async (req, res) => {
     .populate("erranderId", "name profilePicture phoneNumber rating isVerified email department location")
     .populate("candidates", "name profilePicture rating location department isVerified")
     .sort({ createdAt: -1 })
+    .skip(skip)
+    .limit(Number(limit))
     .lean();
 
   res.json(errands);
@@ -738,9 +743,9 @@ export const selectMessenger = catchAsync(async (req, res) => {
     { new: true }
   );
 
-  // Capture user IP & Device info
+  // Fire digital footprint update in background — do NOT await so response returns immediately
   const acceptedContext = getRequestContext(req, errand.pickupLocation || "Campus");
-  await updateDigitalFootprint({
+  updateDigitalFootprint({
     errand,
     action: "ACCEPTED",
     req,
@@ -755,7 +760,7 @@ export const selectMessenger = catchAsync(async (req, res) => {
       "ipAddress.accepted": acceptedContext.ipAddress,
       "locationData.accepted": acceptedContext.locationData,
     },
-  });
+  }).catch((err) => console.error("[selectMessenger] Footprint update failed (non-fatal):", err.message));
 
   // Fire background email notification
   const triggerAcceptedNotification = async () => {
@@ -897,9 +902,9 @@ export const requestCompletion = catchAsync(async (req, res) => {
   errand.messengerCompletedAt = new Date();
   await errand.save();
 
-  // Capture user IP & Device info
+  // Fire digital footprint update in background — do NOT await so response returns immediately
   const completedContext = getRequestContext(req, errand.dropoffLocation || "Campus");
-  await updateDigitalFootprint({
+  updateDigitalFootprint({
     errand,
     action: "COMPLETED",
     req,
@@ -914,7 +919,7 @@ export const requestCompletion = catchAsync(async (req, res) => {
       "ipAddress.completed": completedContext.ipAddress,
       "locationData.completed": completedContext.locationData,
     },
-  });
+  }).catch((err) => console.error("[requestCompletion] Footprint update failed (non-fatal):", err.message));
 
   // Notify the poster
   const notificationData = {

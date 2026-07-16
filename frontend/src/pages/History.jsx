@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { MapPin, Clock, Package, Star, Shield, CheckCircle, Upload, Activity, X, Camera } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -112,14 +112,21 @@ const History = () => {
 
   useEffect(() => {
     if (!socket) return;
-    const handleNotification = (data) => {
-      fetchHistory();
+    // Debounce: wait 800ms after last notification before re-fetching
+    // Prevents multiple rapid socket events from causing multiple re-fetches
+    let debounceTimer = null;
+    const handleNotification = () => {
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        fetchHistory();
+      }, 800);
     };
     socket.on("notification", handleNotification);
     return () => {
       socket.off("notification", handleNotification);
+      clearTimeout(debounceTimer);
     };
-  }, [socket, user]);
+  }, [socket]);
 
   const handleCancelErrand = async (id) => {
     if (
@@ -156,41 +163,71 @@ const History = () => {
   };
 
   const handleCompleteTask = async (id) => {
-    setProcessing(true);
+    // Optimistic: instantly show confirmed_completed in sender's history
+    setHistoryItems((prev) =>
+      prev.map((item) =>
+        item.id === id ? { ...item, status: "confirmed_completed" } : item,
+      ),
+    );
     try {
       await api.patch(`/errands/${id}/complete`);
       showToast("✅ Delivery confirmed! Payment released to messenger.");
+      // Only re-fetch to sync wallet/full state after confirming
       fetchHistory();
     } catch (err) {
+      // Rollback on failure
+      setHistoryItems((prev) =>
+        prev.map((item) =>
+          item.id === id ? { ...item, status: "pending_sender_confirmation" } : item,
+        ),
+      );
       showToast(err.response?.data?.message || "Failed to confirm delivery.", "error");
-    } finally {
-      setProcessing(false);
     }
   };
 
   const handleRequestCompletion = async (id) => {
-    setProcessing(true);
+    // Optimistic: instantly reflect pending confirmation state
+    setHistoryItems((prev) =>
+      prev.map((item) =>
+        item.id === id
+          ? { ...item, status: "pending_sender_confirmation", completionRequested: true }
+          : item,
+      ),
+    );
     try {
       await api.patch(`/errands/${id}/request-completion`);
       showToast("Completion requested! Waiting for sender to confirm.");
-      fetchHistory();
     } catch (err) {
+      // Rollback on failure
+      setHistoryItems((prev) =>
+        prev.map((item) =>
+          item.id === id
+            ? { ...item, status: "in_progress", completionRequested: false }
+            : item,
+        ),
+      );
       showToast(err.response?.data?.message || "Failed to request completion.", "error");
-    } finally {
-      setProcessing(false);
     }
   };
 
   const handleStartErrand = async (id) => {
-    setProcessing(true);
+    // Optimistic: instantly reflect started state
+    setHistoryItems((prev) =>
+      prev.map((item) =>
+        item.id === id ? { ...item, status: "in_progress" } : item,
+      ),
+    );
     try {
       await api.patch(`/errands/${id}/start`);
       showToast("🚀 Errand started! Go ahead and complete the task.");
-      fetchHistory();
     } catch (err) {
+      // Rollback on failure
+      setHistoryItems((prev) =>
+        prev.map((item) =>
+          item.id === id ? { ...item, status: "assigned" } : item,
+        ),
+      );
       showToast(err.response?.data?.message || "Failed to start errand.", "error");
-    } finally {
-      setProcessing(false);
     }
   };
 

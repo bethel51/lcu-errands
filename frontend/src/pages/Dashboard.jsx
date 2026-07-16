@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Search,
@@ -91,6 +91,8 @@ const Dashboard = () => {
   const [toast, setToast] = useState(null);
   const [processing, setProcessing] = useState(false);
   const [acceptingErrand, setAcceptingErrand] = useState(null);
+  // Custom confirm modal state (replaces window.confirm for non-blocking UX)
+  const [confirmModal, setConfirmModal] = useState(null); // { errandId, errandTitle }
 
   const showToast = (message, type = "success") => {
     setToast({ message, type });
@@ -161,7 +163,7 @@ const Dashboard = () => {
     }
   };
 
-  const fetchWalletData = async () => {
+  const fetchWalletData = useCallback(async () => {
     try {
       const [profileRes, txsRes, withdrawalsRes] = await Promise.all([
         api.get("/users/profile"),
@@ -175,7 +177,21 @@ const Dashboard = () => {
     } catch (err) {
       console.error("Failed to refresh wallet data", err);
     }
-  };
+  }, []);
+
+  // Targeted refresh: only re-fetch active errands — does NOT reload the whole dashboard
+  const fetchActiveRequestsOnly = useCallback(async () => {
+    try {
+      const res = await api.get("/errands/history");
+      const data = Array.isArray(res.data) ? res.data : [];
+      const active = data.filter(
+        (e) => !["completed", "confirmed_completed", "cancelled"].includes(e.status),
+      );
+      setActiveRequests(active.map(mapBackendToFrontend));
+    } catch (err) {
+      console.error("fetchActiveRequestsOnly failed", err);
+    }
+  }, []);
 
   const loadDashboard = async () => {
     try {
@@ -243,18 +259,29 @@ const Dashboard = () => {
     socket.on("new_errand", (newErrand) => {
       setErrands((prev) => [mapBackendToFrontend(newErrand), ...prev]);
     });
+    socket.on("errand_removed", ({ errandId }) => {
+      setErrands((prev) => prev.filter((e) => e.id !== errandId));
+    });
     socket.on("notification", (data) => {
-      loadDashboard();
+      const type = data.type || "";
+      // Surgical targeted refresh — only reload the slice that changed
+      if (["wallet_credited", "payment_released", "errand_payment"].includes(type)) {
+        fetchWalletData();
+      } else if (["errand_requested", "errand_accepted", "errand_delivered", "errand_started"].includes(type)) {
+        fetchActiveRequestsOnly();
+      }
+      // Show notification toast
       showToast(
-        data.message,
-        data.type === "errand_requested" ? "info" : "success",
+        data.message || data.title || "New update",
+        type === "errand_requested" ? "info" : "success",
       );
     });
     return () => {
       socket.off("new_errand");
+      socket.off("errand_removed");
       socket.off("notification");
     };
-  }, [socket, user]);
+  }, [socket, fetchWalletData, fetchActiveRequestsOnly]);
 
   const handleWithdraw = async (e) => {
     e.preventDefault();
@@ -326,31 +353,56 @@ const Dashboard = () => {
   };
 
   const handleApplyForErrand = async (id) => {
-    setProcessing(true);
+    // Optimistic: instantly show "Requested" state — no blocking overlay
+    setErrands((prev) =>
+      prev.map((e) =>
+        e.id === id
+          ? { ...e, candidates: [...(e.candidates || []), { _id: cachedUserId }] }
+          : e,
+      ),
+    );
     try {
       await api.patch(`/errands/${id}/apply`);
       showToast("✅ Request sent! The sender will be notified.");
-      loadDashboard();
     } catch (err) {
+      // Rollback optimistic update on failure
+      setErrands((prev) =>
+        prev.map((e) =>
+          e.id === id
+            ? { ...e, candidates: (e.candidates || []).filter((c) => (c._id || c) !== cachedUserId) }
+            : e,
+        ),
+      );
       showToast(err.response?.data?.message || "Error sending request.", "error");
-    } finally {
-      setProcessing(false);
     }
   };
 
-  const handleCompleteTask = async (id) => {
-    if (!window.confirm("Are you sure you want to confirm delivery and release funds to the messenger? This cannot be undone.")) return;
-    setProcessing(true);
+  // Opens non-blocking custom confirm dialog (no window.confirm freeze)
+  const handleCompleteTask = (id, errandTitle) => {
+    setConfirmModal({ errandId: id, errandTitle: errandTitle || "this errand" });
+  };
+
+  // Called when user taps "Confirm" inside the custom modal
+  const handleConfirmDelivery = async () => {
+    const id = confirmModal.errandId;
+    setConfirmModal(null);
+    // Optimistic: instantly move errand out of pending state
+    setActiveRequests((prev) =>
+      prev.map((e) =>
+        e.id === id ? { ...e, status: "confirmed_completed" } : e,
+      ),
+    );
     try {
       const res = await api.patch(`/errands/${id}/complete`);
       const msg = res.data?.message || "✅ Delivery confirmed! Payment released to messenger.";
       showToast(msg);
-      loadDashboard();
+      // Refresh wallet since funds were released
+      fetchWalletData();
     } catch (err) {
+      // Rollback optimistic update on failure
+      fetchActiveRequestsOnly();
       const msg = err.response?.data?.message || err.message || "Failed to confirm delivery. Please try again.";
       showToast(`❌ ${msg}`, "error");
-    } finally {
-      setProcessing(false);
     }
   };
 
@@ -628,15 +680,21 @@ const Dashboard = () => {
                                 className="btn btn-primary btn-sm"
                                 style={{ padding: "6px 12px", fontSize: "0.75rem", borderRadius: 8, marginLeft: "auto" }}
                                 onClick={async () => {
+                                  // Optimistic: instantly hide candidates list & mark as assigned
+                                  setActiveRequests((prev) =>
+                                    prev.map((e) =>
+                                      e.id === errand.id
+                                        ? { ...e, status: "assigned", erranderId: candidate._id, candidates: [] }
+                                        : e,
+                                    ),
+                                  );
                                   try {
-                                    setProcessing(true);
                                     await api.post(`/errands/${errand.id}/select`, { messengerId: candidate._id });
                                     showToast("🎉 Messenger hired successfully!");
-                                    loadDashboard();
                                   } catch (err) {
+                                    // Rollback on failure
+                                    fetchActiveRequestsOnly();
                                     showToast(err.response?.data?.message || "Could not hire messenger.", "error");
-                                  } finally {
-                                    setProcessing(false);
                                   }
                                 }}
                               >
@@ -651,7 +709,7 @@ const Dashboard = () => {
                   <div style={{ display: "flex", gap: 8, alignItems: "center", flexShrink: 0 }}>
                     {userRole === "sender" && errand.posterId?.toString() === cachedUserId && ["pending_confirmation", "pending_sender_confirmation"].includes(errand.status) && (
                       <button
-                        onClick={() => handleCompleteTask(errand.id)}
+                        onClick={() => handleCompleteTask(errand.id, errand.title)}
                         className="btn btn-primary btn-sm"
                         style={{
                           background: "var(--blue-600)",
@@ -1318,6 +1376,79 @@ const Dashboard = () => {
         onReviewComplete={fetchErrands}
         role={userRole}
       />
+
+      {/* ── Custom Confirm Delivery Modal ── */}
+      <AnimatePresence>
+        {confirmModal && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setConfirmModal(null)}
+              style={{
+                position: "fixed", inset: 0,
+                background: "rgba(15,23,42,0.6)",
+                backdropFilter: "blur(6px)",
+                zIndex: 9993,
+              }}
+            />
+            <div style={{
+              position: "fixed", inset: 0, zIndex: 9994,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              padding: "0 16px",
+            }}>
+              <motion.div
+                initial={{ opacity: 0, scale: 0.92, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.92, y: 20 }}
+                transition={{ type: "spring", damping: 26, stiffness: 260 }}
+                style={{
+                  background: "var(--white)", borderRadius: 24,
+                  padding: 28, maxWidth: 420, width: "100%",
+                  boxShadow: "0 24px 60px rgba(0,0,0,0.18)",
+                }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div style={{ textAlign: "center", marginBottom: 20 }}>
+                  <div style={{
+                    width: 60, height: 60, borderRadius: "50%",
+                    background: "linear-gradient(135deg, #dbeafe, #eff6ff)",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    margin: "0 auto 16px", fontSize: "1.8rem",
+                  }}>✅</div>
+                  <h3 style={{ fontWeight: 900, fontSize: "1.15rem", color: "var(--gray-900)", margin: "0 0 8px" }}>
+                    Confirm Delivery
+                  </h3>
+                  <p style={{ fontSize: "0.88rem", color: "var(--gray-500)", lineHeight: 1.5, margin: 0 }}>
+                    Confirm delivery of <strong style={{ color: "var(--gray-800)" }}>"{confirmModal.errandTitle}"</strong>?
+                    Funds will be released instantly to the messenger's wallet.
+                  </p>
+                </div>
+                <div style={{ background: "var(--blue-50)", border: "1px solid var(--blue-100)", borderRadius: 12, padding: "10px 14px", fontSize: "0.8rem", color: "var(--blue-700)", fontWeight: 600, marginBottom: 20 }}>
+                  ⚠️ This action cannot be undone.
+                </div>
+                <div style={{ display: "flex", gap: 12 }}>
+                  <button
+                    onClick={() => setConfirmModal(null)}
+                    className="btn btn-outline"
+                    style={{ flex: 1, borderRadius: 14 }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleConfirmDelivery}
+                    className="btn btn-primary"
+                    style={{ flex: 1, borderRadius: 14, background: "var(--blue-600)" }}
+                  >
+                    Release Funds 💰
+                  </button>
+                </div>
+              </motion.div>
+            </div>
+          </>
+        )}
+      </AnimatePresence>
 
       {/* ── Toast ── */}
       <AnimatePresence>

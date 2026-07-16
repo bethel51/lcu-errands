@@ -138,12 +138,16 @@ const AppLayout = () => {
   );
 };
 
+import { ToastProvider } from "./context/ToastContext";
+
 function App() {
   return (
     <Router>
-      <SocketProvider>
-        <AppLayout />
-      </SocketProvider>
+      <ToastProvider>
+        <SocketProvider>
+          <AppLayout />
+        </SocketProvider>
+      </ToastProvider>
     </Router>
   );
 }

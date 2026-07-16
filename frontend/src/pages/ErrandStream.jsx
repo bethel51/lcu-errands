@@ -18,6 +18,7 @@ import { useNavigate } from "react-router-dom";
 import api from "../api";
 import { useSocket } from "../context/SocketContext";
 import NotificationCenter from "../components/NotificationCenter";
+import { useToast } from "../context/ToastContext";
 
 /* ─── Category colour map ──────────────────────────────────────────── */
 const CATEGORY_COLORS = {
@@ -88,6 +89,7 @@ const getUserId = () => {
 
 /* ─── Component ────────────────────────────────────────────────────── */
 const ErrandStream = () => {
+  const { showToast } = useToast();
   const navigate = useNavigate();
   const { socket } = useSocket();
 
@@ -97,7 +99,6 @@ const ErrandStream = () => {
   const [search, setSearch] = useState("");
   const [activeCategory, setActiveCategory] = useState("All");
   const [processing, setProcessing] = useState(false);
-  const [toast, setToast] = useState(null);
   const [acceptingErrand, setAcceptingErrand] = useState(null);
   const pollingRef = useRef(null);
 
@@ -113,11 +114,6 @@ const ErrandStream = () => {
     }
     return () => { document.body.style.overflow = ""; };
   }, [acceptingErrand]);
-
-  const showToast = (message, type = "success") => {
-    setToast({ message, type });
-    setTimeout(() => setToast(null), 3500);
-  };
 
   const mapBackendToFrontend = useCallback((err) => {
     const uid = userIdRef.current;
@@ -695,21 +691,6 @@ const ErrandStream = () => {
               </motion.div>
             </div>
           </>
-        )}
-      </AnimatePresence>
-
-      {/* ── Toast ── */}
-      <AnimatePresence>
-        {toast && (
-          <motion.div
-            key="toast"
-            initial={{ opacity: 0, y: 20, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 10, scale: 0.97 }}
-            className={`toast toast-${toast.type}`}
-          >
-            {toast.message}
-          </motion.div>
         )}
       </AnimatePresence>
     </div>

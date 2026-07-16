@@ -6,6 +6,7 @@ import api from "../api";
 import ReviewModal from "../components/ReviewModal";
 import { useSocket } from "../context/SocketContext";
 import NotificationCenter from "../components/NotificationCenter";
+import { useToast } from "../context/ToastContext";
 
 const History = () => {
   const navigate = useNavigate();
@@ -20,7 +21,7 @@ const History = () => {
   const [processing, setProcessing] = useState(false);
   const [selectedErrandId, setSelectedErrandId] = useState(null);
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
-  const [toast, setToast] = useState(null);
+  const { showToast } = useToast();
 
   // Status Filter Tabs & Modal Confirmation States
   const [activeStatusTab, setActiveStatusTab] = useState("All");
@@ -37,11 +38,6 @@ const History = () => {
   const [proofText, setProofText] = useState("");
   const [proofImage, setProofImage] = useState("");
   const [uploadingProof, setUploadingProof] = useState(false);
-
-  const showToast = (message, type = "success") => {
-    setToast({ message, type });
-    setTimeout(() => setToast(null), 4000);
-  };
 
   const fetchHistory = async () => {
     if (!user) {
@@ -1301,21 +1297,6 @@ const History = () => {
                 )}
               </motion.div>
             </>
-          )}
-        </AnimatePresence>
-
-        {/* Toast notifications */}
-        <AnimatePresence>
-          {toast && (
-            <motion.div
-              key="toast"
-              initial={{ opacity: 0, y: 20, scale: 0.95 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 10, scale: 0.97 }}
-              className={`toast toast-${toast.type}`}
-            >
-              {toast.message}
-            </motion.div>
           )}
         </AnimatePresence>
       </div>

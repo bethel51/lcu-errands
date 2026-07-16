@@ -20,6 +20,7 @@ import api from "../api";
 import ReviewModal from "../components/ReviewModal";
 import { useSocket } from "../context/SocketContext";
 import NotificationCenter from "../components/NotificationCenter";
+import { useToast } from "../context/ToastContext";
 
 const CATEGORIES = [
   "All",
@@ -69,6 +70,7 @@ const SenderAvatar = ({ picture, name }) => {
 };
 
 const Dashboard = () => {
+  const { showToast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
   const { socket } = useSocket();
@@ -88,16 +90,10 @@ const Dashboard = () => {
     category: "Meals",
   });
   const [user, setUser] = useState(null);
-  const [toast, setToast] = useState(null);
   const [processing, setProcessing] = useState(false);
   const [acceptingErrand, setAcceptingErrand] = useState(null);
   // Custom confirm modal state (replaces window.confirm for non-blocking UX)
   const [confirmModal, setConfirmModal] = useState(null); // { errandId, errandTitle }
-
-  const showToast = (message, type = "success") => {
-    setToast({ message, type });
-    setTimeout(() => setToast(null), 3000);
-  };
 
   const [activeChat, setActiveChat] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -1447,21 +1443,6 @@ const Dashboard = () => {
               </motion.div>
             </div>
           </>
-        )}
-      </AnimatePresence>
-
-      {/* ── Toast ── */}
-      <AnimatePresence>
-        {toast && (
-          <motion.div
-            key="toast"
-            initial={{ opacity: 0, y: 20, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 10, scale: 0.97 }}
-            className={`toast toast-${toast.type}`}
-          >
-            {toast.message}
-          </motion.div>
         )}
       </AnimatePresence>
     </div>

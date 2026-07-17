@@ -92,7 +92,7 @@ const Dashboard = () => {
   const [user, setUser] = useState(null);
   const [processing, setProcessing] = useState(false);
   const [acceptingErrand, setAcceptingErrand] = useState(null);
-  // Custom confirm modal state (replaces window.confirm for non-blocking UX)
+  // Delivery confirmation modal state
   const [confirmModal, setConfirmModal] = useState(null); // { errandId, errandTitle }
 
   const [activeChat, setActiveChat] = useState(null);
@@ -110,6 +110,8 @@ const Dashboard = () => {
     accountNumber: "",
     accountName: "",
   });
+  const [isTopUpModalOpen, setIsTopUpModalOpen] = useState(false);
+  const [topUpAmount, setTopUpAmount] = useState("1000");
 
   const userRole = localStorage.getItem("userRole") || "messenger";
   const cachedUserId = (() => {
@@ -239,7 +241,7 @@ const Dashboard = () => {
   }, []);
 
   useEffect(() => {
-    const isAnyModalOpen = isPostModalOpen || isWithdrawModalOpen || !!acceptingErrand || isReviewModalOpen;
+    const isAnyModalOpen = isPostModalOpen || isWithdrawModalOpen || isTopUpModalOpen || !!acceptingErrand || isReviewModalOpen;
     if (isAnyModalOpen) {
       document.body.style.overflow = "hidden";
     } else {
@@ -248,7 +250,7 @@ const Dashboard = () => {
     return () => {
       document.body.style.overflow = "";
     };
-  }, [isPostModalOpen, isWithdrawModalOpen, acceptingErrand, isReviewModalOpen]);
+  }, [isPostModalOpen, isWithdrawModalOpen, isTopUpModalOpen, acceptingErrand, isReviewModalOpen]);
 
   useEffect(() => {
     if (!socket) return;
@@ -317,6 +319,27 @@ const Dashboard = () => {
     }
   };
 
+  const handleTopUp = async () => {
+    setProcessing(true);
+    try {
+      const res = await api.post("/users/top-up", {
+        amount: topUpAmount,
+        email: user?.email,
+      });
+      if (res.data.checkout_url) {
+        window.location.href = res.data.checkout_url;
+        return;
+      }
+      await fetchWalletData();
+      setIsTopUpModalOpen(false);
+      showToast(`✅ ₦${Number(topUpAmount).toLocaleString()} added to your wallet!`);
+    } catch (err) {
+      showToast(err.response?.data?.message || "Payment failed. Please try again.", "error");
+    } finally {
+      setProcessing(false);
+    }
+  };
+
   const handlePostErrand = async (e) => {
     e.preventDefault();
     setProcessing(true);
@@ -373,12 +396,12 @@ const Dashboard = () => {
     }
   };
 
-  // Opens non-blocking custom confirm dialog (no window.confirm freeze)
+  // Opens delivery confirmation dialog
   const handleCompleteTask = (id, errandTitle) => {
     setConfirmModal({ errandId: id, errandTitle: errandTitle || "this errand" });
   };
 
-  // Called when user taps "Confirm" inside the custom modal
+  // Called when user confirms delivery
   const handleConfirmDelivery = async () => {
     const id = confirmModal.errandId;
     setConfirmModal(null);
@@ -392,10 +415,8 @@ const Dashboard = () => {
       const res = await api.patch(`/errands/${id}/complete`);
       const msg = res.data?.message || "✅ Delivery confirmed! Payment released to messenger.";
       showToast(msg);
-      // Refresh wallet since funds were released
       fetchWalletData();
     } catch (err) {
-      // Rollback optimistic update on failure
       fetchActiveRequestsOnly();
       const msg = err.response?.data?.message || err.message || "Failed to confirm delivery. Please try again.";
       showToast(`❌ ${msg}`, "error");
@@ -543,9 +564,22 @@ const Dashboard = () => {
                   Withdraw Funds
                 </button>
               ) : (
-                <div style={{ fontSize: "0.85rem", opacity: 0.9, lineHeight: 1.4 }}>
-                  💡 <strong>To Top Up:</strong> Go to the <strong>Profile</strong> tab to add funds to your wallet instantly using Paystack.
-                </div>
+                <button
+                  className="btn"
+                  onClick={() => setIsTopUpModalOpen(true)}
+                  style={{
+                    background: "#ffffff",
+                    color: "#1e4db7",
+                    fontWeight: 800,
+                    borderRadius: 12,
+                    padding: "10px 18px",
+                    border: "none",
+                    cursor: "pointer",
+                    boxShadow: "0 4px 12px rgba(255,255,255,0.15)",
+                  }}
+                >
+                  Top Up Funds
+                </button>
               )}
             </div>
           </div>
@@ -1124,7 +1158,7 @@ const Dashboard = () => {
           <div
             className="modal-overlay"
             onClick={() => setIsWithdrawModalOpen(false)}
-            style={{ display: "flex", alignItems: "center", justifyContent: "center" }}
+            style={{ display: "flex", alignItems: "flex-start", justifyContent: "center", overflowY: "auto", padding: "24px 16px" }}
           >
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 10 }}
@@ -1133,7 +1167,7 @@ const Dashboard = () => {
               transition={{ type: "spring", stiffness: 400, damping: 28 }}
               className="modal-container"
               onClick={(e) => e.stopPropagation()}
-              style={{ maxWidth: 440 }}
+              style={{ maxWidth: 440, position: "relative", transform: "none", top: "auto", left: "auto", margin: "auto", maxHeight: "none", overflowY: "visible" }}
             >
               <div
                 style={{
@@ -1246,7 +1280,7 @@ const Dashboard = () => {
           <div
             className="modal-overlay"
             onClick={() => setIsPostModalOpen(false)}
-            style={{ display: "flex", alignItems: "center", justifyContent: "center" }}
+            style={{ display: "flex", alignItems: "flex-start", justifyContent: "center", overflowY: "auto", padding: "24px 16px" }}
           >
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 10 }}
@@ -1255,7 +1289,7 @@ const Dashboard = () => {
               transition={{ type: "spring", stiffness: 400, damping: 28 }}
               className="modal-container"
               onClick={(e) => e.stopPropagation()}
-              style={{ maxWidth: 460 }}
+              style={{ maxWidth: 460, position: "relative", transform: "none", top: "auto", left: "auto", margin: "auto", maxHeight: "none", overflowY: "visible" }}
             >
               {/* Modal header */}
               <div
@@ -1365,6 +1399,129 @@ const Dashboard = () => {
         )}
       </AnimatePresence>
 
+      {/* ── Top Up Modal ── */}
+      <AnimatePresence>
+        {isTopUpModalOpen && (
+          <div
+            className="modal-overlay"
+            onClick={() => setIsTopUpModalOpen(false)}
+            style={{ display: "flex", alignItems: "flex-start", justifyContent: "center", overflowY: "auto", padding: "24px 16px" }}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              transition={{ type: "spring", stiffness: 400, damping: 28 }}
+              className="modal-container"
+              onClick={(e) => e.stopPropagation()}
+              style={{ maxWidth: 420, position: "relative", transform: "none", top: "auto", left: "auto", margin: "auto", maxHeight: "none", overflowY: "visible" }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  marginBottom: 20,
+                  paddingBottom: 16,
+                  borderBottom: "1px solid var(--gray-100)",
+                }}
+              >
+                <h3 style={{ fontWeight: 900, fontSize: "1.2rem", margin: 0, color: "var(--gray-900)" }}>
+                  Top Up Wallet
+                </h3>
+                <button
+                  className="btn-icon"
+                  onClick={() => setIsTopUpModalOpen(false)}
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                <div>
+                  <label className="form-label" style={{ fontWeight: 700, fontSize: "0.85rem", color: "var(--gray-700)" }}>
+                    Enter Amount (₦)
+                  </label>
+                  <input
+                    type="number"
+                    className="input-field"
+                    value={topUpAmount}
+                    onChange={(e) => setTopUpAmount(e.target.value)}
+                    placeholder="e.g. 2000"
+                    style={{ fontSize: "1.25rem", fontWeight: 700, height: 56 }}
+                  />
+                </div>
+
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(3, 1fr)",
+                    gap: 8,
+                    marginBottom: 4,
+                  }}
+                >
+                  {["500", "1000", "2000", "5000", "10000", "20000"].map((amt) => (
+                    <button
+                      key={amt}
+                      onClick={() => setTopUpAmount(amt)}
+                      style={{
+                        padding: "10px 8px",
+                        borderRadius: 12,
+                        border: `2px solid ${topUpAmount === amt ? "var(--blue-600)" : "var(--gray-200)"}`,
+                        background: topUpAmount === amt ? "var(--blue-50)" : "white",
+                        color: topUpAmount === amt ? "var(--blue-700)" : "var(--gray-600)",
+                        fontWeight: 700,
+                        cursor: "pointer",
+                        fontSize: "0.85rem",
+                        transition: "all 0.2s",
+                      }}
+                    >
+                      ₦{Number(amt).toLocaleString()}
+                    </button>
+                  ))}
+                </div>
+
+                <div
+                  style={{
+                    display: "flex",
+                    gap: 8,
+                    alignItems: "center",
+                    padding: "10px 14px",
+                    background: "var(--gray-50)",
+                    borderRadius: 12,
+                    fontSize: "0.78rem",
+                    color: "var(--gray-500)",
+                  }}
+                >
+                  <CheckCheck size={16} color="var(--green-500)" />
+                  <span>Secured by Paystack · Card · Transfer · USSD</span>
+                </div>
+              </div>
+
+              <div style={{ display: "flex", gap: 12, marginTop: 24 }}>
+                <button
+                  type="button"
+                  onClick={() => setIsTopUpModalOpen(false)}
+                  className="btn btn-outline"
+                  style={{ flex: 1, borderRadius: 12 }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleTopUp}
+                  className="btn btn-primary"
+                  disabled={processing || !topUpAmount || Number(topUpAmount) < 100}
+                  style={{ flex: 1, borderRadius: 12 }}
+                >
+                  {processing ? "Redirecting..." : `Deposit ₦${Number(topUpAmount || 0).toLocaleString()}`}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
       <ReviewModal
         isOpen={isReviewModalOpen}
         onClose={() => setIsReviewModalOpen(false)}
@@ -1373,7 +1530,7 @@ const Dashboard = () => {
         role={userRole}
       />
 
-      {/* ── Custom Confirm Delivery Modal ── */}
+      {/* ── Delivery Confirmation Modal ── */}
       <AnimatePresence>
         {confirmModal && (
           <>
@@ -1384,60 +1541,82 @@ const Dashboard = () => {
               onClick={() => setConfirmModal(null)}
               style={{
                 position: "fixed", inset: 0,
-                background: "rgba(15,23,42,0.6)",
-                backdropFilter: "blur(6px)",
+                background: "rgba(8,12,28,0.7)",
+                backdropFilter: "blur(8px)",
                 zIndex: 9993,
               }}
             />
             <div style={{
               position: "fixed", inset: 0, zIndex: 9994,
               display: "flex", alignItems: "center", justifyContent: "center",
-              padding: "0 16px",
+              padding: "16px",
             }}>
               <motion.div
-                initial={{ opacity: 0, scale: 0.92, y: 20 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.92, y: 20 }}
-                transition={{ type: "spring", damping: 26, stiffness: 260 }}
+                initial={{ opacity: 0, y: 24, scale: 0.96 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 16, scale: 0.96 }}
+                transition={{ type: "spring", damping: 24, stiffness: 300 }}
                 style={{
-                  background: "var(--white)", borderRadius: 24,
-                  padding: 28, maxWidth: 420, width: "100%",
-                  boxShadow: "0 24px 60px rgba(0,0,0,0.18)",
+                  background: "#ffffff",
+                  borderRadius: 24,
+                  padding: "32px 28px 28px",
+                  maxWidth: 380, width: "100%",
+                  boxShadow: "0 28px 70px rgba(0,0,0,0.22)",
                 }}
                 onClick={(e) => e.stopPropagation()}
               >
-                <div style={{ textAlign: "center", marginBottom: 20 }}>
-                  <div style={{
-                    width: 60, height: 60, borderRadius: "50%",
-                    background: "linear-gradient(135deg, #dbeafe, #eff6ff)",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    margin: "0 auto 16px", fontSize: "1.8rem",
-                  }}>✅</div>
-                  <h3 style={{ fontWeight: 900, fontSize: "1.15rem", color: "var(--gray-900)", margin: "0 0 8px" }}>
-                    Confirm Delivery
-                  </h3>
-                  <p style={{ fontSize: "0.88rem", color: "var(--gray-500)", lineHeight: 1.5, margin: 0 }}>
-                    Confirm delivery of <strong style={{ color: "var(--gray-800)" }}>"{confirmModal.errandTitle}"</strong>?
-                    Funds will be released instantly to the messenger's wallet.
-                  </p>
+                {/* Icon */}
+                <div style={{
+                  width: 64, height: 64, borderRadius: "50%",
+                  background: "linear-gradient(135deg, #22c55e, #16a34a)",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  margin: "0 auto 20px",
+                  boxShadow: "0 8px 24px rgba(34,197,94,0.35)",
+                  fontSize: "1.9rem",
+                }}>✓</div>
+
+                {/* Text */}
+                <h3 style={{ fontWeight: 900, fontSize: "1.15rem", color: "#0f172a", textAlign: "center", margin: "0 0 8px" }}>
+                  Confirm Delivery
+                </h3>
+                <p style={{ fontSize: "0.85rem", color: "#64748b", textAlign: "center", lineHeight: 1.55, margin: "0 0 20px" }}>
+                  Confirming that <strong style={{ color: "#0f172a" }}>"{confirmModal.errandTitle}"</strong> has been delivered will instantly release payment to the messenger.
+                </p>
+
+                {/* Warning chip */}
+                <div style={{
+                  background: "#fefce8", border: "1px solid #fde68a",
+                  borderRadius: 12, padding: "10px 14px",
+                  fontSize: "0.78rem", color: "#92400e", fontWeight: 600,
+                  textAlign: "center", marginBottom: 24,
+                }}>
+                  ⚠️ This cannot be undone once confirmed
                 </div>
-                <div style={{ background: "var(--blue-50)", border: "1px solid var(--blue-100)", borderRadius: 12, padding: "10px 14px", fontSize: "0.8rem", color: "var(--blue-700)", fontWeight: 600, marginBottom: 20 }}>
-                  ⚠️ This action cannot be undone.
-                </div>
+
+                {/* Buttons */}
                 <div style={{ display: "flex", gap: 12 }}>
                   <button
                     onClick={() => setConfirmModal(null)}
-                    className="btn btn-outline"
-                    style={{ flex: 1, borderRadius: 14 }}
+                    style={{
+                      flex: 1, padding: "13px 0", borderRadius: 14,
+                      border: "1.5px solid #e2e8f0", background: "#f8fafc",
+                      color: "#475569", fontWeight: 700, fontSize: "0.9rem", cursor: "pointer",
+                    }}
                   >
                     Cancel
                   </button>
                   <button
                     onClick={handleConfirmDelivery}
-                    className="btn btn-primary"
-                    style={{ flex: 1, borderRadius: 14, background: "var(--blue-600)" }}
+                    style={{
+                      flex: 1, padding: "13px 0", borderRadius: 14,
+                      border: "none",
+                      background: "linear-gradient(135deg, #16a34a, #22c55e)",
+                      color: "#ffffff", fontWeight: 800, fontSize: "0.9rem",
+                      cursor: "pointer",
+                      boxShadow: "0 6px 20px rgba(34,197,94,0.35)",
+                    }}
                   >
-                    Release Funds 💰
+                    Release Funds 💸
                   </button>
                 </div>
               </motion.div>

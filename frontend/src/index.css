@@ -645,35 +645,34 @@ ul { list-style: none; }
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
   z-index: 1050;
+  overflow-y: auto;
 }
 
 .modal-container {
-  position: fixed;
-  top: 50%;
-  left: 50%;
+  position: relative;
+  top: auto;
+  left: auto;
+  transform: none;
   width: 90%;
   max-width: 500px;
-  max-height: 90vh;
-  overflow-y: auto;
+  max-height: none;
+  overflow-y: visible;
   background: var(--white);
   border-radius: var(--radius-xl);
   padding: 32px;
   z-index: 1100;
   box-shadow: var(--shadow-xl);
-  transform: translate(-50%, -50%);
+  margin: auto;
 }
 
 @media (max-width: 768px) {
   .modal-container {
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%) !important;
     width: 92%;
     max-width: 440px;
-    max-height: 85vh;
+    max-height: none;
     border-radius: var(--radius-lg);
     padding: 20px;
-    overflow-y: auto;
+    overflow-y: visible;
   }
 }
 
@@ -1711,20 +1710,19 @@ ul { list-style: none; }
   /* Body bottom padding for bottom nav */
   body { padding-bottom: 80px; }
 
-  /* Modal: full-screen sheet on mobile */
+  /* Modal: scrollable sheet on mobile */
   .modal-container {
-    position: fixed !important;
-    top: 0 !important;
-    left: 0 !important;
-    width: 100% !important;
-    height: 100% !important;
-    max-width: 100% !important;
-    max-height: 100% !important;
-    border-radius: 0 !important;
+    position: relative !important;
+    top: auto !important;
+    left: auto !important;
     transform: none !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    max-height: none !important;
+    border-radius: var(--radius-lg) !important;
     padding: 20px 16px !important;
-    padding-top: 56px !important;
-    overflow-y: auto;
+    overflow-y: visible !important;
+    margin: auto !important;
   }
 
   /* Profile dropdown: keep it right-aligned but clamp width */
@@ -3499,7 +3497,7 @@ input, select, textarea {
   z-index: 9993;
   padding: 24px 16px;
   pointer-events: none;
-  overflow-y: auto; /* Enable outer scroll if modal exceeds height */
+  overflow-y: auto;
   box-sizing: border-box;
 }
 
@@ -3517,12 +3515,14 @@ input, select, textarea {
   background: var(--white);
   border-radius: 24px;
   box-shadow: 0 20px 40px rgba(0,0,0,0.15);
-  overflow: hidden;
   padding: 24px 20px;
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
-  margin: auto; /* Centers modal in scrollable viewport */
+  margin: auto;
+  /* Allow inner scroll when content is tall */
+  max-height: 88vh;
+  overflow-y: auto;
 }
 
 @media (max-width: 480px) {

@@ -10,7 +10,7 @@ const ReviewModal = ({
   onSuccess,
   onReviewComplete,
 }) => {
-  const [rating, setRating] = useState(4);
+  const [rating, setRating] = useState(5);
   const [hoverRating, setHoverRating] = useState(0);
   const [comment, setComment] = useState("");
   const [loading, setLoading] = useState(false);
@@ -36,21 +36,19 @@ const ReviewModal = ({
   return (
     <AnimatePresence>
       {isOpen && (
-        <>
+        <div
+          className="modal-overlay"
+          onClick={onClose}
+          style={{ display: "flex", alignItems: "flex-start", justifyContent: "center", overflowY: "auto", padding: "24px 16px", zIndex: 9995 }}
+        >
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="modal-overlay"
-            onClick={onClose}
-          />
-
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9, x: "-50%", y: "-50%" }}
-            animate={{ opacity: 1, scale: 1, x: "-50%", y: "-50%" }}
-            exit={{ opacity: 0, scale: 0.9, x: "-50%", y: "-50%" }}
+            initial={{ opacity: 0, scale: 0.95, y: 10 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 10 }}
+            transition={{ type: "spring", stiffness: 400, damping: 28 }}
             className="modal-container"
-            style={{ maxWidth: 450 }}
+            onClick={(e) => e.stopPropagation()}
+            style={{ maxWidth: 450, position: "relative", transform: "none", top: "auto", left: "auto", margin: "auto", maxHeight: "none", overflowY: "visible", zIndex: 9996 }}
           >
             <div
               style={{
@@ -113,7 +111,7 @@ const ReviewModal = ({
                 <div
                   style={{ display: "flex", justifyContent: "center", gap: 12 }}
                 >
-                  {[1, 2, 3, 4].map((star) => (
+                  {[1, 2, 3, 4, 5].map((star) => (
                     <button
                       key={star}
                       type="button"
@@ -173,7 +171,7 @@ const ReviewModal = ({
               </button>
             </form>
           </motion.div>
-        </>
+        </div>
       )}
     </AnimatePresence>
   );

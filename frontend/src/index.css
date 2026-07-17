@@ -645,7 +645,13 @@ ul { list-style: none; }
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
   z-index: 1050;
-  overflow-y: auto;
+  display: flex !important;
+  align-items: flex-start !important;
+  justify-content: center !important;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+  padding: 24px 16px !important;
+  box-sizing: border-box !important;
 }
 
 .modal-container {

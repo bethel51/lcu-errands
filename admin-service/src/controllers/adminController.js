@@ -146,34 +146,40 @@ export const getErrandIntel = catchAsync(async (req, res) => {
 
   let footprint = await DigitalFootprint.findOne({ errandId }).lean();
   if (!footprint) {
-    footprint = await DigitalFootprint.create({
-      errandId: errand._id,
-      senderId: errand.posterId?._id || errand.posterId,
-      messengerId: errand.erranderId?._id || errand.erranderId,
-      timePosted: errand.createdAt || new Date(),
-      timeAccepted: ["assigned", "accepted", "in_progress", "pending_confirmation", "pending_sender_confirmation", "completed", "confirmed_completed"].includes(errand.status)
-        ? errand.acceptedAt || errand.updatedAt || errand.createdAt
-        : undefined,
-      timeCompleted: ["pending_confirmation", "pending_sender_confirmation", "completed", "confirmed_completed"].includes(errand.status)
-        ? errand.messengerCompletedAt || errand.updatedAt || errand.createdAt
-        : undefined,
-      timeConfirmed: ["completed", "confirmed_completed"].includes(errand.status) ? errand.senderConfirmedAt || errand.updatedAt || errand.createdAt : undefined,
-      locationData: {
-        posted: errand.dropoffLocation || "Campus",
-        accepted: errand.pickupLocation || "Campus",
-        completed: errand.dropoffLocation || "Campus",
-        confirmed: errand.dropoffLocation || "Campus",
-      },
-      status: ["completed", "confirmed_completed"].includes(errand.status) ? "released" : "held",
-      auditTrail: [
-        {
-          action: "POSTED",
-          timestamp: errand.createdAt || new Date(),
-          userId: errand.posterId?._id || errand.posterId,
-          details: "Digital footprint backfilled from the errand record for admin review.",
+    try {
+      const newDoc = await DigitalFootprint.create({
+        errandId: errand._id,
+        senderId: errand.posterId?._id || errand.posterId,
+        messengerId: errand.erranderId?._id || errand.erranderId,
+        timePosted: errand.createdAt || new Date(),
+        timeAccepted: ["assigned", "accepted", "in_progress", "pending_confirmation", "pending_sender_confirmation", "completed", "confirmed_completed"].includes(errand.status)
+          ? errand.acceptedAt || errand.updatedAt || errand.createdAt
+          : undefined,
+        timeCompleted: ["pending_confirmation", "pending_sender_confirmation", "completed", "confirmed_completed"].includes(errand.status)
+          ? errand.messengerCompletedAt || errand.updatedAt || errand.createdAt
+          : undefined,
+        timeConfirmed: ["completed", "confirmed_completed"].includes(errand.status) ? errand.senderConfirmedAt || errand.updatedAt || errand.createdAt : undefined,
+        locationData: {
+          posted: errand.dropoffLocation || "Campus",
+          accepted: errand.pickupLocation || "Campus",
+          completed: errand.dropoffLocation || "Campus",
+          confirmed: errand.dropoffLocation || "Campus",
         },
-      ],
-    }).then((doc) => doc.toObject());
+        status: ["completed", "confirmed_completed"].includes(errand.status) ? "released" : "held",
+        auditTrail: [
+          {
+            action: "POSTED",
+            timestamp: errand.createdAt || new Date(),
+            userId: errand.posterId?._id || errand.posterId,
+            details: "Digital footprint backfilled from the errand record for admin review.",
+          },
+        ],
+      });
+      footprint = newDoc ? newDoc.toObject() : null;
+    } catch (createErr) {
+      console.error("[getErrandIntel] Failed to backfill footprint:", createErr.message);
+      footprint = null;
+    }
   }
 
   res.json({ errand, messages, footprint });

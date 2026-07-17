@@ -1060,7 +1060,7 @@ const History = () => {
                 style={{
                   position: "fixed", bottom: 0, left: 0, right: 0,
                   background: "var(--white)", borderTopLeftRadius: 28, borderTopRightRadius: 28,
-                  padding: "24px 20px 40px", zIndex: 9993, maxOpacity: "80vh", boxShadow: "0 -8px 24px rgba(0,0,0,0.12)"
+                  padding: "24px 20px 40px", zIndex: 9993, maxHeight: "85vh", overflowY: "auto", boxShadow: "0 -8px 24px rgba(0,0,0,0.12)"
                 }}
               >
                 <div style={{ width: 44, height: 5, background: "var(--gray-200)", borderRadius: 10, margin: "0 auto 16px" }} />

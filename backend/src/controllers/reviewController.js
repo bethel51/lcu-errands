@@ -29,8 +29,8 @@ export const createReview = catchAsync(async (req, res) => {
     return;
   }
 
-  if (rating < 1 || rating > 4) {
-    res.status(400).json({ message: "Rating must be between 1 and 4" });
+  if (rating < 1 || rating > 5) {
+    res.status(400).json({ message: "Rating must be between 1 and 5" });
     return;
   }
 

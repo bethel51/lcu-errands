@@ -18,6 +18,7 @@ import {
   Wallet,
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { useBodyScrollLock } from "../hooks/useBodyScrollLock";
 import api from "../api";
 import NotificationCenter from "../components/NotificationCenter";
 
@@ -63,17 +64,8 @@ const Profile = () => {
     fetchMyReviews();
   }, []);
 
-  useEffect(() => {
-    const isAnyModalOpen = isTopUpModalOpen || isWithdrawModalOpen || isBoostModalOpen;
-    if (isAnyModalOpen) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "";
-    }
-    return () => {
-      document.body.style.overflow = "";
-    };
-  }, [isTopUpModalOpen, isWithdrawModalOpen, isBoostModalOpen]);
+  const isAnyModalOpen = isTopUpModalOpen || isWithdrawModalOpen || isBoostModalOpen;
+  useBodyScrollLock(isAnyModalOpen);
 
   async function fetchProfile() {
     try {

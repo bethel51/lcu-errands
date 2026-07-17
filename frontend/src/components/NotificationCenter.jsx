@@ -3,6 +3,7 @@ import { Bell, X, CheckCheck, Trash2, ArrowRight } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import api from "../api";
 import { useSocket } from "../context/SocketContext";
+import { useBodyScrollLock } from "../hooks/useBodyScrollLock";
 
 // Module-level cache: shared across all mounts, survives re-renders
 // Avoids re-fetching on every tab switch / page navigation
@@ -57,6 +58,8 @@ const NotificationCenter = () => {
   }, [socket]);
 
   // Click outside to close drawer
+  useBodyScrollLock(isOpen);
+
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (panelRef.current && !panelRef.current.contains(e.target) && !e.target.closest(".notif-bell-btn")) {
@@ -64,14 +67,11 @@ const NotificationCenter = () => {
       }
     };
     if (isOpen) {
-      document.body.style.overflow = "hidden";
       document.addEventListener("mousedown", handleClickOutside);
     } else {
-      document.body.style.overflow = "";
       document.removeEventListener("mousedown", handleClickOutside);
     }
     return () => {
-      document.body.style.overflow = "";
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [isOpen]);

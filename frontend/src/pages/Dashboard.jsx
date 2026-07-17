@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { useBodyScrollLock } from "../hooks/useBodyScrollLock";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Search,
@@ -240,17 +241,8 @@ const Dashboard = () => {
     loadDashboard();
   }, []);
 
-  useEffect(() => {
-    const isAnyModalOpen = isPostModalOpen || isWithdrawModalOpen || isTopUpModalOpen || !!acceptingErrand || isReviewModalOpen;
-    if (isAnyModalOpen) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "";
-    }
-    return () => {
-      document.body.style.overflow = "";
-    };
-  }, [isPostModalOpen, isWithdrawModalOpen, isTopUpModalOpen, acceptingErrand, isReviewModalOpen]);
+  const isAnyModalOpen = isPostModalOpen || isWithdrawModalOpen || isTopUpModalOpen || !!acceptingErrand || isReviewModalOpen || !!confirmModal;
+  useBodyScrollLock(isAnyModalOpen);
 
   useEffect(() => {
     if (!socket) return;

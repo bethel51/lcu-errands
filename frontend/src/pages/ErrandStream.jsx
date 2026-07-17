@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { useBodyScrollLock } from "../hooks/useBodyScrollLock";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Search,
@@ -106,14 +107,7 @@ const ErrandStream = () => {
   const userIdRef = useRef(getUserId());
   const userRole = localStorage.getItem("userRole") || "messenger";
 
-  useEffect(() => {
-    if (acceptingErrand) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "";
-    }
-    return () => { document.body.style.overflow = ""; };
-  }, [acceptingErrand]);
+  useBodyScrollLock(!!acceptingErrand);
 
   const mapBackendToFrontend = useCallback((err) => {
     const uid = userIdRef.current;

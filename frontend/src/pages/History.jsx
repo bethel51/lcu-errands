@@ -7,6 +7,7 @@ import ReviewModal from "../components/ReviewModal";
 import { useSocket } from "../context/SocketContext";
 import NotificationCenter from "../components/NotificationCenter";
 import { useToast } from "../context/ToastContext";
+import { useBodyScrollLock } from "../hooks/useBodyScrollLock";
 
 const History = () => {
   const navigate = useNavigate();
@@ -94,17 +95,8 @@ const History = () => {
     fetchHistory();
   }, [user?.id, user?._id, filterType]);
 
-  useEffect(() => {
-    const isAnyModalOpen = confirmModalOpen || intelModalOpen || proofModalOpen || isReviewModalOpen;
-    if (isAnyModalOpen) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "";
-    }
-    return () => {
-      document.body.style.overflow = "";
-    };
-  }, [confirmModalOpen, intelModalOpen, proofModalOpen, isReviewModalOpen]);
+  const isAnyModalOpen = confirmModalOpen || intelModalOpen || proofModalOpen || isReviewModalOpen;
+  useBodyScrollLock(isAnyModalOpen);
 
   useEffect(() => {
     if (!socket) return;

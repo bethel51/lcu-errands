@@ -1014,13 +1014,26 @@ const Dashboard = () => {
                 zIndex: 9992,
               }}
             />
-            <div className="errand-accept-modal-wrapper">
+            <div className="errand-accept-modal-wrapper" style={{ display: "flex", alignItems: "flex-end", justifyContent: "center", position: "fixed", inset: 0, zIndex: 9993, padding: "0 0 env(safe-area-inset-bottom, 0px) 0" }}>
               <motion.div
                 initial={{ opacity: 0, scale: 0.95, y: 20 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95, y: 20 }}
                 transition={{ type: "spring", damping: 25, stiffness: 220 }}
                 className="errand-accept-modal"
+                style={{
+                  maxHeight: "85vh",
+                  overflowY: "auto",
+                  WebkitOverflowScrolling: "touch",
+                  width: "100%",
+                  maxWidth: 520,
+                  background: "#fff",
+                  borderRadius: "28px 28px 0 0",
+                  padding: "24px 20px 32px",
+                  display: "flex",
+                  flexDirection: "column",
+                  boxShadow: "0 -8px 40px rgba(0,0,0,0.25)"
+                }}
               >
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, borderBottom: "1px solid var(--gray-100)", paddingBottom: 12 }}>
                   <h3 style={{ fontWeight: 900, fontSize: "1.2rem", margin: 0, color: "var(--gray-900)" }}>Request to Do Errand</h3>
@@ -1159,7 +1172,19 @@ const Dashboard = () => {
               transition={{ type: "spring", stiffness: 400, damping: 28 }}
               className="modal-container"
               onClick={(e) => e.stopPropagation()}
-              style={{ maxWidth: 440, position: "relative", transform: "none", top: "auto", left: "auto", margin: "auto", maxHeight: "none", overflowY: "visible" }}
+              style={{
+                maxWidth: 440,
+                width: "100%",
+                position: "relative",
+                transform: "none",
+                top: "auto",
+                left: "auto",
+                margin: "auto",
+                maxHeight: "85vh",
+                overflowY: "auto",
+                WebkitOverflowScrolling: "touch",
+                padding: "24px 20px"
+              }}
             >
               <div
                 style={{
@@ -1281,7 +1306,19 @@ const Dashboard = () => {
               transition={{ type: "spring", stiffness: 400, damping: 28 }}
               className="modal-container"
               onClick={(e) => e.stopPropagation()}
-              style={{ maxWidth: 460, position: "relative", transform: "none", top: "auto", left: "auto", margin: "auto", maxHeight: "none", overflowY: "visible" }}
+              style={{
+                maxWidth: 460,
+                width: "100%",
+                position: "relative",
+                transform: "none",
+                top: "auto",
+                left: "auto",
+                margin: "auto",
+                maxHeight: "85vh",
+                overflowY: "auto",
+                WebkitOverflowScrolling: "touch",
+                padding: "24px 20px"
+              }}
             >
               {/* Modal header */}
               <div
@@ -1406,7 +1443,19 @@ const Dashboard = () => {
               transition={{ type: "spring", stiffness: 400, damping: 28 }}
               className="modal-container"
               onClick={(e) => e.stopPropagation()}
-              style={{ maxWidth: 420, position: "relative", transform: "none", top: "auto", left: "auto", margin: "auto", maxHeight: "none", overflowY: "visible" }}
+              style={{
+                maxWidth: 420,
+                width: "100%",
+                position: "relative",
+                transform: "none",
+                top: "auto",
+                left: "auto",
+                margin: "auto",
+                maxHeight: "85vh",
+                overflowY: "auto",
+                WebkitOverflowScrolling: "touch",
+                padding: "24px 20px"
+              }}
             >
               <div
                 style={{
@@ -1551,8 +1600,11 @@ const Dashboard = () => {
                 style={{
                   background: "#ffffff",
                   borderRadius: 24,
-                  padding: "32px 28px 28px",
+                  padding: "28px 24px 24px",
                   maxWidth: 380, width: "100%",
+                  maxHeight: "85vh",
+                  overflowY: "auto",
+                  WebkitOverflowScrolling: "touch",
                   boxShadow: "0 28px 70px rgba(0,0,0,0.22)",
                 }}
                 onClick={(e) => e.stopPropagation()}

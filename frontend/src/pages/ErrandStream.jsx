@@ -560,13 +560,26 @@ const ErrandStream = () => {
                 zIndex: 9992,
               }}
             />
-            <div className="errand-accept-modal-wrapper">
+            <div className="errand-accept-modal-wrapper" style={{ display: "flex", alignItems: "flex-end", justifyContent: "center", position: "fixed", inset: 0, zIndex: 9993, padding: "0 0 env(safe-area-inset-bottom, 0px) 0" }}>
               <motion.div
                 initial={{ opacity: 0, scale: 0.95, y: 20 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95, y: 20 }}
                 transition={{ type: "spring", damping: 25, stiffness: 220 }}
                 className="errand-accept-modal"
+                style={{
+                  maxHeight: "85vh",
+                  overflowY: "auto",
+                  WebkitOverflowScrolling: "touch",
+                  width: "100%",
+                  maxWidth: 520,
+                  background: "#fff",
+                  borderRadius: "28px 28px 0 0",
+                  padding: "24px 20px 32px",
+                  display: "flex",
+                  flexDirection: "column",
+                  boxShadow: "0 -8px 40px rgba(0,0,0,0.25)"
+                }}
               >
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, borderBottom: "1px solid var(--gray-100)", paddingBottom: 12 }}>
                   <h3 style={{ fontWeight: 900, fontSize: "1.2rem", margin: 0, color: "var(--gray-900)" }}>Request to Do Errand</h3>

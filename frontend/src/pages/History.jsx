@@ -612,25 +612,6 @@ const History = () => {
                     {/* ── SENDER ACTIONS ── */}
                     {filterType === "posted" && (
                       <div style={{ display: "flex", gap: 8, width: "100%", justifyContent: "flex-end", flexWrap: "wrap" }}>
-                        {/* Only show Confirm Delivery when messenger has requested completion */}
-                        {["pending_sender_confirmation", "pending_confirmation"].includes(item.status) && (
-                          <button
-                            onClick={() => {
-                              setConfirmErrandId(item.id);
-                              setConfirmModalOpen(true);
-                            }}
-                            className="btn btn-primary btn-sm"
-                            style={{
-                              background: "var(--blue-600)",
-                              borderColor: "var(--blue-600)",
-                              color: "var(--white)",
-                              fontWeight: 750,
-                              boxShadow: "0 0 10px rgba(37, 99, 235, 0.2)"
-                            }}
-                          >
-                            Confirm Delivery 🔔
-                          </button>
-                        )}
                         {/* Cancel Errand — only allowed if still open (no messenger assigned) */}
                         {item.status === "open" && (
                           <button
@@ -1004,15 +985,23 @@ const History = () => {
                         setProcessing(true);
                         try {
                           const res = await api.patch(`/errands/${id}/complete`);
+                          
+                          // Close confirm modal & reset ID
                           setConfirmModalOpen(false);
                           setConfirmErrandId(null);
+                          
                           const msg = res.data?.message || "✅ Payment released! Messenger has been paid.";
                           showToast(msg);
+                          
+                          // Automatically open the Review/Rating modal for the messenger
+                          setSelectedErrandId(id);
+                          setIsReviewModalOpen(true);
+                          
+                          // Reload list
                           fetchHistory();
                         } catch (err) {
                           const msg = err.response?.data?.message || err.message || "Request failed. Please try again.";
                           showToast(`❌ ${msg}`, "error");
-                          // Keep modal open so user can retry
                         } finally {
                           setProcessing(false);
                         }

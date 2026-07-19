@@ -904,6 +904,7 @@ const History = () => {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
+                onClick={() => { if (!processing) { setConfirmModalOpen(false); setConfirmErrandId(null); } }}
                 className="release-funds-overlay"
                 style={{
                   position: "fixed", inset: 0,
@@ -913,25 +914,28 @@ const History = () => {
                   display: "flex",
                   alignItems: "flex-end",
                   justifyContent: "center",
-                  padding: 0,
+                  padding: "0 0 env(safe-area-inset-bottom, 0px) 0",
                   overflowY: "auto",
                 }}
               >
                 <style>{`
                   @media (max-width: 480px) {
                     .release-funds-card {
-                      padding: 24px 16px 32px !important;
+                      padding: 20px 16px 28px !important;
                       border-radius: 20px 20px 0 0 !important;
-                      gap: 16px !important;
+                      gap: 14px !important;
                     }
+                    .release-funds-card h2 { font-size: 1.15rem !important; }
+                    .release-funds-card p { font-size: 0.84rem !important; }
                   }
                   @media (max-height: 620px) {
                     .release-funds-overlay {
                       align-items: flex-start !important;
-                      padding: 20px 10px !important;
+                      padding: 12px 8px !important;
                     }
                     .release-funds-card {
                       border-radius: 20px !important;
+                      max-height: 95vh !important;
                     }
                   }
                 `}</style>
@@ -945,16 +949,17 @@ const History = () => {
                   style={{
                     width: "100%",
                     maxWidth: 520,
-                    maxHeight: "90vh",
+                    maxHeight: "85vh",
                     overflowY: "auto",
+                    WebkitOverflowScrolling: "touch",
                     background: "#fff",
                     borderRadius: "28px 28px 0 0",
-                    padding: "32px 24px 40px",
+                    padding: "28px 20px 36px",
                     boxSizing: "border-box",
                     boxShadow: "0 -8px 40px rgba(0,0,0,0.2)",
                     display: "flex",
                     flexDirection: "column",
-                    gap: 20,
+                    gap: 18,
                   }}
                 >
                   {/* Drag handle */}
@@ -1081,6 +1086,7 @@ const History = () => {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
+                onClick={() => { if (!processing) { setCancelModalOpen(false); setCancelErrandId(null); } }}
                 style={{
                   position: "fixed", inset: 0,
                   background: "rgba(15,23,42,0.75)",
@@ -1089,25 +1095,48 @@ const History = () => {
                   display: "flex",
                   alignItems: "flex-end",
                   justifyContent: "center",
+                  padding: "0 0 env(safe-area-inset-bottom, 0px) 0",
+                  overflowY: "auto",
                 }}
               >
+                <style>{`
+                  @media (max-width: 480px) {
+                    .cancel-errand-card {
+                      padding: 20px 16px 28px !important;
+                      border-radius: 20px 20px 0 0 !important;
+                      gap: 14px !important;
+                    }
+                    .cancel-errand-card h2 { font-size: 1.15rem !important; }
+                    .cancel-errand-card p { font-size: 0.84rem !important; }
+                  }
+                  @media (max-height: 620px) {
+                    .cancel-errand-card {
+                      border-radius: 20px !important;
+                      max-height: 95vh !important;
+                    }
+                  }
+                `}</style>
                 <motion.div
                   initial={{ y: "100%", opacity: 0 }}
                   animate={{ y: 0, opacity: 1 }}
                   exit={{ y: "100%", opacity: 0 }}
                   transition={{ type: "spring", damping: 28, stiffness: 260 }}
                   onClick={e => e.stopPropagation()}
+                  className="cancel-errand-card"
                   style={{
                     width: "100%",
                     maxWidth: 520,
+                    maxHeight: "85vh",
+                    overflowY: "auto",
+                    WebkitOverflowScrolling: "touch",
                     background: "#fff",
                     borderRadius: "28px 28px 0 0",
-                    padding: "32px 24px 40px",
+                    padding: "28px 20px 36px",
                     boxSizing: "border-box",
                     boxShadow: "0 -8px 40px rgba(0,0,0,0.2)",
                     display: "flex",
                     flexDirection: "column",
-                    gap: 20,
+                    gap: 18,
                   }}
                 >
                   <div style={{ width: 40, height: 4, background: "#e2e8f0", borderRadius: 99, margin: "0 auto -8px" }} />
@@ -1227,7 +1256,9 @@ const History = () => {
                 style={{
                   position: "fixed", bottom: 0, left: 0, right: 0,
                   background: "var(--white)", borderTopLeftRadius: 28, borderTopRightRadius: 28,
-                  padding: "24px 20px 40px", zIndex: 9993, maxHeight: "85vh", overflowY: "auto", boxShadow: "0 -8px 24px rgba(0,0,0,0.12)"
+                  padding: "20px 16px 36px", paddingBottom: "calc(36px + env(safe-area-inset-bottom, 0px))",
+                  zIndex: 9993, maxHeight: "80vh", overflowY: "auto", WebkitOverflowScrolling: "touch",
+                  boxShadow: "0 -8px 24px rgba(0,0,0,0.12)"
                 }}
               >
                 <div style={{ width: 44, height: 5, background: "var(--gray-200)", borderRadius: 10, margin: "0 auto 16px" }} />

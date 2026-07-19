@@ -29,6 +29,10 @@ const History = () => {
   const [confirmModalOpen, setConfirmModalOpen] = useState(false);
   const [confirmErrandId, setConfirmErrandId] = useState(null);
 
+  // Cancel Errand Confirm Modal
+  const [cancelModalOpen, setCancelModalOpen] = useState(false);
+  const [cancelErrandId, setCancelErrandId] = useState(null);
+
   // Digital Footprint Timeline States
   const [intelFootprint, setIntelFootprint] = useState(null);
   const [intelModalOpen, setIntelModalOpen] = useState(false);
@@ -95,7 +99,7 @@ const History = () => {
     fetchHistory();
   }, [user?.id, user?._id, filterType]);
 
-  const isAnyModalOpen = confirmModalOpen || intelModalOpen || proofModalOpen || isReviewModalOpen;
+  const isAnyModalOpen = confirmModalOpen || cancelModalOpen || intelModalOpen || proofModalOpen || isReviewModalOpen;
   useBodyScrollLock(isAnyModalOpen);
 
   useEffect(() => {
@@ -117,16 +121,12 @@ const History = () => {
   }, [socket]);
 
   const handleCancelErrand = async (id) => {
-    if (
-      !window.confirm(
-        "Are you sure you want to cancel this errand? You will be fully refunded.",
-      )
-    )
-      return;
     setProcessing(true);
     try {
       await api.delete(`/errands/${id}`);
       showToast("Errand cancelled. Funds refunded to your wallet.");
+      setCancelModalOpen(false);
+      setCancelErrandId(null);
       fetchHistory();
     } catch (err) {
       showToast(err.response?.data?.message || "Failed to cancel. It might have been accepted already.", "error");
@@ -293,7 +293,8 @@ const History = () => {
     .filter((item) => {
       if (activeStatusTab === "All") return true;
       if (activeStatusTab === "Open") return item.status === "open";
-      if (activeStatusTab === "Accepted") return ["assigned", "accepted", "in_progress"].includes(item.status);
+      // "Active" for senders, "In Progress" for messengers — both map to the same statuses
+      if (activeStatusTab === "Active" || activeStatusTab === "In Progress") return ["assigned", "accepted", "in_progress"].includes(item.status);
       if (activeStatusTab === "Pending Confirmation") return ["pending_confirmation", "pending_sender_confirmation"].includes(item.status);
       if (activeStatusTab === "Completed") return ["completed", "confirmed_completed"].includes(item.status);
       return true;
@@ -411,7 +412,13 @@ const History = () => {
           scrollbarWidth: "none",
           msOverflowStyle: "none"
         }}>
-          {["All", ...(filterType === "posted" ? ["Open"] : []), "Accepted", "Pending Confirmation", "Completed"].map((tab) => (
+          {[
+            "All",
+            ...(filterType === "posted" ? ["Open"] : []),
+            filterType === "posted" ? "Active" : "In Progress",
+            "Pending Confirmation",
+            "Completed"
+          ].map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveStatusTab(tab)}
@@ -523,10 +530,18 @@ const History = () => {
                                 ? "badge-red"
                                 : item.status === "in_progress"
                                   ? "badge-orange"
-                                  : "badge-blue"
+                                  : ["pending_sender_confirmation", "pending_confirmation"].includes(item.status)
+                                    ? "badge-amber"
+                                    : item.status === "open"
+                                      ? "badge-blue"
+                                      : "badge-blue"
                         }`}
                       >
-                        {item.status.replace(/_/g, " ").toUpperCase()}
+                        {item.status === "pending_sender_confirmation"
+                          ? "AWAITING CONFIRMATION"
+                          : item.status === "pending_confirmation"
+                            ? "PENDING CONFIRMATION"
+                            : item.status.replace(/_/g, " ").toUpperCase()}
                       </span>
                     </div>
 
@@ -594,8 +609,10 @@ const History = () => {
                       <Activity size={12} /> Intel
                     </button>
 
-                    {filterType === "posted" && ["open", "assigned", "in_progress", "pending_sender_confirmation", "pending_confirmation"].includes(item.status) && (
-                      <div style={{ display: "flex", gap: 8, width: "100%", justifyContent: "flex-end" }}>
+                    {/* ── SENDER ACTIONS ── */}
+                    {filterType === "posted" && (
+                      <div style={{ display: "flex", gap: 8, width: "100%", justifyContent: "flex-end", flexWrap: "wrap" }}>
+                        {/* Only show Confirm Delivery when messenger has requested completion */}
                         {["pending_sender_confirmation", "pending_confirmation"].includes(item.status) && (
                           <button
                             onClick={() => {
@@ -614,18 +631,29 @@ const History = () => {
                             Confirm Delivery 🔔
                           </button>
                         )}
-                        <button
-                          onClick={() => handleDeleteFromHistory(item.id)}
-                          className="btn btn-outline btn-sm"
-                          style={{ borderColor: "var(--red-200)", color: "var(--red-600)" }}
-                        >
-                          Delete Errand
-                        </button>
+                        {/* Cancel Errand — only allowed if still open (no messenger assigned) */}
+                        {item.status === "open" && (
+                          <button
+                            onClick={() => {
+                              setCancelErrandId(item.id);
+                              setCancelModalOpen(true);
+                            }}
+                            className="btn btn-outline btn-sm"
+                            style={{ borderColor: "var(--red-200)", color: "var(--red-600)" }}
+                          >
+                            Cancel Errand
+                          </button>
+                        )}
+                        {/* For assigned/in_progress/pending — no cancel button, errand is active */}
+                        {["assigned", "in_progress"].includes(item.status) && (
+                          <span style={{ fontSize: "0.76rem", color: "var(--gray-400)", alignSelf: "center" }}>
+                            In progress — cannot cancel
+                          </span>
+                        )}
                       </div>
                     )}
 
-
-
+                    {/* ── MESSENGER ACTIONS ── */}
                     {filterType === "accepted" && item.status === "assigned" && (
                       <button
                         onClick={() => handleStartErrand(item.id)}
@@ -637,7 +665,7 @@ const History = () => {
                     )}
 
                     {filterType === "accepted" && item.status === "in_progress" && (
-                      <div style={{ display: "flex", gap: 8 }}>
+                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                         <button
                           onClick={() => {
                             setSelectedErrandId(item.id);
@@ -704,7 +732,7 @@ const History = () => {
                       )
                     )}
 
-                    {/* Delete from history button — available for completed or cancelled errands */}
+                    {/* Delete from history — only for completed or cancelled errands (not active ones) */}
                     {["completed", "confirmed_completed", "cancelled"].includes(item.status) && (
                       <button
                         className="btn btn-outline btn-sm"
@@ -754,7 +782,7 @@ const History = () => {
                     )}
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontWeight: 800, fontSize: "0.82rem", color: "var(--gray-800)" }}>
-                        {item.errander.name} (Assigned Messenger)
+                        {item.errander.name} <span style={{ color: "var(--gray-500)", fontWeight: 600 }}>(Assigned Messenger)</span>
                       </div>
                       <div style={{ fontSize: "0.75rem", color: "var(--gray-500)", marginTop: 1 }}>
                         📞 {item.errander.phoneNumber || "No contact info listed"}
@@ -766,9 +794,29 @@ const History = () => {
                         className="btn btn-outline btn-sm"
                         style={{ borderRadius: 8, padding: "5px 10px", textDecoration: "none", fontSize: "0.72rem" }}
                       >
-                        Call
+                        📞 Call
                       </a>
                     )}
+                  </div>
+                )}
+
+                {/* ── Messenger: Assigned-but-not-started info banner ── */}
+                {filterType === "accepted" && item.status === "assigned" && (
+                  <div style={{
+                    background: "var(--blue-50)",
+                    border: "1px solid var(--blue-100)",
+                    borderRadius: 12,
+                    padding: "10px 14px",
+                    marginTop: 10,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    fontSize: "0.82rem",
+                    color: "var(--blue-700)",
+                    fontWeight: 600
+                  }}>
+                    <span style={{ fontSize: "1.1rem" }}>🎉</span>
+                    <span>You've been selected for this errand! Tap <strong>Start Errand</strong> when you're ready to begin.</span>
                   </div>
                 )}
 
@@ -1016,6 +1064,133 @@ const History = () => {
                       }}
                     >
                       Not Yet, Cancel
+                    </button>
+                  </div>
+                </motion.div>
+              </motion.div>
+            );
+          })()}
+        </AnimatePresence>
+
+        {/* ── Cancel Errand Confirm Modal ── */}
+        <AnimatePresence>
+          {cancelModalOpen && (() => {
+            const cancelItem = historyItems.find(i => i.id === cancelErrandId);
+            return (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                style={{
+                  position: "fixed", inset: 0,
+                  background: "rgba(15,23,42,0.75)",
+                  backdropFilter: "blur(8px)",
+                  zIndex: 9994,
+                  display: "flex",
+                  alignItems: "flex-end",
+                  justifyContent: "center",
+                }}
+              >
+                <motion.div
+                  initial={{ y: "100%", opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  exit={{ y: "100%", opacity: 0 }}
+                  transition={{ type: "spring", damping: 28, stiffness: 260 }}
+                  onClick={e => e.stopPropagation()}
+                  style={{
+                    width: "100%",
+                    maxWidth: 520,
+                    background: "#fff",
+                    borderRadius: "28px 28px 0 0",
+                    padding: "32px 24px 40px",
+                    boxSizing: "border-box",
+                    boxShadow: "0 -8px 40px rgba(0,0,0,0.2)",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 20,
+                  }}
+                >
+                  <div style={{ width: 40, height: 4, background: "#e2e8f0", borderRadius: 99, margin: "0 auto -8px" }} />
+                  <div style={{ textAlign: "center" }}>
+                    <div style={{
+                      width: 64, height: 64, borderRadius: "50%",
+                      background: "linear-gradient(135deg,#fee2e2,#fecaca)",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      margin: "0 auto 12px", fontSize: "2rem"
+                    }}>❌</div>
+                    <h2 style={{ fontWeight: 900, fontSize: "1.3rem", color: "#0f172a", margin: 0 }}>
+                      Cancel Errand?
+                    </h2>
+                    <p style={{ color: "#64748b", fontSize: "0.9rem", marginTop: 6, lineHeight: 1.5 }}>
+                      {cancelItem ? (
+                        <>You're about to cancel <strong>"{cancelItem.title}"</strong>.<br />
+                        <strong style={{ color: "#16a34a" }}>₦{(cancelItem.fee || 0).toLocaleString()}</strong> will be refunded to your wallet.</>
+                      ) : "This errand will be cancelled and funds returned to your wallet."}
+                    </p>
+                  </div>
+                  <div style={{
+                    background: "#fff7ed", border: "1px solid #fed7aa",
+                    borderRadius: 14, padding: "12px 16px",
+                    display: "flex", alignItems: "center", gap: 10,
+                    fontSize: "0.82rem", color: "#c2410c"
+                  }}>
+                    <span style={{ fontSize: "1.2rem", flexShrink: 0 }}>⚠️</span>
+                    <span style={{ flex: 1, textAlign: "left", lineHeight: 1.4 }}>This action <strong>cannot be undone</strong>. The errand will be permanently removed.</span>
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                    <button
+                      disabled={processing}
+                      onClick={() => handleCancelErrand(cancelErrandId)}
+                      style={{
+                        width: "100%",
+                        padding: "16px 0",
+                        borderRadius: 14,
+                        border: "none",
+                        background: processing ? "#fca5a5" : "linear-gradient(135deg,#dc2626,#ef4444)",
+                        color: "#fff",
+                        fontWeight: 800,
+                        fontSize: "1rem",
+                        cursor: processing ? "not-allowed" : "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: 10,
+                        boxShadow: processing ? "none" : "0 4px 18px rgba(220,38,38,0.35)",
+                        transition: "all 0.2s",
+                      }}
+                    >
+                      {processing ? (
+                        <>
+                          <span style={{
+                            width: 20, height: 20, border: "3px solid rgba(255,255,255,0.3)",
+                            borderTop: "3px solid #fff", borderRadius: "50%",
+                            display: "inline-block", animation: "spin 0.8s linear infinite"
+                          }} />
+                          Cancelling...
+                        </>
+                      ) : "❌ Yes, Cancel Errand"}
+                    </button>
+                    <button
+                      disabled={processing}
+                      onClick={() => {
+                        if (!processing) {
+                          setCancelModalOpen(false);
+                          setCancelErrandId(null);
+                        }
+                      }}
+                      style={{
+                        width: "100%",
+                        padding: "14px 0",
+                        borderRadius: 14,
+                        border: "2px solid #e2e8f0",
+                        background: "transparent",
+                        color: "#64748b",
+                        fontWeight: 700,
+                        fontSize: "0.95rem",
+                        cursor: processing ? "not-allowed" : "pointer",
+                      }}
+                    >
+                      Keep Errand
                     </button>
                   </div>
                 </motion.div>

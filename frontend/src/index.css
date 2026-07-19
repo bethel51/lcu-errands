@@ -734,6 +734,21 @@ ul { list-style: none; }
   color: #065F46;
 }
 
+.badge-red {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.badge-orange {
+  background: #ffedd5;
+  color: #c2410c;
+}
+
+.badge-amber {
+  background: #fef3c7;
+  color: #b45309;
+}
+
 /* ===== FORMS ===== */
 .form-group {
   margin-bottom: 20px;

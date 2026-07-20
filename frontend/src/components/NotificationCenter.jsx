@@ -3,6 +3,7 @@ import { Bell, X, CheckCheck, Trash2, ArrowRight } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import api from "../api";
 import { useSocket } from "../context/SocketContext";
+import { useToast } from "../context/ToastContext";
 import { useBodyScrollLock } from "../hooks/useBodyScrollLock";
 
 // Module-level cache: shared across all mounts, survives re-renders
@@ -13,6 +14,7 @@ const CACHE_TTL_MS = 30_000; // 30 seconds
 
 const NotificationCenter = () => {
   const { socket } = useSocket();
+  const { showToast } = useToast();
   const [notifications, setNotifications] = useState(notifCache);
   const [isOpen, setIsOpen] = useState(false);
   const panelRef = useRef(null);
@@ -43,12 +45,20 @@ const NotificationCenter = () => {
     if (!socket) return;
 
     const handleNewNotification = (data) => {
+      const type = data.type || "";
+      
       // Add new notification at the top and update cache
       setNotifications((prev) => {
         const updated = [data, ...prev];
         notifCache = updated;
         return updated;
       });
+
+      // Show toast globally
+      showToast(
+        data.message || data.title || "New update",
+        type === "errand_requested" ? "info" : "success"
+      );
     };
 
     socket.on("notification", handleNewNotification);

@@ -262,13 +262,15 @@ const Dashboard = () => {
 
   useEffect(() => {
     if (!socket) return;
-    socket.on("new_errand", (newErrand) => {
+    const handleNewErrand = (newErrand) => {
       setErrands((prev) => [mapBackendToFrontend(newErrand), ...prev]);
-    });
-    socket.on("errand_removed", ({ errandId }) => {
+    };
+
+    const handleErrandRemoved = ({ errandId }) => {
       setErrands((prev) => prev.filter((e) => e.id !== errandId));
-    });
-    socket.on("notification", (data) => {
+    };
+
+    const handleNotification = (data) => {
       const type = data.type || "";
       // Surgical targeted refresh — only reload the slice that changed
       if (["wallet_credited", "payment_released", "errand_payment"].includes(type)) {
@@ -276,16 +278,17 @@ const Dashboard = () => {
       } else if (["errand_requested", "errand_accepted", "errand_delivered", "errand_started"].includes(type)) {
         fetchActiveRequestsOnly();
       }
-      // Show notification toast
-      showToast(
-        data.message || data.title || "New update",
-        type === "errand_requested" ? "info" : "success",
-      );
-    });
+      // Toast logic is now handled globally in NotificationCenter.jsx
+    };
+
+    socket.on("new_errand", handleNewErrand);
+    socket.on("errand_removed", handleErrandRemoved);
+    socket.on("notification", handleNotification);
+
     return () => {
-      socket.off("new_errand");
-      socket.off("errand_removed");
-      socket.off("notification");
+      socket.off("new_errand", handleNewErrand);
+      socket.off("errand_removed", handleErrandRemoved);
+      socket.off("notification", handleNotification);
     };
   }, [socket, fetchWalletData, fetchActiveRequestsOnly]);
 
@@ -472,6 +475,22 @@ const Dashboard = () => {
       showToast(err.response?.data?.message || "Could not hire messenger.", "error");
     } finally {
       setHiringId(null);
+    }
+  };
+
+  const handleCancelErrand = async (id) => {
+    if (!window.confirm("Are you sure you want to cancel this errand? The fee will be refunded to your wallet.")) return;
+    
+    // Optimistic update
+    setActiveRequests((prev) => prev.filter((e) => e.id !== id));
+    
+    try {
+      await api.delete(`/errands/${id}`);
+      fetchWalletData(); // Refresh wallet to show refund
+      showToast("Errand cancelled successfully.", "success");
+    } catch (err) {
+      fetchActiveRequestsOnly();
+      showToast(err.response?.data?.message || "Failed to cancel errand.", "error");
     }
   };
 
@@ -811,6 +830,22 @@ const Dashboard = () => {
                           )}
                         </div>
                       )
+                    )}
+                    {/* Cancel Errand button */}
+                    {userRole === "sender" && errand.status === "open" && (
+                      <button
+                        onClick={() => handleCancelErrand(errand.id)}
+                        className="btn btn-sm"
+                        style={{
+                          background: "var(--red-50)",
+                          color: "var(--red-600)",
+                          border: "1px solid var(--red-200)",
+                          fontWeight: 700,
+                          padding: "6px 12px",
+                        }}
+                      >
+                        Cancel
+                      </button>
                     )}
                     {/* Confirm Delivery button */}
                     {userRole === "sender" && ["pending_confirmation", "pending_sender_confirmation"].includes(errand.status) && (

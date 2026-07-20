@@ -310,9 +310,11 @@ app.use((req, res) => {
 
 // Socket.io for Real-time Notifications & Online Status
 const onlineUsers = new Map(); // socketId -> userId
+const userSocketCount = new Map(); // userId -> count of active sockets
 
 io.on("connection", (socket) => {
-  console.log("User connected:", socket.id);
+  // Avoid logging on every mobile reconnect — only log in dev
+  if (process.env.NODE_ENV !== "production") console.log("User connected:", socket.id);
 
   socket.on("join", async (userId) => {
     try {
@@ -323,14 +325,15 @@ io.on("connection", (socket) => {
       socket.join(userId);
       onlineUsers.set(socket.id, userId);
 
-      // Update DB
-      await User.findByIdAndUpdate(userId, { isOnline: true });
+      // Track how many sockets this user has open
+      const prev = userSocketCount.get(userId) || 0;
+      userSocketCount.set(userId, prev + 1);
 
-      // Broadcast status change
-      io.emit("user_status_change", { userId, isOnline: true });
-      console.log(
-        `User ${socket.id} (ID: ${userId}) joined personal room and is now ONLINE`,
-      );
+      // Only write to DB + broadcast on the FIRST socket (avoid duplicate writes on reconnect)
+      if (prev === 0) {
+        await User.findByIdAndUpdate(userId, { isOnline: true });
+        io.emit("user_status_change", { userId, isOnline: true });
+      }
     } catch (err) {
       console.error("[Socket] Error in join handler:", err);
     }
@@ -348,19 +351,23 @@ io.on("connection", (socket) => {
     try {
       const userId = onlineUsers.get(socket.id);
       if (userId && mongoose.Types.ObjectId.isValid(userId)) {
-        // Check if user has other active connections before marking offline
-        const userSockets = await io.in(userId).fetchSockets();
-        if (userSockets.length === 0) {
+        onlineUsers.delete(socket.id);
+        const remaining = (userSocketCount.get(userId) || 1) - 1;
+        userSocketCount.set(userId, remaining);
+
+        // Only mark offline if no more sockets for this user
+        if (remaining <= 0) {
+          userSocketCount.delete(userId);
           await User.findByIdAndUpdate(userId, { isOnline: false });
           io.emit("user_status_change", { userId, isOnline: false });
-          console.log(`User ${userId} is now OFFLINE`);
+          if (process.env.NODE_ENV !== "production") console.log(`User ${userId} is now OFFLINE`);
         }
+      } else {
         onlineUsers.delete(socket.id);
       }
     } catch (err) {
       console.error("[Socket] Error in disconnect handler:", err);
     }
-    console.log("User disconnected:", socket.id);
   });
 });
 

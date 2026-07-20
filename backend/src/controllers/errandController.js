@@ -43,15 +43,17 @@ const updateDigitalFootprint = async ({
 }) => {
   const { ipAddress, deviceInfo } = getRequestContext(req);
   
-  let finalActorName = actorName;
-  let finalActorRole = actorRole;
-  
-  if (userId && (!finalActorName || !finalActorRole)) {
+  // Use provided names directly — callers that know the actor should pass them.
+  // Only fall back to a DB lookup if both are missing (legacy callers).
+  let finalActorName = actorName || "System";
+  let finalActorRole = actorRole || "system";
+
+  if (userId && (!actorName || !actorRole)) {
     try {
-      const actorUser = await User.findById(userId);
+      const actorUser = await User.findById(userId).select("name role").lean();
       if (actorUser) {
-        if (!finalActorName) finalActorName = actorUser.name;
-        if (!finalActorRole) {
+        if (!actorName) finalActorName = actorUser.name;
+        if (!actorRole) {
           finalActorRole = actorUser.role || (errand.posterId?.toString() === userId.toString() ? "sender" : "messenger");
         }
       }
@@ -359,13 +361,15 @@ export const getUserHistory = catchAsync(async (req, res) => {
   const { page = 1, limit = 50 } = req.query;
   const skip = (Number(page) - 1) * Number(limit);
 
+  // NOTE: candidates is intentionally NOT populated here — history view only
+  // needs the count (array length), not the full objects. This saves a heavy
+  // multi-document lookup on every history load.
   const errands = await Errand.find({
     $or: [{ posterId: userId }, { erranderId: userId }],
     hiddenBy: { $ne: userId }, // exclude entries the user has hidden
   })
-    .populate("posterId", "name profilePicture phoneNumber rating isVerified email department location")
-    .populate("erranderId", "name profilePicture phoneNumber rating isVerified email department location")
-    .populate("candidates", "name profilePicture rating location department isVerified")
+    .populate("posterId", "name profilePicture rating isVerified department location")
+    .populate("erranderId", "name profilePicture rating isVerified department location")
     .sort({ createdAt: -1 })
     .skip(skip)
     .limit(Number(limit))
@@ -937,16 +941,17 @@ export const requestCompletion = catchAsync(async (req, res) => {
     io.to(errand.posterId.toString()).emit("notification", notificationData);
   }
 
-  // Send email to poster
-  const poster = await User.findById(errand.posterId);
-  if (poster) {
-    sendErrandNotification(
-      poster.email,
-      poster.name,
-      "completed", // This notifies the poster to log in and confirm
-      errand.title
-    ).catch(console.error);
-  }
+  // Send email to poster — fire-and-forget, do NOT block the response
+  User.findById(errand.posterId).select("email name").lean().then((poster) => {
+    if (poster) {
+      sendErrandNotification(
+        poster.email,
+        poster.name,
+        "completed", // This notifies the poster to log in and confirm
+        errand.title
+      ).catch(console.error);
+    }
+  }).catch(console.error);
 
   res.json({ message: "Completion request sent to poster successfully" });
 });

@@ -66,13 +66,15 @@ if (!process.env.BREVO_API_KEY && emailUser && emailPass) {
 }
 
 export const sendEmail = async (to: string, subject: string, text: string, html: string): Promise<boolean> => {
+  const resendApiKey = (process.env.RESEND_API_KEY || "").trim();
   const brevoApiKey = (process.env.BREVO_API_KEY || "").trim();
-  const emailFrom = process.env.EMAIL_FROM || emailUser || "no-reply@leadcityerrands.com";
+  const emailFrom = process.env.EMAIL_FROM || emailUser || "onboarding@resend.dev";
   const senderName = process.env.EMAIL_SENDER_NAME || "LCU Errands";
 
+  // ── 1. Brevo (primary) ──────────────────────────────────────────────────
   if (brevoApiKey) {
     try {
-      console.log(`📡 [Brevo API] Sending email to ${to}...`);
+      console.log(`📡 [Brevo] Sending email to ${to}...`);
       const response = await fetch("https://api.brevo.com/v3/smtp/email", {
         method: "POST",
         headers: {
@@ -81,15 +83,8 @@ export const sendEmail = async (to: string, subject: string, text: string, html:
           "content-type": "application/json",
         },
         body: JSON.stringify({
-          sender: {
-            name: senderName,
-            email: emailFrom,
-          },
-          to: [
-            {
-              email: to,
-            },
-          ],
+          sender: { name: senderName, email: emailFrom || "no-reply@leadcityerrands.com" },
+          to: [{ email: to }],
           subject,
           htmlContent: html || text,
           textContent: text,
@@ -98,59 +93,84 @@ export const sendEmail = async (to: string, subject: string, text: string, html:
 
       if (response.ok) {
         const data: any = await response.json();
-        console.log(`📧 Email sent successfully via Brevo API to ${to}. MessageId: ${data.messageId}`);
+        console.log(`📧 [Brevo] Email delivered to ${to}. MessageId: ${data.messageId}`);
         return true;
       } else {
         const errorText = await response.text();
-        console.error("❌ Brevo API ERROR: Failed to send email", response.status, errorText);
-        console.log("Falling back to SMTP / Mock Email...");
+        console.error(`❌ [Brevo] Failed (${response.status}):`, errorText);
+        console.log("[Brevo] Falling back to Resend / SMTP...");
       }
+    } catch (err: any) {
+      console.error("❌ [Brevo] Exception:", err.message);
+      console.log("[Brevo] Falling back to Resend / SMTP...");
+    }
+  }
+
+  // ── 2. Resend (secondary) ──────────────────────────────────────────
+  if (resendApiKey) {
+    try {
+      console.log(`📡 [Resend] Sending email to ${to}...`);
+      const response = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${resendApiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          from: `${senderName} <${emailFrom || "onboarding@resend.dev"}>`,
+          to: [to],
+          subject,
+          html: html || `<p>${text}</p>`,
+          text,
+        }),
+      });
+
+      if (response.ok) {
+        const data: any = await response.json();
+        console.log(`📧 [Resend] Email delivered to ${to}. id: ${data.id}`);
+        return true;
+      } else {
+        const errorBody = await response.text();
+        console.error(`❌ [Resend] Failed (${response.status}):`, errorBody);
+        console.log("[Resend] Falling back to SMTP...");
+      }
+    } catch (err: any) {
+      console.error("❌ [Resend] Exception:", err.message);
+      console.log("[Resend] Falling back to SMTP...");
+    }
+  }
+
+  // ── 3. SMTP / Nodemailer (tertiary) ───────────────────────────────────────
+  if (emailUser && emailPass) {
+    try {
+      console.log(`📡 [SMTP] Sending email to ${to}...`);
+      const info = await transporter.sendMail({
+        from: `"${senderName}" <${emailUser}>`,
+        to,
+        subject,
+        text,
+        html: html || text,
+      });
+      console.log(`📧 [SMTP] Email delivered to ${to}. MessageId: ${info.messageId}`);
+      return true;
     } catch (error: any) {
-      console.error("❌ Brevo API ERROR: Failed to send email");
-      console.error("Target:", to);
+      console.error("❌ [SMTP] Failed to send email to", to);
+      console.error("Error Code:", error.code);
       console.error("Error Message:", error.message);
-      console.log("Falling back to SMTP / Mock Email...");
+      if (error.code === "EAUTH") {
+        console.error("Authentication failed: Check EMAIL_USER and EMAIL_PASS (App Password).");
+      }
     }
   }
 
-  // Fallback to Nodemailer
-  if (!emailUser || !emailPass) {
-    console.warn(`⚠️ [MOCK EMAIL] Credentials not set. Simulated email to ${to}:`);
-    console.warn(`Subject: ${subject}`);
-    console.warn(`Content: ${text}`);
-    return true; // Return true to allow register/OTP flow to complete locally
-  }
-
-  try {
-    console.log(`📡 [EMAIL] Sending email to ${to}...`);
-    const info = await transporter.sendMail({
-      from: `"LCU Errands" <${emailUser}>`,
-      to,
-      subject,
-      text,
-      html: html || text,
-    });
-    console.log(
-      `📧 Email sent successfully to ${to}. MessageId: ${info.messageId}`,
-    );
-    return true;
-  } catch (error: any) {
-    console.error("❌ EMAIL ERROR: Failed to send email to", to);
-    console.error("Error Code:", error.code); // e.g., ETIMEDOUT, EAUTH
-    console.error("Error Message:", error.message);
-
-    if (error.code === "EAUTH") {
-      console.error(
-        "Authentication failed: Check your EMAIL_USER and EMAIL_PASS (App Password).",
-      );
-    }
-    
-    // Fallback in development/mock environments to not block workflows
-    console.warn(`⚠️ [MOCK EMAIL FALLBACK] Simulated email to ${to} due to error:`);
-    console.warn(`Subject: ${subject}`);
-    console.warn(`Content: ${text}`);
-    return true; 
-  }
+  // ── 4. Mock fallback (dev / no credentials at all) ────────────────────────
+  // NOTE: This returns true so registration/OTP flows don't break in dev,
+  // but the log clearly shows it was NOT actually sent.
+  console.warn(`⚠️ [MOCK — NOT SENT] No email provider configured. Email to ${to} was SIMULATED only.`);
+  console.warn(`   Subject: ${subject}`);
+  console.warn(`   Body:    ${text}`);
+  console.warn(`   Fix: Set RESEND_API_KEY (free at resend.com) in your Render environment variables.`);
+  return true;
 };
 
 export const sendErrandNotification = async (

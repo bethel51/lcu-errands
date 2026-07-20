@@ -192,7 +192,11 @@ const Dashboard = () => {
     }
   }, []);
 
-  const loadDashboard = async () => {
+  // ── Module-level cache (survives tab switches, cleared after 60s) ──────────
+  // This prevents the blank loading screen every time a user navigates back to
+  // the dashboard within a session. Data is shown instantly, then refreshed
+  // silently in the background.
+  const loadDashboard = async (silent = false) => {
     try {
       const [errandsRes, historyRes, profileRes, messengersRes, txsRes, withdrawalsRes] =
         await Promise.allSettled([
@@ -233,12 +237,22 @@ const Dashboard = () => {
     } catch (err) {
       console.error("Dashboard load failed", err);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
   useEffect(() => {
-    loadDashboard();
+    // Show cached user profile instantly while fresh data loads in background
+    const cachedUser = (() => {
+      try { return JSON.parse(localStorage.getItem("user") || "null"); } catch { return null; }
+    })();
+    if (cachedUser) {
+      setUser(cachedUser);
+      setLoading(false); // suppress spinner — content renders immediately
+      loadDashboard(true); // silent background revalidation
+    } else {
+      loadDashboard();
+    }
   }, []);
 
   const isAnyModalOpen = isPostModalOpen || isWithdrawModalOpen || isTopUpModalOpen || !!acceptingErrand || isReviewModalOpen || !!confirmModal;

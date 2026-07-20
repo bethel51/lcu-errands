@@ -99,7 +99,7 @@ const ErrandStream = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [search, setSearch] = useState("");
   const [activeCategory, setActiveCategory] = useState("All");
-  const [processing, setProcessing] = useState(false);
+  const [applyingId, setApplyingId] = useState(null); // track per-card applying state
   const [acceptingErrand, setAcceptingErrand] = useState(null);
   const pollingRef = useRef(null);
 
@@ -242,18 +242,23 @@ const ErrandStream = () => {
   }, [socket, mapBackendToFrontend]);
 
   const handleApplyForErrand = async (id) => {
-    setProcessing(true);
+    if (applyingId) return; // prevent double-tap
+    setApplyingId(id);
+    // Optimistic update immediately — no full-screen block
+    setErrands((prev) =>
+      prev.map((e) => (e.id === id ? { ...e, hasApplied: true } : e))
+    );
     try {
       await api.patch(`/errands/${id}/apply`);
       showToast("✅ Request sent! The sender will be notified and will select you if chosen.");
-      // Optimistic update — mark as applied immediately without refetch
-      setErrands((prev) =>
-        prev.map((e) => (e.id === id ? { ...e, hasApplied: true } : e))
-      );
     } catch (err) {
+      // Rollback on failure
+      setErrands((prev) =>
+        prev.map((e) => (e.id === id ? { ...e, hasApplied: false } : e))
+      );
       showToast(err.response?.data?.message || "Could not send request.", "error");
     } finally {
-      setProcessing(false);
+      setApplyingId(null);
     }
   };
 
@@ -281,26 +286,6 @@ const ErrandStream = () => {
 
   return (
     <div className="errand-stream-page">
-      {/* ── Full-screen processing overlay ── */}
-      <AnimatePresence>
-        {processing && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            style={{
-              position: "fixed", inset: 0, background: "rgba(255,255,255,0.88)",
-              backdropFilter: "blur(6px)", zIndex: 9999, display: "flex",
-              alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 16,
-            }}
-          >
-            <div className="loader" style={{ width: 44, height: 44 }} />
-            <div style={{ fontWeight: 700, color: "#111827", fontSize: "0.8rem", letterSpacing: "0.15em", textTransform: "uppercase" }}>
-              Sending Request...
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       {/* ── Hero header ── */}
       <div className="stream-hero">
@@ -689,8 +674,9 @@ const ErrandStream = () => {
                       setAcceptingErrand(null);
                       await handleApplyForErrand(id);
                     }}
+                    disabled={!!applyingId}
                     className="btn btn-primary"
-                    style={{ flex: 1, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}
+                    style={{ flex: 1, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, opacity: applyingId ? 0.7 : 1 }}
                   >
                     Send Request <ArrowRight size={14} />
                   </button>

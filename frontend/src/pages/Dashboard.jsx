@@ -1177,7 +1177,6 @@ const Dashboard = () => {
           <div
             className="modal-overlay"
             onClick={() => setIsWithdrawModalOpen(false)}
-            style={{ display: "flex", alignItems: "flex-start", justifyContent: "center", overflowY: "auto", padding: "24px 16px" }}
           >
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 10 }}
@@ -1188,16 +1187,7 @@ const Dashboard = () => {
               onClick={(e) => e.stopPropagation()}
               style={{
                 maxWidth: 440,
-                width: "100%",
-                position: "relative",
-                transform: "none",
-                top: "auto",
-                left: "auto",
-                margin: "auto",
-                maxHeight: "85vh",
-                overflowY: "auto",
-                WebkitOverflowScrolling: "touch",
-                padding: "24px 20px"
+                width: "100%"
               }}
             >
               <div
@@ -1311,7 +1301,6 @@ const Dashboard = () => {
           <div
             className="modal-overlay"
             onClick={() => setIsPostModalOpen(false)}
-            style={{ display: "flex", alignItems: "flex-start", justifyContent: "center", overflowY: "auto", padding: "24px 16px" }}
           >
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 10 }}
@@ -1322,16 +1311,7 @@ const Dashboard = () => {
               onClick={(e) => e.stopPropagation()}
               style={{
                 maxWidth: 460,
-                width: "100%",
-                position: "relative",
-                transform: "none",
-                top: "auto",
-                left: "auto",
-                margin: "auto",
-                maxHeight: "85vh",
-                overflowY: "auto",
-                WebkitOverflowScrolling: "touch",
-                padding: "24px 20px"
+                width: "100%"
               }}
             >
               {/* Modal header */}
@@ -1448,7 +1428,6 @@ const Dashboard = () => {
           <div
             className="modal-overlay"
             onClick={() => setIsTopUpModalOpen(false)}
-            style={{ display: "flex", alignItems: "flex-start", justifyContent: "center", overflowY: "auto", padding: "24px 16px" }}
           >
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 10 }}
@@ -1459,16 +1438,7 @@ const Dashboard = () => {
               onClick={(e) => e.stopPropagation()}
               style={{
                 maxWidth: 420,
-                width: "100%",
-                position: "relative",
-                transform: "none",
-                top: "auto",
-                left: "auto",
-                margin: "auto",
-                maxHeight: "85vh",
-                overflowY: "auto",
-                WebkitOverflowScrolling: "touch",
-                padding: "24px 20px"
+                width: "100%"
               }}
             >
               <div
@@ -1588,98 +1558,79 @@ const Dashboard = () => {
       {/* ── Delivery Confirmation Modal ── */}
       <AnimatePresence>
         {confirmModal && (
-          <>
+          <div
+            className="modal-overlay"
+            onClick={() => setConfirmModal(null)}
+          >
             <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setConfirmModal(null)}
+              initial={{ opacity: 0, y: 24, scale: 0.96 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 16, scale: 0.96 }}
+              transition={{ type: "spring", damping: 24, stiffness: 300 }}
+              className="modal-container"
               style={{
-                position: "fixed", inset: 0,
-                background: "rgba(8,12,28,0.7)",
-                backdropFilter: "blur(8px)",
-                zIndex: 9993,
+                maxWidth: 380,
+                width: "100%"
               }}
-            />
-            <div style={{
-              position: "fixed", inset: 0, zIndex: 9994,
-              display: "flex", alignItems: "center", justifyContent: "center",
-              padding: "16px",
-            }}>
-              <motion.div
-                initial={{ opacity: 0, y: 24, scale: 0.96 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: 16, scale: 0.96 }}
-                transition={{ type: "spring", damping: 24, stiffness: 300 }}
-                style={{
-                  background: "#ffffff",
-                  borderRadius: 24,
-                  padding: "28px 24px 24px",
-                  maxWidth: 380, width: "100%",
-                  maxHeight: "85vh",
-                  overflowY: "auto",
-                  WebkitOverflowScrolling: "touch",
-                  boxShadow: "0 28px 70px rgba(0,0,0,0.22)",
-                }}
-                onClick={(e) => e.stopPropagation()}
-              >
-                {/* Icon */}
-                <div style={{
-                  width: 64, height: 64, borderRadius: "50%",
-                  background: "linear-gradient(135deg, #22c55e, #16a34a)",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  margin: "0 auto 20px",
-                  boxShadow: "0 8px 24px rgba(34,197,94,0.35)",
-                  fontSize: "1.9rem",
-                }}>✓</div>
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Icon */}
+              <div style={{
+                width: 64, height: 64, borderRadius: "50%",
+                background: "linear-gradient(135deg, #22c55e, #16a34a)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                margin: "0 auto 20px",
+                boxShadow: "0 8px 24px rgba(34,197,94,0.35)",
+                fontSize: "1.9rem",
+                color: "#ffffff"
+              }}>✓</div>
 
-                {/* Text */}
-                <h3 style={{ fontWeight: 900, fontSize: "1.15rem", color: "#0f172a", textAlign: "center", margin: "0 0 8px" }}>
-                  Confirm Delivery
-                </h3>
-                <p style={{ fontSize: "0.85rem", color: "#64748b", textAlign: "center", lineHeight: 1.55, margin: "0 0 20px" }}>
-                  Confirming that <strong style={{ color: "#0f172a" }}>"{confirmModal.errandTitle}"</strong> has been delivered will instantly release payment to the messenger.
-                </p>
+              {/* Text */}
+              <h3 style={{ fontWeight: 900, fontSize: "1.15rem", color: "#0f172a", textAlign: "center", margin: "0 0 8px" }}>
+                Confirm Delivery
+              </h3>
+              <p style={{ fontSize: "0.85rem", color: "#64748b", textAlign: "center", lineHeight: 1.55, margin: "0 0 20px" }}>
+                Confirming that <strong style={{ color: "#0f172a" }}>"{confirmModal.errandTitle}"</strong> has been delivered will instantly release payment to the messenger.
+              </p>
 
-                {/* Warning chip */}
-                <div style={{
-                  background: "#fefce8", border: "1px solid #fde68a",
-                  borderRadius: 12, padding: "10px 14px",
-                  fontSize: "0.78rem", color: "#92400e", fontWeight: 600,
-                  textAlign: "center", marginBottom: 24,
-                }}>
-                  ⚠️ This cannot be undone once confirmed
-                </div>
+              {/* Warning chip */}
+              <div style={{
+                background: "#fefce8", border: "1px solid #fde68a",
+                borderRadius: 12, padding: "10px 14px",
+                fontSize: "0.78rem", color: "#92400e", fontWeight: 600,
+                textAlign: "center", marginBottom: 24,
+              }}>
+                ⚠️ This cannot be undone once confirmed
+              </div>
 
-                {/* Buttons */}
-                <div style={{ display: "flex", gap: 12 }}>
-                  <button
-                    onClick={() => setConfirmModal(null)}
-                    style={{
-                      flex: 1, padding: "13px 0", borderRadius: 14,
-                      border: "1.5px solid #e2e8f0", background: "#f8fafc",
-                      color: "#475569", fontWeight: 700, fontSize: "0.9rem", cursor: "pointer",
-                    }}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleConfirmDelivery}
-                    style={{
-                      flex: 1, padding: "13px 0", borderRadius: 14,
-                      border: "none",
-                      background: "linear-gradient(135deg, #16a34a, #22c55e)",
-                      color: "#ffffff", fontWeight: 800, fontSize: "0.9rem",
-                      cursor: "pointer",
-                      boxShadow: "0 6px 20px rgba(34,197,94,0.35)",
-                    }}
-                  >
-                    Release Funds 💸
-                  </button>
-                </div>
-              </motion.div>
-            </div>
-          </>
+              {/* Buttons */}
+              <div style={{ display: "flex", gap: 12 }}>
+                <button
+                  onClick={() => setConfirmModal(null)}
+                  style={{
+                    flex: 1, padding: "13px 0", borderRadius: 14,
+                    border: "1.5px solid #e2e8f0", background: "#f8fafc",
+                    color: "#475569", fontWeight: 700, fontSize: "0.9rem", cursor: "pointer",
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleConfirmDelivery}
+                  style={{
+                    flex: 1, padding: "13px 0", borderRadius: 14,
+                    border: "none",
+                    background: "linear-gradient(135deg, #16a34a, #22c55e)",
+                    color: "#ffffff", fontWeight: 800, fontSize: "0.9rem",
+                    cursor: "pointer",
+                    boxShadow: "0 6px 20px rgba(34,197,94,0.35)",
+                  }}
+                >
+                  Release Funds 💸
+                </button>
+              </div>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
     </div>

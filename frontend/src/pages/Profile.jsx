@@ -369,8 +369,8 @@ const Profile = () => {
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className="card"
-          style={{ padding: 32, textAlign: "center", height: "fit-content" }}
+          className="card profile-card-left"
+          style={{ textAlign: "center", height: "fit-content" }}
         >
           <div
             style={{
@@ -696,8 +696,7 @@ const Profile = () => {
         <motion.div
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
-          className="card"
-          style={{ padding: 40 }}
+          className="card profile-card-right"
         >
           <h3
             style={{ fontSize: "1.25rem", fontWeight: 800, marginBottom: 32 }}
@@ -706,11 +705,7 @@ const Profile = () => {
           </h3>
 
           <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-              gap: 40,
-            }}
+              className="profile-info-grid"
           >
             <div>
               <div style={{ marginBottom: 32 }}>
@@ -916,7 +911,7 @@ const Profile = () => {
                   >
                     <Wallet size={32} /> ₦{user.balance?.toLocaleString() || 0}
                   </motion.div>
-                  <div style={{ display: "flex", gap: 8 }}>
+                  <div className="profile-wallet-actions">
                     {user.role === "messenger" && (
                       <button
                         onClick={() => setIsWithdrawModalOpen(true)}

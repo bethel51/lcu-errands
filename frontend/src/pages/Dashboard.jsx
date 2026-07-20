@@ -491,7 +491,7 @@ const Dashboard = () => {
 
       <div className="container">
         {/* ── Header ── */}
-        <div className="dashboard-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", width: "100%" }}>
+        <div className="dashboard-header">
           <div className="dashboard-title" style={{ flex: 1 }}>
             <h1>
               Hello, {user?.name?.split(" ")[0] || "Student"}! 👋
@@ -528,18 +528,7 @@ const Dashboard = () => {
 
         {/* ── Wallet & Payouts Card ── */}
         <div
-          className="card"
-          style={{
-            background: "linear-gradient(135deg, #1e4db7 0%, #0f172a 100%)",
-            color: "#ffffff",
-            borderRadius: 24,
-            padding: 24,
-            marginBottom: 28,
-            boxShadow: "0 10px 25px -5px rgba(30, 77, 183, 0.3)",
-            display: "grid",
-            gap: 20,
-            gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-          }}
+          className="card dash-wallet-card"
         >
           {/* Left Column: Balance & Action */}
           <div style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", gap: 16 }}>
@@ -547,7 +536,7 @@ const Dashboard = () => {
               <span style={{ fontSize: "0.8rem", textTransform: "uppercase", letterSpacing: "0.1em", opacity: 0.8, fontWeight: 700 }}>
                 LCU Errand Wallet
               </span>
-              <div style={{ fontSize: "2.5rem", fontWeight: 900, marginTop: 4, display: "flex", alignItems: "center", gap: 10 }}>
+              <div className="dash-wallet-balance">
                 <Wallet size={32} /> ₦{user?.balance?.toLocaleString() || "0"}
               </div>
             </div>
@@ -591,7 +580,7 @@ const Dashboard = () => {
           </div>
 
           {/* Right Column: Explainer / Recent Request */}
-          <div style={{ borderLeft: "1px solid rgba(255,255,255,0.15)", paddingLeft: 20, display: "flex", flexDirection: "column", justifyContent: "center", gap: 10 }}>
+          <div className="dash-wallet-right">
             <h4 style={{ fontSize: "0.85rem", fontWeight: 800, margin: 0, textTransform: "uppercase", letterSpacing: "0.05em", color: "#60a5fa" }}>
               Secure Payment System
             </h4>
@@ -659,18 +648,11 @@ const Dashboard = () => {
                 {activeRequests.length} active errand{activeRequests.length === 1 ? "" : "s"}
               </span>
             </div>
-            <div style={{ display: "grid", gap: 12 }}>
+            <div className="dash-active-list">
               {activeRequests.slice(0, 4).map((errand) => (
                 <div
                   key={errand.id}
-                  className="card"
-                  style={{
-                    padding: 14,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    gap: 12,
-                  }}
+                  className="card dash-active-card"
                 >
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div

@@ -8,6 +8,7 @@ import { useSocket } from "../context/SocketContext";
 import NotificationCenter from "../components/NotificationCenter";
 import { useToast } from "../context/ToastContext";
 import { useBodyScrollLock } from "../hooks/useBodyScrollLock";
+import ConfirmDeliveryOverlay from "../components/ConfirmDeliveryOverlay";
 
 const History = () => {
   const navigate = useNavigate();
@@ -24,10 +25,10 @@ const History = () => {
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
   const { showToast } = useToast();
 
-  // Status Filter Tabs & Modal Confirmation States
+  // Status Filter Tabs
   const [activeStatusTab, setActiveStatusTab] = useState("All");
-  const [confirmModalOpen, setConfirmModalOpen] = useState(false);
-  const [confirmErrandId, setConfirmErrandId] = useState(null);
+  // New: full-screen confirm delivery overlay state
+  const [confirmOverlay, setConfirmOverlay] = useState(null); // { errandId, errandTitle, errandFee }
 
   // Cancel Errand Confirm Modal
   const [cancelModalOpen, setCancelModalOpen] = useState(false);
@@ -99,7 +100,7 @@ const History = () => {
     fetchHistory();
   }, [user?.id, user?._id, filterType]);
 
-  const isAnyModalOpen = confirmModalOpen || cancelModalOpen || intelModalOpen || proofModalOpen || isReviewModalOpen;
+  const isAnyModalOpen = !!confirmOverlay || cancelModalOpen || intelModalOpen || proofModalOpen || isReviewModalOpen;
   useBodyScrollLock(isAnyModalOpen);
 
   useEffect(() => {
@@ -855,20 +856,18 @@ const History = () => {
                   <div className="history-pending-banner">
                     <span>⚠️ Messenger marked this errand as completed. Please confirm.</span>
                     <button
-                      onClick={() => {
-                        setConfirmErrandId(item.id);
-                        setConfirmModalOpen(true);
-                      }}
+                      onClick={() => setConfirmOverlay({ errandId: item.id, errandTitle: item.title, errandFee: item.fee })}
                       className="btn btn-primary btn-sm"
                       style={{
-                        background: "var(--blue-600)",
-                        borderColor: "var(--blue-600)",
-                        color: "var(--white)",
+                        background: "linear-gradient(135deg,#16a34a,#22c55e)",
+                        borderColor: "transparent",
+                        color: "#fff",
                         animation: "pulse 2s infinite",
                         whiteSpace: "nowrap",
+                        display: "flex", alignItems: "center", gap: 6,
                       }}
                     >
-                      Confirm Errand Completed
+                      <CheckCircle size={14} /> Confirm &amp; Release Payment
                     </button>
                   </div>
                 )}
@@ -879,195 +878,26 @@ const History = () => {
           </div>
         )}
 
-        {/* ── Confirm Completion Modal — New Design ── */}
-        <AnimatePresence>
-          {confirmModalOpen && (
-            <motion.div
-              key="confirm-modal"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => { if (!processing) { setConfirmModalOpen(false); setConfirmErrandId(null); } }}
-              className="release-funds-overlay"
-              style={{
-                position: "fixed", inset: 0,
-                background: "rgba(15,23,42,0.75)",
-                backdropFilter: "blur(8px)",
-                zIndex: 9994,
-                display: "flex",
-                alignItems: "flex-end",
-                justifyContent: "center",
-                padding: "0 0 env(safe-area-inset-bottom, 0px) 0",
-                overflowY: "auto",
-              }}
-            >
-              <style>{`
-                @media (max-width: 480px) {
-                  .release-funds-card {
-                    padding: 20px 16px 28px !important;
-                    border-radius: 20px 20px 0 0 !important;
-                    gap: 14px !important;
-                  }
-                  .release-funds-card h2 { font-size: 1.15rem !important; }
-                  .release-funds-card p { font-size: 0.84rem !important; }
-                }
-                @media (max-height: 620px) {
-                  .release-funds-overlay {
-                    align-items: flex-start !important;
-                    padding: 12px 8px !important;
-                  }
-                  .release-funds-card {
-                    border-radius: 20px !important;
-                    max-height: 95vh !important;
-                  }
-                }
-              `}</style>
-              <motion.div
-                initial={{ y: "100%", opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                exit={{ y: "100%", opacity: 0 }}
-                transition={{ type: "spring", damping: 28, stiffness: 260 }}
-                onClick={e => e.stopPropagation()}
-                className="release-funds-card"
-                style={{
-                  width: "100%",
-                  maxWidth: 520,
-                  maxHeight: "85vh",
-                  overflowY: "auto",
-                  WebkitOverflowScrolling: "touch",
-                  background: "#fff",
-                  borderRadius: "28px 28px 0 0",
-                  padding: "28px 20px 36px",
-                  boxSizing: "border-box",
-                  boxShadow: "0 -8px 40px rgba(0,0,0,0.2)",
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 18,
-                }}
-              >
-                {/* Drag handle */}
-                <div style={{ width: 40, height: 4, background: "#e2e8f0", borderRadius: 99, margin: "0 auto -8px" }} />
+        {/* ── Confirm Delivery Overlay (full-screen, portal-based) ── */}
+        <ConfirmDeliveryOverlay
+          isOpen={!!confirmOverlay}
+          errandId={confirmOverlay?.errandId}
+          errandTitle={confirmOverlay?.errandTitle}
+          errandFee={confirmOverlay?.errandFee}
+          onClose={() => setConfirmOverlay(null)}
+          onSuccess={(id) => {
+            setConfirmOverlay(null);
+            // Optimistic update in list
+            setHistoryItems(prev => prev.map(item =>
+              item.id === id ? { ...item, status: "confirmed_completed" } : item
+            ));
+            // Open review modal
+            setSelectedErrandId(id);
+            setIsReviewModalOpen(true);
+            fetchHistory();
+          }}
+        />
 
-                {/* Header icon */}
-                <div style={{ textAlign: "center" }}>
-                  <div style={{
-                    width: 64, height: 64, borderRadius: "50%",
-                    background: "linear-gradient(135deg,#dbeafe,#bfdbfe)",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    margin: "0 auto 12px", fontSize: "2rem"
-                  }}>💸</div>
-                  <h2 style={{ fontWeight: 900, fontSize: "1.3rem", color: "#0f172a", margin: 0 }}>
-                    Release Payment?
-                  </h2>
-                  <p style={{ color: "#64748b", fontSize: "0.9rem", marginTop: 6, lineHeight: 1.5 }}>
-                    {confirmErrandItem ? (
-                      <>Confirm that <strong>"{confirmErrandItem.title}"</strong> was delivered successfully. <br />
-                      <strong style={{ color: "#16a34a" }}>₦{(confirmErrandItem.fee || 0).toLocaleString()}</strong> will be sent to the messenger.</>
-                    ) : "Confirm delivery and release funds to the messenger."}
-                  </p>
-                </div>
-
-                {/* Info row */}
-                <div style={{
-                  background: "#f0fdf4", border: "1px solid #bbf7d0",
-                  borderRadius: 14, padding: "12px 16px",
-                  display: "flex", alignItems: "center", gap: 10,
-                  fontSize: "0.82rem", color: "#15803d"
-                }}>
-                  <span style={{ fontSize: "1.2rem", flexShrink: 0 }}>✅</span>
-                  <span style={{ flex: 1, textAlign: "left", lineHeight: 1.4 }}>Once confirmed, payment is <strong>immediately released</strong> and cannot be reversed.</span>
-                </div>
-
-                {/* Actions */}
-                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                  <button
-                    disabled={processing}
-                    onClick={async () => {
-                      const id = confirmErrandId;
-                      setProcessing(true);
-                      try {
-                        const res = await api.patch(`/errands/${id}/complete`);
-                        
-                        // Close confirm modal & reset ID
-                        setConfirmModalOpen(false);
-                        setConfirmErrandId(null);
-                        
-                        const msg = res.data?.message || "✅ Payment released! Messenger has been paid.";
-                        showToast(msg);
-                        
-                        // Automatically open the Review/Rating modal for the messenger
-                        setSelectedErrandId(id);
-                        setIsReviewModalOpen(true);
-                        
-                        // Reload list
-                        fetchHistory();
-                      } catch (err) {
-                        const msg = err.response?.data?.message || err.message || "Request failed. Please try again.";
-                        showToast(`❌ ${msg}`, "error");
-                      } finally {
-                        setProcessing(false);
-                      }
-                    }}
-                    style={{
-                      width: "100%",
-                      padding: "16px 0",
-                      borderRadius: 14,
-                      border: "none",
-                      background: processing
-                        ? "#93c5fd"
-                        : "linear-gradient(135deg,#1d4ed8,#2563eb)",
-                      color: "#fff",
-                      fontWeight: 800,
-                      fontSize: "1rem",
-                      cursor: processing ? "not-allowed" : "pointer",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      gap: 10,
-                      boxShadow: processing ? "none" : "0 4px 18px rgba(37,99,235,0.35)",
-                      transition: "all 0.2s",
-                    }}
-                  >
-                    {processing ? (
-                      <>
-                        <span style={{
-                          width: 20, height: 20, border: "3px solid rgba(255,255,255,0.3)",
-                          borderTop: "3px solid #fff", borderRadius: "50%",
-                          display: "inline-block", animation: "spin 0.8s linear infinite"
-                        }} />
-                        Releasing Payment...
-                      </>
-                    ) : "💸 Yes, Release Payment"}
-                  </button>
-                  <button
-                    disabled={processing}
-                    onClick={() => {
-                      if (!processing) {
-                        setConfirmModalOpen(false);
-                        setConfirmErrandId(null);
-                      }
-                    }}
-                    style={{
-                      width: "100%",
-                      padding: "14px 0",
-                      borderRadius: 14,
-                      border: "2px solid #e2e8f0",
-                      background: "transparent",
-                      color: "#64748b",
-                      fontWeight: 700,
-                      fontSize: "0.95rem",
-                      cursor: processing ? "not-allowed" : "pointer",
-                    }}
-                  >
-                    Keep Errand
-                  </button>
-                </div>
-              </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* ── Cancel Errand Confirm Modal ── */}
         <AnimatePresence>
           {cancelModalOpen && (
             <motion.div

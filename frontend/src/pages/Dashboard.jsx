@@ -15,6 +15,8 @@ import {
   Send,
   ImagePlus,
   CheckCheck,
+  Users,
+  CheckCircle,
 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import api from "../api";
@@ -22,6 +24,8 @@ import ReviewModal from "../components/ReviewModal";
 import { useSocket } from "../context/SocketContext";
 import NotificationCenter from "../components/NotificationCenter";
 import { useToast } from "../context/ToastContext";
+import ConfirmDeliveryOverlay from "../components/ConfirmDeliveryOverlay";
+import ApplicantsSheet from "../components/ApplicantsSheet";
 
 const CATEGORIES = [
   "All",
@@ -92,15 +96,13 @@ const Dashboard = () => {
   });
   const [user, setUser] = useState(null);
   const [processing, setProcessing] = useState(false);
-  const [acceptingErrand, setAcceptingErrand] = useState(null);
-  // Delivery confirmation modal state
-  const [confirmModal, setConfirmModal] = useState(null); // { errandId, errandTitle }
-
-  const [activeChat, setActiveChat] = useState(null);
-  const [messages, setMessages] = useState([]);
-  const [newMessage, setNewMessage] = useState("");
-  const [chatImageUrl, setChatImageUrl] = useState("");
-  const [chatImageUploading, setChatImageUploading] = useState(false);
+  // New: inline accept state — which errand card is expanded for confirmation
+  const [pendingAcceptId, setPendingAcceptId] = useState(null);
+  // New: applicants sheet
+  const [applicantsSheet, setApplicantsSheet] = useState(null); // { errandId, errandTitle, candidates }
+  const [hiringId, setHiringId] = useState(null);
+  // New: confirm delivery overlay
+  const [confirmOverlay, setConfirmOverlay] = useState(null); // { errandId, errandTitle, errandFee }
 
   const [transactions, setTransactions] = useState([]);
   const [withdrawals, setWithdrawals] = useState([]);
@@ -255,7 +257,7 @@ const Dashboard = () => {
     }
   }, []);
 
-  const isAnyModalOpen = isPostModalOpen || isWithdrawModalOpen || isTopUpModalOpen || !!acceptingErrand || isReviewModalOpen || !!confirmModal;
+  const isAnyModalOpen = isPostModalOpen || isWithdrawModalOpen || isTopUpModalOpen || !!applicantsSheet || isReviewModalOpen || !!confirmOverlay;
   useBodyScrollLock(isAnyModalOpen);
 
   useEffect(() => {
@@ -402,30 +404,46 @@ const Dashboard = () => {
     }
   };
 
-  // Opens delivery confirmation dialog
-  const handleCompleteTask = (id, errandTitle) => {
-    setConfirmModal({ errandId: id, errandTitle: errandTitle || "this errand" });
+  // Opens the full-screen delivery confirmation overlay
+  const handleCompleteTask = (id, errandTitle, errandFee) => {
+    setConfirmOverlay({ errandId: id, errandTitle: errandTitle || "this errand", errandFee: errandFee || 0 });
   };
 
-  // Called when user confirms delivery
-  const handleConfirmDelivery = async () => {
-    const id = confirmModal.errandId;
-    setConfirmModal(null);
-    // Optimistic: instantly move errand out of pending state
+  // Called when ConfirmDeliveryOverlay successfully releases funds
+  const handleDeliveryConfirmed = (id) => {
+    setConfirmOverlay(null);
+    // Optimistic update
+    setActiveRequests((prev) =>
+      prev.map((e) => e.id === id ? { ...e, status: "confirmed_completed" } : e),
+    );
+    fetchWalletData();
+    // Open review modal
+    setSelectedErrandId(id);
+    setIsReviewModalOpen(true);
+  };
+
+  // Hire a messenger from the applicants sheet
+  const handleHireFromSheet = async (messengerId) => {
+    if (!applicantsSheet || hiringId) return;
+    setHiringId(messengerId);
+    const errandId = applicantsSheet.errandId;
+    // Optimistic update
     setActiveRequests((prev) =>
       prev.map((e) =>
-        e.id === id ? { ...e, status: "confirmed_completed" } : e,
+        e.id === errandId
+          ? { ...e, status: "assigned", erranderId: messengerId, candidates: [] }
+          : e,
       ),
     );
+    setApplicantsSheet(null);
     try {
-      const res = await api.patch(`/errands/${id}/complete`);
-      const msg = res.data?.message || "✅ Delivery confirmed! Payment released to messenger.";
-      showToast(msg);
-      fetchWalletData();
+      await api.post(`/errands/${errandId}/select`, { messengerId });
+      showToast("🎉 Messenger hired successfully!");
     } catch (err) {
       fetchActiveRequestsOnly();
-      const msg = err.response?.data?.message || err.message || "Failed to confirm delivery. Please try again.";
-      showToast(`❌ ${msg}`, "error");
+      showToast(err.response?.data?.message || "Could not hire messenger.", "error");
+    } finally {
+      setHiringId(null);
     }
   };
 
@@ -631,6 +649,33 @@ const Dashboard = () => {
           ))}
         </div>
 
+        {/* ── Action Required Banner (sender pending confirmation) ── */}
+        {userRole === "sender" && activeRequests.some(e => ["pending_confirmation", "pending_sender_confirmation"].includes(e.status)) && (
+          <div className="action-required-banner">
+            <div className="action-required-banner-left">
+              <div className="action-required-bell">🔔</div>
+              <div>
+                <div className="action-required-title">Action Required</div>
+                <div className="action-required-sub">
+                  {activeRequests.filter(e => ["pending_confirmation", "pending_sender_confirmation"].includes(e.status)).length} errand{activeRequests.filter(e => ["pending_confirmation", "pending_sender_confirmation"].includes(e.status)).length > 1 ? "s" : ""} waiting for your confirmation
+                </div>
+              </div>
+            </div>
+            <div className="action-required-errands">
+              {activeRequests.filter(e => ["pending_confirmation", "pending_sender_confirmation"].includes(e.status)).map(errand => (
+                <button
+                  key={errand.id}
+                  className="action-required-confirm-btn"
+                  onClick={() => handleCompleteTask(errand.id, errand.title, errand.fee)}
+                >
+                  <CheckCircle size={15} />
+                  Confirm "{errand.title.length > 20 ? errand.title.slice(0, 20) + "…" : errand.title}" · ₦{errand.fee?.toLocaleString()}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {activeRequests.length > 0 && (
           <div style={{ marginBottom: 28 }}>
             <div
@@ -649,96 +694,59 @@ const Dashboard = () => {
               </span>
             </div>
             <div className="dash-active-list">
-              {activeRequests.slice(0, 4).map((errand) => (
+              {activeRequests.slice(0, 6).map((errand) => (
                 <div
                   key={errand.id}
                   className="card dash-active-card"
                 >
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div
-                       style={{
-                         fontWeight: 800,
-                         color: "var(--gray-900)",
-                         whiteSpace: "nowrap",
-                         overflow: "hidden",
-                         textOverflow: "ellipsis",
-                       }}
-                     >
-                       {errand.title}
-                     </div>
-                     <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 5 }}>
-                       <span style={{ fontSize: "0.75rem", color: "var(--gray-500)", fontWeight: 700 }}>
-                         {errand.status?.replace("_", " ")}
-                       </span>
-                       <span style={{ fontSize: "0.75rem", color: "var(--blue-600)", fontWeight: 800 }}>
-                         ₦{errand.fee?.toLocaleString()}
-                       </span>
-                     </div>
-
-                    {/* Render Candidates/Applicants list if status is open */}
-                    {userRole === "sender" && errand.status === "open" && errand.candidates && errand.candidates.length > 0 && (
-                      <div style={{ marginTop: 12, borderTop: "1px solid var(--gray-100)", paddingTop: 10 }}>
-                        <div style={{ fontSize: "0.78rem", fontWeight: 800, color: "var(--gray-500)", textTransform: "uppercase", marginBottom: 8 }}>
-                          Applicants ({errand.candidates.length})
-                        </div>
-                        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                          {errand.candidates.map((candidate) => (
-                            <div key={candidate._id} style={{ display: "flex", alignItems: "center", justifyBetween: "space-between", gap: 10, background: "var(--gray-50)", padding: 8, borderRadius: 12 }}>
-                              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                                <SenderAvatar picture={candidate.profilePicture} name={candidate.name} />
-                                <div>
-                                  <div style={{ fontSize: "0.85rem", fontWeight: 700, color: "var(--gray-900)" }}>{candidate.name}</div>
-                                  <div style={{ fontSize: "0.72rem", color: "var(--gray-500)" }}>
-                                    {candidate.department && <span>{candidate.department} · </span>}
-                                    {candidate.rating > 0 && <span style={{ color: "var(--amber-500)" }}>★ {candidate.rating.toFixed(1)}</span>}
-                                  </div>
-                                </div>
-                              </div>
-                              <button
-                                className="btn btn-primary btn-sm"
-                                style={{ padding: "6px 12px", fontSize: "0.75rem", borderRadius: 8, marginLeft: "auto" }}
-                                onClick={async () => {
-                                  // Optimistic: instantly hide candidates list & mark as assigned
-                                  setActiveRequests((prev) =>
-                                    prev.map((e) =>
-                                      e.id === errand.id
-                                        ? { ...e, status: "assigned", erranderId: candidate._id, candidates: [] }
-                                        : e,
-                                    ),
-                                  );
-                                  try {
-                                    await api.post(`/errands/${errand.id}/select`, { messengerId: candidate._id });
-                                    showToast("🎉 Messenger hired successfully!");
-                                  } catch (err) {
-                                    // Rollback on failure
-                                    fetchActiveRequestsOnly();
-                                    showToast(err.response?.data?.message || "Could not hire messenger.", "error");
-                                  }
-                                }}
-                              >
-                                Hire
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
+                      style={{
+                        fontSize: "0.88rem",
+                        fontWeight: 800,
+                        color: "var(--gray-900)",
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                      }}
+                    >
+                      {errand.title}
+                    </div>
+                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 5 }}>
+                      <span style={{ fontSize: "0.75rem", color: "var(--gray-500)", fontWeight: 700 }}>
+                        {errand.status?.replace(/_/g, " ")}
+                      </span>
+                      <span style={{ fontSize: "0.75rem", color: "var(--blue-600)", fontWeight: 800 }}>
+                        ₦{errand.fee?.toLocaleString()}
+                      </span>
+                    </div>
                   </div>
                   <div style={{ display: "flex", gap: 8, alignItems: "center", flexShrink: 0 }}>
-                    {userRole === "sender" && errand.posterId?.toString() === cachedUserId && ["pending_confirmation", "pending_sender_confirmation"].includes(errand.status) && (
+                    {/* View Applicants button */}
+                    {userRole === "sender" && errand.status === "open" && errand.candidates && errand.candidates.length > 0 && (
                       <button
-                        onClick={() => handleCompleteTask(errand.id, errand.title)}
+                        className="btn btn-primary btn-sm"
+                        style={{ display: "flex", alignItems: "center", gap: 5 }}
+                        onClick={() => setApplicantsSheet({ errandId: errand.id, errandTitle: errand.title, candidates: errand.candidates })}
+                      >
+                        <Users size={13} /> {errand.candidates.length} Applicant{errand.candidates.length > 1 ? "s" : ""}
+                      </button>
+                    )}
+                    {/* Confirm Delivery button */}
+                    {userRole === "sender" && ["pending_confirmation", "pending_sender_confirmation"].includes(errand.status) && (
+                      <button
+                        onClick={() => handleCompleteTask(errand.id, errand.title, errand.fee)}
                         className="btn btn-primary btn-sm"
                         style={{
-                          background: "var(--blue-600)",
-                          borderColor: "var(--blue-600)",
-                          color: "var(--white)",
-                          fontWeight: 750,
-                          boxShadow: "0 0 10px rgba(37, 99, 235, 0.2)",
+                          background: "linear-gradient(135deg,#16a34a,#22c55e)",
+                          borderColor: "transparent",
+                          color: "#fff",
+                          fontWeight: 800,
+                          display: "flex", alignItems: "center", gap: 5,
                           animation: "pulse 2s infinite"
                         }}
                       >
-                        Confirm Delivery 🔔
+                        <CheckCircle size={13} /> Confirm
                       </button>
                     )}
                   </div>
@@ -950,20 +958,44 @@ const Dashboard = () => {
 
                           {userRole === "messenger" && user?.isVerified && errand.posterId !== cachedUserId && (() => {
                             const hasApplied = errand.candidates && errand.candidates.some(c => (c._id || c) === cachedUserId);
+                            
+                            if (hasApplied) {
+                              return (
+                                <span style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--green-600)", background: "var(--green-50)", padding: "4px 10px", borderRadius: 20, border: "1px solid var(--green-200)", flexShrink: 0 }}>
+                                  ✓ Requested
+                                </span>
+                              );
+                            }
+                            const isExpanded = pendingAcceptId === errand.id;
+                            if (isExpanded) {
+                              return (
+                                <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+                                  <button
+                                    className="btn btn-outline btn-sm"
+                                    style={{ borderRadius: 10, padding: "5px 10px", fontSize: "0.78rem" }}
+                                    onClick={() => setPendingAcceptId(null)}
+                                  >
+                                    Cancel
+                                  </button>
+                                  <button
+                                    id={`confirm-accept-${errand.id}`}
+                                    className="btn btn-primary btn-sm"
+                                    style={{ background: "linear-gradient(135deg,#1d4ed8,#2563eb)", borderRadius: 10, padding: "5px 12px", fontSize: "0.78rem", fontWeight: 800 }}
+                                    onClick={() => { setPendingAcceptId(null); handleApplyForErrand(errand.id); }}
+                                  >
+                                    ✓ Confirm Accept
+                                  </button>
+                                </div>
+                              );
+                            }
                             return (
                               <button
                                 id={`accept-errand-${errand.id}`}
-                                onClick={() => !hasApplied && setAcceptingErrand(errand)}
+                                onClick={() => setPendingAcceptId(errand.id)}
                                 className="btn btn-primary btn-sm"
-                                style={{
-                                  flexShrink: 0,
-                                  opacity: hasApplied ? 0.7 : 1,
-                                  pointerEvents: hasApplied ? "none" : "auto",
-                                  background: hasApplied ? "var(--gray-300)" : "var(--blue-600)",
-                                  color: hasApplied ? "var(--gray-600)" : "#ffffff"
-                                }}
+                                style={{ flexShrink: 0 }}
                               >
-                                {hasApplied ? "Requested" : "Apply"} <ArrowRight size={13} />
+                                Accept <ArrowRight size={13} />
                               </button>
                             );
                           })()}
@@ -993,163 +1025,25 @@ const Dashboard = () => {
         )}
       </div>
 
-      {/* ── Acceptance Confirmation Modal ── */}
-      <AnimatePresence>
-        {acceptingErrand && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setAcceptingErrand(null)}
-              style={{
-                position: "fixed",
-                inset: 0,
-                background: "rgba(15,23,42,0.65)",
-                backdropFilter: "blur(6px)",
-                zIndex: 9992,
-              }}
-            />
-            <div className="errand-accept-modal-wrapper" style={{ display: "flex", alignItems: "flex-end", justifyContent: "center", position: "fixed", inset: 0, zIndex: 9993, padding: "0 0 env(safe-area-inset-bottom, 0px) 0" }}>
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                transition={{ type: "spring", damping: 25, stiffness: 220 }}
-                className="errand-accept-modal"
-                style={{
-                  maxHeight: "85vh",
-                  overflowY: "auto",
-                  WebkitOverflowScrolling: "touch",
-                  width: "100%",
-                  maxWidth: 520,
-                  background: "#fff",
-                  borderRadius: "28px 28px 0 0",
-                  padding: "24px 20px 32px",
-                  display: "flex",
-                  flexDirection: "column",
-                  boxShadow: "0 -8px 40px rgba(0,0,0,0.25)"
-                }}
-              >
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, borderBottom: "1px solid var(--gray-100)", paddingBottom: 12 }}>
-                  <h3 style={{ fontWeight: 900, fontSize: "1.2rem", margin: 0, color: "var(--gray-900)" }}>Request to Do Errand</h3>
-                  <button
-                    onClick={() => setAcceptingErrand(null)}
-                    style={{ background: "none", border: "none", cursor: "pointer", color: "var(--gray-400)" }}
-                  >
-                    <X size={20} />
-                  </button>
-                </div>
+      {/* ── Applicants Sheet ── */}
+      <ApplicantsSheet
+        isOpen={!!applicantsSheet}
+        candidates={applicantsSheet?.candidates || []}
+        errandTitle={applicantsSheet?.errandTitle || ""}
+        onHire={handleHireFromSheet}
+        onClose={() => setApplicantsSheet(null)}
+        hiringId={hiringId}
+      />
 
-                <div style={{ flex: 1, overflowY: "auto", paddingRight: 4, display: "flex", flexDirection: "column", gap: 16 }}>
-                  {/* Sender Card */}
-                  <div style={{ background: "var(--gray-50)", border: "1px solid var(--gray-200)", borderRadius: 16, padding: 14 }}>
-                    <h4 style={{ margin: "0 0 10px 0", fontSize: "0.8rem", fontWeight: 800, color: "var(--gray-500)", textTransform: "uppercase", letterSpacing: "0.05em" }}>Sender Details</h4>
-                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                      <SenderAvatar picture={acceptingErrand.posterPicture} name={acceptingErrand.posterName} />
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 5, fontWeight: 800, fontSize: "0.95rem", color: "var(--gray-900)" }}>
-                          {acceptingErrand.posterName}
-                          {acceptingErrand.posterVerified && (
-                            <span
-                              style={{
-                                display: "inline-flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                background: "var(--blue-100)",
-                                color: "var(--blue-600)",
-                                borderRadius: "50%",
-                                width: 14,
-                                height: 14,
-                                fontSize: "0.6rem",
-                                fontWeight: 900
-                              }}
-                              title="Verified User"
-                            >
-                              ✓
-                            </span>
-                          )}
-                        </div>
-                        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginTop: 4 }}>
-                          {acceptingErrand.posterDepartment && (
-                            <span style={{ display: "flex", alignItems: "center", gap: 4, fontSize: "0.75rem", color: "var(--blue-600)", fontWeight: 600 }}>
-                              <Building size={11} /> {acceptingErrand.posterDepartment}
-                            </span>
-                          )}
-                          {acceptingErrand.posterLocation && (
-                            <span style={{ display: "flex", alignItems: "center", gap: 4, fontSize: "0.75rem", color: "var(--gray-500)", fontWeight: 600 }}>
-                              <Home size={11} /> {acceptingErrand.posterLocation}
-                            </span>
-                          )}
-                          {acceptingErrand.posterRating > 0 && (
-                            <span style={{ display: "flex", alignItems: "center", gap: 3, fontSize: "0.75rem", color: "#D97706", fontWeight: 700 }}>
-                              <Star size={10} fill="#D97706" color="#D97706" /> {acceptingErrand.posterRating.toFixed(1)}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Errand Info */}
-                  <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                    <h4 style={{ margin: "0", fontSize: "0.8rem", fontWeight: 800, color: "var(--gray-500)", textTransform: "uppercase", letterSpacing: "0.05em" }}>Errand Details</h4>
-                    <div>
-                      <h3 style={{ margin: "0 0 6px 0", fontSize: "1.05rem", fontWeight: 800, color: "var(--gray-900)" }}>{acceptingErrand.title}</h3>
-                      <p style={{ margin: 0, fontSize: "0.88rem", color: "var(--gray-600)", lineHeight: 1.5 }}>{acceptingErrand.description}</p>
-                    </div>
-
-                    <div className="accept-modal-grid">
-                      <div style={{ background: "var(--blue-50)", border: "1px solid var(--blue-100)", padding: 10, borderRadius: 12 }}>
-                        <span style={{ display: "block", fontSize: "0.65rem", color: "var(--blue-500)", fontWeight: 800, textTransform: "uppercase", marginBottom: 2 }}>Category</span>
-                        <span style={{ fontSize: "0.85rem", color: "var(--blue-900)", fontWeight: 700 }}>{acceptingErrand.category}</span>
-                      </div>
-                      <div style={{ background: "var(--green-50)", border: "1px solid var(--green-100)", padding: 10, borderRadius: 12 }}>
-                        <span style={{ display: "block", fontSize: "0.65rem", color: "var(--green-500)", fontWeight: 800, textTransform: "uppercase", marginBottom: 2 }}>Payout Fee</span>
-                        <span style={{ fontSize: "0.95rem", color: "var(--green-900)", fontWeight: 800 }}>₦{acceptingErrand.fee.toLocaleString()}</span>
-                      </div>
-                    </div>
-
-                    <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 8 }}>
-                      {acceptingErrand.pickupLocation && (
-                        <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.8rem", color: "var(--gray-600)" }}>
-                          <span style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--green-500)" }} />
-                          <span><strong>Pick Up:</strong> {acceptingErrand.pickupLocation}</span>
-                        </div>
-                      )}
-                      <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.8rem", color: "var(--gray-600)" }}>
-                        <span style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--blue-500)" }} />
-                        <span><strong>Drop Off:</strong> {acceptingErrand.location || "Not specified"}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="accept-modal-actions">
-                  <button
-                    onClick={() => setAcceptingErrand(null)}
-                    className="btn btn-outline"
-                    style={{ flex: 1, borderRadius: 12 }}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={async () => {
-                      const id = acceptingErrand.id || acceptingErrand._id;
-                      setAcceptingErrand(null);
-                      await handleApplyForErrand(id);
-                    }}
-                    className="btn btn-primary"
-                    style={{ flex: 1, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}
-                  >
-                    Send Request <ArrowRight size={14} />
-                  </button>
-                </div>
-              </motion.div>
-            </div>
-          </>
-        )}
-      </AnimatePresence>
+      {/* ── Confirm Delivery Overlay ── */}
+      <ConfirmDeliveryOverlay
+        isOpen={!!confirmOverlay}
+        errandId={confirmOverlay?.errandId}
+        errandTitle={confirmOverlay?.errandTitle}
+        errandFee={confirmOverlay?.errandFee}
+        onClose={() => setConfirmOverlay(null)}
+        onSuccess={handleDeliveryConfirmed}
+      />
 
 
 
@@ -1537,84 +1431,6 @@ const Dashboard = () => {
         role={userRole}
       />
 
-      {/* ── Delivery Confirmation Modal ── */}
-      <AnimatePresence>
-        {confirmModal && (
-          <div
-            className="modal-overlay"
-            onClick={() => setConfirmModal(null)}
-          >
-            <motion.div
-              initial={{ opacity: 0, y: 24, scale: 0.96 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 16, scale: 0.96 }}
-              transition={{ type: "spring", damping: 24, stiffness: 300 }}
-              className="modal-container"
-              style={{
-                maxWidth: 380,
-                width: "100%"
-              }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              {/* Icon */}
-              <div style={{
-                width: 64, height: 64, borderRadius: "50%",
-                background: "linear-gradient(135deg, #22c55e, #16a34a)",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                margin: "0 auto 20px",
-                boxShadow: "0 8px 24px rgba(34,197,94,0.35)",
-                fontSize: "1.9rem",
-                color: "#ffffff"
-              }}>✓</div>
-
-              {/* Text */}
-              <h3 style={{ fontWeight: 900, fontSize: "1.15rem", color: "#0f172a", textAlign: "center", margin: "0 0 8px" }}>
-                Confirm Delivery
-              </h3>
-              <p style={{ fontSize: "0.85rem", color: "#64748b", textAlign: "center", lineHeight: 1.55, margin: "0 0 20px" }}>
-                Confirming that <strong style={{ color: "#0f172a" }}>"{confirmModal?.errandTitle || "this errand"}"</strong> has been delivered will instantly release payment to the messenger.
-              </p>
-
-              {/* Warning chip */}
-              <div style={{
-                background: "#fefce8", border: "1px solid #fde68a",
-                borderRadius: 12, padding: "10px 14px",
-                fontSize: "0.78rem", color: "#92400e", fontWeight: 600,
-                textAlign: "center", marginBottom: 24,
-              }}>
-                ⚠️ This cannot be undone once confirmed
-              </div>
-
-              {/* Buttons */}
-              <div style={{ display: "flex", gap: 12 }}>
-                <button
-                  onClick={() => setConfirmModal(null)}
-                  style={{
-                    flex: 1, padding: "13px 0", borderRadius: 14,
-                    border: "1.5px solid #e2e8f0", background: "#f8fafc",
-                    color: "#475569", fontWeight: 700, fontSize: "0.9rem", cursor: "pointer",
-                  }}
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleConfirmDelivery}
-                  style={{
-                    flex: 1, padding: "13px 0", borderRadius: 14,
-                    border: "none",
-                    background: "linear-gradient(135deg, #16a34a, #22c55e)",
-                    color: "#ffffff", fontWeight: 800, fontSize: "0.9rem",
-                    cursor: "pointer",
-                    boxShadow: "0 6px 20px rgba(34,197,94,0.35)",
-                  }}
-                >
-                  Release Funds 💸
-                </button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
     </div>
   );
 };

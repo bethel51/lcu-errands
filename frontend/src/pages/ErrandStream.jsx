@@ -100,14 +100,12 @@ const ErrandStream = () => {
   const [search, setSearch] = useState("");
   const [activeCategory, setActiveCategory] = useState("All");
   const [applyingId, setApplyingId] = useState(null); // track per-card applying state
-  const [acceptingErrand, setAcceptingErrand] = useState(null);
+  const [pendingAcceptId, setPendingAcceptId] = useState(null);
   const pollingRef = useRef(null);
 
   // Keep userId fresh without causing re-renders
   const userIdRef = useRef(getUserId());
   const userRole = localStorage.getItem("userRole") || "messenger";
-
-  useBodyScrollLock(!!acceptingErrand);
 
   const mapBackendToFrontend = useCallback((err) => {
     const uid = userIdRef.current;
@@ -498,21 +496,47 @@ const ErrandStream = () => {
                         <span>Drop off: {errand.location || "Not specified"}</span>
                       </div>
 
-                      {userRole === "messenger" && !isOwner && (
-                        <button
-                          onClick={() => !errand.hasApplied && setAcceptingErrand(errand)}
-                          className={`stream-accept-btn ${errand.hasApplied ? "applied" : ""}`}
-                          style={{
-                            opacity: errand.hasApplied ? 0.7 : 1,
-                            pointerEvents: errand.hasApplied ? "none" : "auto",
-                            background: errand.hasApplied ? "var(--gray-300)" : "var(--blue-600)",
-                            color: errand.hasApplied ? "var(--gray-600)" : "#ffffff"
-                          }}
-                        >
-                          {errand.hasApplied ? "Requested ✓" : "Request to Do"}
-                          {!errand.hasApplied && <ArrowRight size={14} />}
-                        </button>
-                      )}
+                      {userRole === "messenger" && !isOwner && (() => {
+                        const isExpanded = pendingAcceptId === errand.id;
+                        if (errand.hasApplied) {
+                          return (
+                            <span style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--green-600)", background: "var(--green-50)", padding: "4px 10px", borderRadius: 20, border: "1px solid var(--green-200)", flexShrink: 0 }}>
+                              ✓ Requested
+                            </span>
+                          );
+                        }
+                        if (isExpanded) {
+                          return (
+                            <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+                              <button
+                                className="btn btn-outline btn-sm"
+                                style={{ borderRadius: 10, padding: "5px 10px", fontSize: "0.78rem" }}
+                                onClick={() => setPendingAcceptId(null)}
+                              >
+                                Cancel
+                              </button>
+                              <button
+                                id={`confirm-accept-${errand.id}`}
+                                className="btn btn-primary btn-sm"
+                                style={{ background: "linear-gradient(135deg,#1d4ed8,#2563eb)", borderRadius: 10, padding: "5px 12px", fontSize: "0.78rem", fontWeight: 800 }}
+                                onClick={() => { setPendingAcceptId(null); handleApplyForErrand(errand.id); }}
+                              >
+                                ✓ Confirm Accept
+                              </button>
+                            </div>
+                          );
+                        }
+                        return (
+                          <button
+                            id={`accept-errand-${errand.id}`}
+                            onClick={() => setPendingAcceptId(errand.id)}
+                            className="btn btn-primary btn-sm"
+                            style={{ flexShrink: 0 }}
+                          >
+                            Accept <ArrowRight size={13} />
+                          </button>
+                        );
+                      })()}
 
                       {isOwner && (
                         <span className="stream-owner-tag">
@@ -527,165 +551,6 @@ const ErrandStream = () => {
           </div>
         )}
       </div>
-
-      {/* ── Acceptance Confirmation Modal ── */}
-      <AnimatePresence>
-        {acceptingErrand && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setAcceptingErrand(null)}
-              style={{
-                position: "fixed",
-                inset: 0,
-                background: "rgba(15,23,42,0.65)",
-                backdropFilter: "blur(6px)",
-                zIndex: 9992,
-              }}
-            />
-            <div className="errand-accept-modal-wrapper" style={{ display: "flex", alignItems: "flex-end", justifyContent: "center", position: "fixed", inset: 0, zIndex: 9993, padding: "0 0 env(safe-area-inset-bottom, 0px) 0" }}>
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                transition={{ type: "spring", damping: 25, stiffness: 220 }}
-                className="errand-accept-modal"
-                style={{
-                  maxHeight: "85vh",
-                  overflowY: "auto",
-                  WebkitOverflowScrolling: "touch",
-                  width: "100%",
-                  maxWidth: 520,
-                  background: "#fff",
-                  borderRadius: "28px 28px 0 0",
-                  padding: "24px 20px 32px",
-                  display: "flex",
-                  flexDirection: "column",
-                  boxShadow: "0 -8px 40px rgba(0,0,0,0.25)"
-                }}
-              >
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, borderBottom: "1px solid var(--gray-100)", paddingBottom: 12 }}>
-                  <h3 style={{ fontWeight: 900, fontSize: "1.2rem", margin: 0, color: "var(--gray-900)" }}>Request to Do Errand</h3>
-                  <button
-                    onClick={() => setAcceptingErrand(null)}
-                    style={{ background: "none", border: "none", cursor: "pointer", color: "var(--gray-400)" }}
-                  >
-                    <X size={20} />
-                  </button>
-                </div>
-
-                <div style={{ flex: 1, overflowY: "auto", paddingRight: 4, display: "flex", flexDirection: "column", gap: 16 }}>
-                  {/* Sender Card */}
-                  <div style={{ background: "var(--gray-50)", border: "1px solid var(--gray-200)", borderRadius: 16, padding: 14 }}>
-                    <h4 style={{ margin: "0 0 10px 0", fontSize: "0.8rem", fontWeight: 800, color: "var(--gray-500)", textTransform: "uppercase", letterSpacing: "0.05em" }}>Sender Details</h4>
-                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                      <SenderAvatar picture={acceptingErrand.posterPicture} name={acceptingErrand.posterName} />
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 5, fontWeight: 800, fontSize: "0.95rem", color: "var(--gray-900)" }}>
-                          {acceptingErrand.posterName}
-                          {acceptingErrand.posterVerified && (
-                            <span
-                              style={{
-                                display: "inline-flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                background: "var(--blue-100)",
-                                color: "var(--blue-600)",
-                                borderRadius: "50%",
-                                width: 14,
-                                height: 14,
-                                fontSize: "0.6rem",
-                                fontWeight: 900
-                              }}
-                              title="Verified User"
-                            >
-                              ✓
-                            </span>
-                          )}
-                        </div>
-                        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginTop: 4 }}>
-                          {acceptingErrand.posterDepartment && (
-                            <span style={{ display: "flex", alignItems: "center", gap: 4, fontSize: "0.75rem", color: "var(--blue-600)", fontWeight: 600 }}>
-                              <Building size={11} /> {acceptingErrand.posterDepartment}
-                            </span>
-                          )}
-                          {acceptingErrand.posterLocation && (
-                            <span style={{ display: "flex", alignItems: "center", gap: 4, fontSize: "0.75rem", color: "var(--gray-500)", fontWeight: 600 }}>
-                              <Home size={11} /> {acceptingErrand.posterLocation}
-                            </span>
-                          )}
-                          {acceptingErrand.posterRating > 0 && (
-                            <span style={{ display: "flex", alignItems: "center", gap: 3, fontSize: "0.75rem", color: "#D97706", fontWeight: 700 }}>
-                              <Star size={10} fill="#D97706" color="#D97706" /> {acceptingErrand.posterRating.toFixed(1)}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Errand Info */}
-                  <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                    <h4 style={{ margin: "0", fontSize: "0.8rem", fontWeight: 800, color: "var(--gray-500)", textTransform: "uppercase", letterSpacing: "0.05em" }}>Errand Details</h4>
-                    <div>
-                      <h3 style={{ margin: "0 0 6px 0", fontSize: "1.05rem", fontWeight: 800, color: "var(--gray-900)" }}>{acceptingErrand.title}</h3>
-                      <p style={{ margin: 0, fontSize: "0.88rem", color: "var(--gray-600)", lineHeight: 1.5 }}>{acceptingErrand.description}</p>
-                    </div>
-
-                    <div className="accept-modal-grid">
-                      <div style={{ background: "var(--blue-50)", border: "1px solid var(--blue-100)", padding: 10, borderRadius: 12 }}>
-                        <span style={{ display: "block", fontSize: "0.65rem", color: "var(--blue-500)", fontWeight: 800, textTransform: "uppercase", marginBottom: 2 }}>Category</span>
-                        <span style={{ fontSize: "0.85rem", color: "var(--blue-900)", fontWeight: 700 }}>{acceptingErrand.category}</span>
-                      </div>
-                      <div style={{ background: "var(--green-50)", border: "1px solid var(--green-100)", padding: 10, borderRadius: 12 }}>
-                        <span style={{ display: "block", fontSize: "0.65rem", color: "var(--green-500)", fontWeight: 800, textTransform: "uppercase", marginBottom: 2 }}>Payout Fee</span>
-                        <span style={{ fontSize: "0.95rem", color: "var(--green-900)", fontWeight: 800 }}>₦{acceptingErrand.fee.toLocaleString()}</span>
-                      </div>
-                    </div>
-
-                    <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 8 }}>
-                      {acceptingErrand.pickupLocation && (
-                        <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.8rem", color: "var(--gray-600)" }}>
-                          <span style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--green-500)", flexShrink: 0 }} />
-                          <span><strong>Pick Up:</strong> {acceptingErrand.pickupLocation}</span>
-                        </div>
-                      )}
-                      <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.8rem", color: "var(--gray-600)" }}>
-                        <span style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--blue-500)", flexShrink: 0 }} />
-                        <span><strong>Drop Off:</strong> {acceptingErrand.location || "Not specified"}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="accept-modal-actions">
-                  <button
-                    onClick={() => setAcceptingErrand(null)}
-                    className="btn btn-outline"
-                    style={{ flex: 1, borderRadius: 12 }}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={async () => {
-                      const id = acceptingErrand.id || acceptingErrand._id;
-                      setAcceptingErrand(null);
-                      await handleApplyForErrand(id);
-                    }}
-                    disabled={!!applyingId}
-                    className="btn btn-primary"
-                    style={{ flex: 1, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, opacity: applyingId ? 0.7 : 1 }}
-                  >
-                    Send Request <ArrowRight size={14} />
-                  </button>
-                </div>
-              </motion.div>
-            </div>
-          </>
-        )}
-      </AnimatePresence>
     </div>
   );
 };

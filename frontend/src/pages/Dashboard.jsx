@@ -1590,7 +1590,7 @@ const Dashboard = () => {
                 Confirm Delivery
               </h3>
               <p style={{ fontSize: "0.85rem", color: "#64748b", textAlign: "center", lineHeight: 1.55, margin: "0 0 20px" }}>
-                Confirming that <strong style={{ color: "#0f172a" }}>"{confirmModal.errandTitle}"</strong> has been delivered will instantly release payment to the messenger.
+                Confirming that <strong style={{ color: "#0f172a" }}>"{confirmModal?.errandTitle || "this errand"}"</strong> has been delivered will instantly release payment to the messenger.
               </p>
 
               {/* Warning chip */}

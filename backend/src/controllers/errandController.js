@@ -370,6 +370,7 @@ export const getUserHistory = catchAsync(async (req, res) => {
   })
     .populate("posterId", "name profilePicture rating isVerified department location")
     .populate("erranderId", "name profilePicture rating isVerified department location")
+    .populate("candidates", "name profilePicture rating isVerified department location")
     .sort({ createdAt: -1 })
     .skip(skip)
     .limit(Number(limit))

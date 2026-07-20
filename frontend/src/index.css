@@ -4069,7 +4069,7 @@ input, select, textarea {
   border-top-right-radius: 28px;
   padding: 20px 16px 36px;
   padding-bottom: calc(36px + env(safe-area-inset-bottom, 0px));
-  zIndex: 9991;
+  z-index: 9991;
   max-height: 80vh;
   display: flex;
   flex-direction: column;

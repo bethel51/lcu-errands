@@ -1,7 +1,16 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Search, MapPin, Tag, Banknote, List } from "lucide-react";
-import { CATEGORIES, CATEGORY_EMOJI } from "../utils/categories";
+
+const CATEGORIES = ["All", "Meals", "Shopping", "Academic", "Delivery", "Gates", "Other"];
+const CATEGORY_EMOJI = {
+  Meals: "🍽️",
+  Shopping: "🛒",
+  Academic: "📚",
+  Delivery: "📦",
+  Gates: "🚪",
+  Other: "✨",
+};
 
 const PostErrandModal = ({ isOpen, onClose, onSubmit, isProcessing }) => {
   const [formData, setFormData] = useState({

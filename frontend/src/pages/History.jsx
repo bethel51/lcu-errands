@@ -355,7 +355,6 @@ const History = () => {
     );
   };
 
-  const confirmErrandItem = historyItems.find(i => i.id === confirmErrandId);
   const cancelErrandItem = historyItems.find(i => i.id === cancelErrandId);
 
   return (

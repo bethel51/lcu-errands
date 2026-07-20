@@ -21,6 +21,7 @@ import {
 import { useLocation, useNavigate } from "react-router-dom";
 import api from "../api";
 import ReviewModal from "../components/ReviewModal";
+import PostErrandModal from "../components/PostErrandModal";
 import { useSocket } from "../context/SocketContext";
 import NotificationCenter from "../components/NotificationCenter";
 import { useToast } from "../context/ToastContext";
@@ -351,28 +352,20 @@ const Dashboard = () => {
     }
   };
 
-  const handlePostErrand = async (e) => {
-    e.preventDefault();
+  const handlePostErrand = async (submittedData) => {
     setProcessing(true);
     try {
       await api.post("/errands", {
-        title: formData.title,
-        description: formData.description,
-        fee: parseInt(formData.fee) || 0,
-        category: formData.category,
-        dropoffLocation: formData.location,
+        title: submittedData.title,
+        description: submittedData.description,
+        fee: parseInt(submittedData.fee) || 0,
+        category: submittedData.category,
+        dropoffLocation: submittedData.location,
         pickupLocation: "Campus",
         erranderId: selectedMessenger?._id || undefined,
       });
       setIsPostModalOpen(false);
       setSelectedMessenger(null);
-      setFormData({
-        title: "",
-        description: "",
-        fee: "",
-        location: "",
-        category: "Meals",
-      });
       fetchErrands();
       showToast("Errand posted successfully!");
       navigate("/history");
@@ -1308,131 +1301,12 @@ const Dashboard = () => {
       </AnimatePresence>
 
       {/* ── Post Errand Modal ── */}
-      <AnimatePresence>
-        {isPostModalOpen && (
-          <div
-            className="modal-overlay"
-            onClick={() => setIsPostModalOpen(false)}
-          >
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 10 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 10 }}
-              transition={{ type: "spring", stiffness: 400, damping: 28 }}
-              className="modal-container"
-              onClick={(e) => e.stopPropagation()}
-              style={{
-                maxWidth: 460,
-                width: "100%"
-              }}
-            >
-              {/* Modal header */}
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  marginBottom: 24,
-                  paddingBottom: 20,
-                  borderBottom: "1px solid var(--gray-100)",
-                }}
-              >
-                <div>
-                  <h2 style={{ fontWeight: 900, fontSize: "1.25rem", color: "var(--gray-900)" }}>
-                    Post New Errand
-                  </h2>
-                  <p style={{ fontSize: "0.85rem", color: "var(--gray-400)", marginTop: 4 }}>
-                    Describe your task and set a reward
-                  </p>
-                </div>
-                <button
-                  onClick={() => setIsPostModalOpen(false)}
-                  className="btn-icon"
-                  style={{ flexShrink: 0 }}
-                >
-                  <X size={18} />
-                </button>
-              </div>
-
-              <form
-                onSubmit={handlePostErrand}
-                style={{ display: "flex", flexDirection: "column", gap: 16 }}
-              >
-                <div>
-                  <label className="form-label">Title</label>
-                  <input
-                    className="input-field"
-                    placeholder="e.g. Buy Lunch at J-One"
-                    value={formData.title}
-                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="form-label">Drop-off Location</label>
-                  <input
-                    className="input-field"
-                    placeholder="e.g. Block A, Room 202"
-                    value={formData.location}
-                    onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                    required
-                  />
-                </div>
-
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-                  <div>
-                    <label className="form-label">Category</label>
-                    <select
-                      className="input-field"
-                      value={formData.category}
-                      onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                    >
-                      {CATEGORIES.filter((c) => c !== "All").map((c) => (
-                        <option key={c} value={c}>
-                          {CATEGORY_EMOJI[c]} {c}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="form-label">Reward (₦)</label>
-                    <input
-                      className="input-field"
-                      type="number"
-                      placeholder="500"
-                      value={formData.fee}
-                      onChange={(e) => setFormData({ ...formData, fee: e.target.value })}
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="form-label">Details</label>
-                  <textarea
-                    className="input-field"
-                    style={{ minHeight: 96, resize: "vertical" }}
-                    placeholder="Specify items, quantities, special notes…"
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    required
-                  />
-                </div>
-
-                <button
-                  type="submit"
-                  className="btn btn-primary"
-                  style={{ width: "100%", padding: "14px", marginTop: 4, fontSize: "1rem" }}
-                  disabled={processing}
-                >
-                  {processing ? "Publishing…" : "🚀 Publish Errand"}
-                </button>
-              </form>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+      <PostErrandModal
+        isOpen={isPostModalOpen}
+        onClose={() => setIsPostModalOpen(false)}
+        onSubmit={handlePostErrand}
+        isProcessing={processing}
+      />
 
       {/* ── Top Up Modal ── */}
       <AnimatePresence>

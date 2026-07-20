@@ -660,8 +660,7 @@ ul { list-style: none; }
 
 @media (max-width: 480px) {
   .modal-overlay {
-    align-items: flex-end !important; /* slide up from bottom on mobile */
-    padding: 0 !important;
+    padding: 16px !important;
   }
 }
 
@@ -4353,3 +4352,31 @@ input, select, textarea {
   }
 }
 
+/* Responsive Modals */
+.modal-overlay-responsive {
+  align-items: center;
+}
+@media (max-width: 768px) {
+  .modal-overlay-responsive {
+    align-items: flex-end !important;
+  }
+}
+
+.bottom-sheet-responsive {
+  border-radius: 24px;
+}
+@media (max-width: 768px) {
+  .bottom-sheet-responsive {
+    border-bottom-left-radius: 0 !important;
+    border-bottom-right-radius: 0 !important;
+  }
+}
+
+.mobile-drag-handle {
+  display: none;
+}
+@media (max-width: 768px) {
+  .mobile-drag-handle {
+    display: block !important;
+  }
+}

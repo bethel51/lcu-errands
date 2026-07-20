@@ -37,18 +37,47 @@ const ReviewModal = ({
     <AnimatePresence>
       {isOpen && (
         <div
-          className="modal-overlay"
+          className="modal-overlay-responsive"
           onClick={onClose}
+          style={{
+            position: "fixed",
+            top: 0, left: 0, right: 0, bottom: 0,
+            background: "rgba(0, 0, 0, 0.4)",
+            backdropFilter: "blur(4px)",
+            zIndex: 9999,
+            display: "flex",
+            justifyContent: "center",
+          }}
         >
           <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: 10 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 10 }}
-            transition={{ type: "spring", stiffness: 400, damping: 28 }}
-            className="modal-container"
+            initial={{ y: "100%", opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: "100%", opacity: 0 }}
+            transition={{ type: "spring", damping: 25, stiffness: 300 }}
+            className="bottom-sheet-responsive"
             onClick={(e) => e.stopPropagation()}
-            style={{ maxWidth: 450 }}
+            style={{
+              background: "#ffffff",
+              width: "100%",
+              maxWidth: 450,
+              maxHeight: "90vh",
+              overflowY: "auto",
+              padding: "24px 20px 32px",
+              boxShadow: "0 -10px 40px rgba(0,0,0,0.1)",
+              position: "relative",
+            }}
           >
+            {/* Mobile Drag Handle */}
+            <div
+              className="mobile-drag-handle"
+              style={{
+                width: 40,
+                height: 5,
+                background: "var(--gray-200)",
+                borderRadius: 10,
+                margin: "0 auto 20px",
+              }}
+            />
             <div
               style={{
                 display: "flex",

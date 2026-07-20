@@ -1773,6 +1773,11 @@ ul { list-style: none; }
     padding-bottom: 12px;
   }
 
+  /* Modal overlay: remove padding on mobile so it sits flush at the bottom */
+  .modal-overlay {
+    padding: 0 !important;
+  }
+
   /* Modal: scrollable sheet on mobile */
   .modal-container {
     position: relative !important;
@@ -1782,10 +1787,11 @@ ul { list-style: none; }
     width: 100% !important;
     max-width: 100% !important;
     max-height: 90vh !important;
-    border-radius: var(--radius-lg) !important;
-    padding: 20px 16px !important;
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0 !important;
+    padding: 24px 16px !important;
     overflow-y: auto !important;
-    margin: auto !important;
+    margin: 0 !important;
+    margin-top: auto !important;
   }
 
   /* Profile dropdown: keep it right-aligned but clamp width */

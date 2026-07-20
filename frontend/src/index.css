@@ -615,6 +615,9 @@ ul { list-style: none; }
   overflow: hidden;
   transition: box-shadow 0.25s ease, border-color 0.25s ease, transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: var(--shadow-sm);
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  word-break: break-word;
 }
 
 .card:hover {
@@ -1138,6 +1141,21 @@ ul { list-style: none; }
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
+/* ===== DASHBOARD ACTIVE LIST ===== */
+.dash-active-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.dash-active-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  gap: 12px;
+}
+
 .filter-chips {
   display: flex;
   gap: 8px;
@@ -1147,6 +1165,7 @@ ul { list-style: none; }
   padding-bottom: 4px;
   scrollbar-width: none;
   -ms-overflow-style: none;
+  -webkit-overflow-scrolling: touch;
 }
 
 .filter-chips::-webkit-scrollbar { display: none; }
@@ -1745,8 +1764,14 @@ ul { list-style: none; }
   .hero-badge { font-size: 0.7rem; }
   .btn-lg { padding: 12px 24px; font-size: 0.9rem; }
 
-  /* Body bottom padding for bottom nav */
-  body { padding-bottom: 80px; }
+  /* Body bottom padding: removed because .dashboard-page has 120px padding-bottom already */
+  body { padding-bottom: 0; }
+
+  /* Horizontal swipe for chips on mobile */
+  .filter-chips {
+    flex-wrap: nowrap;
+    padding-bottom: 12px;
+  }
 
   /* Modal: scrollable sheet on mobile */
   .modal-container {
@@ -1756,10 +1781,10 @@ ul { list-style: none; }
     transform: none !important;
     width: 100% !important;
     max-width: 100% !important;
-    max-height: none !important;
+    max-height: 90vh !important;
     border-radius: var(--radius-lg) !important;
     padding: 20px 16px !important;
-    overflow-y: visible !important;
+    overflow-y: auto !important;
     margin: auto !important;
   }
 

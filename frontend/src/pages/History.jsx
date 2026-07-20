@@ -85,9 +85,12 @@ const History = () => {
             : !!errand.isReviewedByErrander,
         };
       });
-      setHistoryItems(formatted);
+      const filteredHistory = formatted.filter((item) =>
+        ["completed", "confirmed_completed", "pending_confirmation", "pending_sender_confirmation"].includes(item.status)
+      );
+      setHistoryItems(filteredHistory);
       // Always overwrite cache with fresh data
-      localStorage.setItem(cacheKey, JSON.stringify(formatted));
+      localStorage.setItem(cacheKey, JSON.stringify(filteredHistory));
     } catch (err) {
       console.error("Failed to fetch history", err);
       if (!cached) setHistoryItems([]);
@@ -417,8 +420,6 @@ const History = () => {
         }}>
           {[
             "All",
-            ...(filterType === "posted" ? ["Open"] : []),
-            filterType === "posted" ? "Active" : "In Progress",
             "Pending Confirmation",
             "Completed"
           ].map((tab) => (
@@ -851,25 +852,7 @@ const History = () => {
                 )}
 
                 {/* ── Pending Confirmation Alert banner ── */}
-                {filterType === "posted" && ["pending_confirmation", "pending_sender_confirmation"].includes(item.status) && (
-                  <div className="history-pending-banner">
-                    <span>⚠️ Messenger marked this errand as completed. Please confirm.</span>
-                    <button
-                      onClick={() => setConfirmOverlay({ errandId: item.id, errandTitle: item.title, errandFee: item.fee })}
-                      className="btn btn-primary btn-sm"
-                      style={{
-                        background: "linear-gradient(135deg,#16a34a,#22c55e)",
-                        borderColor: "transparent",
-                        color: "#fff",
-                        animation: "pulse 2s infinite",
-                        whiteSpace: "nowrap",
-                        display: "flex", alignItems: "center", gap: 6,
-                      }}
-                    >
-                      <CheckCircle size={14} /> Confirm &amp; Release Payment
-                    </button>
-                  </div>
-                )}
+                {/* ── Pending Confirmation banner removed — done on Dashboard ── */}
 
                 {renderEscrowTracker(item.status)}
               </motion.div>

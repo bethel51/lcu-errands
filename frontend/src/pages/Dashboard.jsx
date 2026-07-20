@@ -372,6 +372,7 @@ const Dashboard = () => {
       });
       fetchErrands();
       showToast("Errand posted successfully!");
+      navigate("/history");
     } catch (err) {
       showToast(err.response?.data?.message || "Check balance.", "info");
     } finally {
@@ -1425,9 +1426,15 @@ const Dashboard = () => {
 
       <ReviewModal
         isOpen={isReviewModalOpen}
-        onClose={() => setIsReviewModalOpen(false)}
+        onClose={() => {
+          setIsReviewModalOpen(false);
+          navigate("/history");
+        }}
         errandId={selectedErrandId || ""}
-        onReviewComplete={fetchErrands}
+        onReviewComplete={() => {
+          fetchErrands();
+          navigate("/history");
+        }}
         role={userRole}
       />
 

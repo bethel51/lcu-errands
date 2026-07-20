@@ -39,7 +39,6 @@ const ReviewModal = ({
         <div
           className="modal-overlay"
           onClick={onClose}
-          style={{ display: "flex", alignItems: "flex-start", justifyContent: "center", overflowY: "auto", padding: "24px 16px", zIndex: 9995 }}
         >
           <motion.div
             initial={{ opacity: 0, scale: 0.95, y: 10 }}
@@ -48,7 +47,7 @@ const ReviewModal = ({
             transition={{ type: "spring", stiffness: 400, damping: 28 }}
             className="modal-container"
             onClick={(e) => e.stopPropagation()}
-            style={{ maxWidth: 450, position: "relative", transform: "none", top: "auto", left: "auto", margin: "auto", maxHeight: "none", overflowY: "visible", zIndex: 9996 }}
+            style={{ maxWidth: 450 }}
           >
             <div
               style={{

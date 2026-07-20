@@ -15,13 +15,15 @@ const emailPass = (process.env.EMAIL_PASS || process.env.SMTP_PASS || "").trim()
 
 let smtpIpAddress = smtpHostName;
 if (smtpHostName) {
-  try {
-    const lookup = await dnsPromises.lookup(smtpHostName, { family: 4 });
-    smtpIpAddress = lookup.address;
-    console.log(`[EMAIL] Resolved SMTP host ${smtpHostName} to IPv4: ${smtpIpAddress}`);
-  } catch (err: any) {
-    console.error(`⚠️ DNS resolution failed for SMTP host ${smtpHostName}:`, err.message || err);
-  }
+  // Wrap in a non-blocking background promise so top-level ES module import does not hang or crash the app boot
+  dnsPromises.lookup(smtpHostName, { family: 4 })
+    .then((lookup) => {
+      smtpIpAddress = lookup.address;
+      console.log(`[EMAIL] Resolved SMTP host ${smtpHostName} to IPv4: ${smtpIpAddress}`);
+    })
+    .catch((err) => {
+      console.error(`⚠️ DNS resolution failed for SMTP host ${smtpHostName}:`, err.message || err);
+    });
 }
 
 const transporter = nodemailer.createTransport(

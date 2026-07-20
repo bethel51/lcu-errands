@@ -423,6 +423,34 @@ const Dashboard = () => {
     setIsReviewModalOpen(true);
   };
 
+  const handleStartErrand = async (id) => {
+    // Optimistic update
+    setActiveRequests((prev) =>
+      prev.map((e) => (e.id === id ? { ...e, status: "in_progress" } : e))
+    );
+    try {
+      await api.patch(`/errands/${id}/start`);
+      showToast("🚀 Errand started successfully!");
+    } catch (err) {
+      fetchActiveRequestsOnly();
+      showToast(err.response?.data?.message || "Could not start errand.", "error");
+    }
+  };
+
+  const handleRequestCompletion = async (id) => {
+    // Optimistic update
+    setActiveRequests((prev) =>
+      prev.map((e) => (e.id === id ? { ...e, status: "pending_sender_confirmation" } : e))
+    );
+    try {
+      await api.patch(`/errands/${id}/request-completion`);
+      showToast("✅ Completion requested. Waiting for sender confirmation.");
+    } catch (err) {
+      fetchActiveRequestsOnly();
+      showToast(err.response?.data?.message || "Could not request completion.", "error");
+    }
+  };
+
   // Directly hire a messenger — no sheet, no modal
   const handleDirectHire = async (errandId, messengerId) => {
     if (hiringId) return;
@@ -799,6 +827,37 @@ const Dashboard = () => {
                         }}
                       >
                         <CheckCircle size={13} /> Confirm
+                      </button>
+                    )}
+                    {/* Start Errand button (Messenger) */}
+                    {userRole === "messenger" && errand.status === "assigned" && (
+                      <button
+                        onClick={() => handleStartErrand(errand.id)}
+                        className="btn btn-primary btn-sm"
+                        style={{
+                          background: "var(--blue-600)",
+                          color: "#fff",
+                          fontWeight: 800,
+                          display: "flex", alignItems: "center", gap: 5,
+                        }}
+                      >
+                        🚀 Start
+                      </button>
+                    )}
+                    {/* Complete Errand button (Messenger) */}
+                    {userRole === "messenger" && errand.status === "in_progress" && (
+                      <button
+                        onClick={() => handleRequestCompletion(errand.id)}
+                        className="btn btn-primary btn-sm"
+                        style={{
+                          background: "linear-gradient(135deg,#16a34a,#22c55e)",
+                          borderColor: "transparent",
+                          color: "#fff",
+                          fontWeight: 800,
+                          display: "flex", alignItems: "center", gap: 5,
+                        }}
+                      >
+                        <CheckCircle size={13} /> Complete
                       </button>
                     )}
                   </div>

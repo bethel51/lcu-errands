@@ -25,7 +25,7 @@ import { useSocket } from "../context/SocketContext";
 import NotificationCenter from "../components/NotificationCenter";
 import { useToast } from "../context/ToastContext";
 import ConfirmDeliveryOverlay from "../components/ConfirmDeliveryOverlay";
-import ApplicantsSheet from "../components/ApplicantsSheet";
+
 
 const CATEGORIES = [
   "All",
@@ -98,10 +98,9 @@ const Dashboard = () => {
   const [processing, setProcessing] = useState(false);
   // New: inline accept state — which errand card is expanded for confirmation
   const [pendingAcceptId, setPendingAcceptId] = useState(null);
-  // New: applicants sheet
-  const [applicantsSheet, setApplicantsSheet] = useState(null); // { errandId, errandTitle, candidates }
-  const [hiringId, setHiringId] = useState(null);
-  const [loadingApplicants, setLoadingApplicants] = useState(false);
+  // Inline hire: track which errand is showing candidate picker & which is being hired
+  const [hirePicker, setHirePicker] = useState(null); // errandId showing inline picker
+  const [hiringId, setHiringId] = useState(null); // candidateId being hired
   // New: confirm delivery overlay
   const [confirmOverlay, setConfirmOverlay] = useState(null); // { errandId, errandTitle, errandFee }
 
@@ -258,7 +257,7 @@ const Dashboard = () => {
     }
   }, []);
 
-  const isAnyModalOpen = isPostModalOpen || isWithdrawModalOpen || isTopUpModalOpen || !!applicantsSheet || isReviewModalOpen || !!confirmOverlay;
+  const isAnyModalOpen = isPostModalOpen || isWithdrawModalOpen || isTopUpModalOpen || isReviewModalOpen || !!confirmOverlay;
   useBodyScrollLock(isAnyModalOpen);
 
   useEffect(() => {
@@ -424,11 +423,11 @@ const Dashboard = () => {
     setIsReviewModalOpen(true);
   };
 
-  // Hire a messenger from the applicants sheet
-  const handleHireFromSheet = async (messengerId) => {
-    if (!applicantsSheet || hiringId) return;
+  // Directly hire a messenger — no sheet, no modal
+  const handleDirectHire = async (errandId, messengerId) => {
+    if (hiringId) return;
     setHiringId(messengerId);
-    const errandId = applicantsSheet.errandId;
+    setHirePicker(null);
     // Optimistic update
     setActiveRequests((prev) =>
       prev.map((e) =>
@@ -437,7 +436,6 @@ const Dashboard = () => {
           : e,
       ),
     );
-    setApplicantsSheet(null);
     try {
       await api.post(`/errands/${errandId}/select`, { messengerId });
       showToast("🎉 Messenger hired successfully!");
@@ -723,32 +721,68 @@ const Dashboard = () => {
                       </span>
                     </div>
                   </div>
-                  <div style={{ display: "flex", gap: 8, alignItems: "center", flexShrink: 0 }}>
-                    {/* View Applicants button */}
+                  <div style={{ display: "flex", gap: 8, alignItems: "center", flexShrink: 0, flexDirection: "column" }}>
+                    {/* Direct Hire button */}
                     {userRole === "sender" && errand.status === "open" && errand.candidates && errand.candidates.length > 0 && (
-                      <button
-                        className="btn btn-primary btn-sm"
-                        style={{ display: "flex", alignItems: "center", gap: 5 }}
-                        onClick={async () => {
-                          // Open sheet immediately with what we have, then fetch fresh populated data
-                          setApplicantsSheet({ errandId: errand.id, errandTitle: errand.title, candidates: errand.candidates });
-                          setLoadingApplicants(true);
-                          try {
-                            const res = await api.get(`/errands/${errand.id}`);
-                            const freshData = res.data;
-                            const populatedCandidates = Array.isArray(freshData.candidates) ? freshData.candidates : [];
-                            setApplicantsSheet(prev =>
-                              prev ? { ...prev, candidates: populatedCandidates } : null
-                            );
-                          } catch (e) {
-                            console.error("Failed to load applicants:", e);
-                          } finally {
-                            setLoadingApplicants(false);
-                          }
-                        }}
-                      >
-                        <Users size={13} /> {errand.candidates.length} Applicant{errand.candidates.length > 1 ? "s" : ""}
-                      </button>
+                      errand.candidates.length === 1 ? (
+                        // 1 candidate — hire immediately
+                        <button
+                          className="btn btn-primary btn-sm"
+                          style={{ display: "flex", alignItems: "center", gap: 5, whiteSpace: "nowrap" }}
+                          disabled={hiringId === (errand.candidates[0]?._id || errand.candidates[0])}
+                          onClick={() => {
+                            const cId = errand.candidates[0]?._id || errand.candidates[0];
+                            handleDirectHire(errand.id, cId);
+                          }}
+                        >
+                          {hiringId === (errand.candidates[0]?._id || errand.candidates[0])
+                            ? "Hiring…"
+                            : <><Users size={13} /> Hire</>}
+                        </button>
+                      ) : (
+                        // Multiple candidates — inline picker
+                        <div style={{ display: "flex", flexDirection: "column", gap: 4, alignItems: "flex-end" }}>
+                          <button
+                            className="btn btn-primary btn-sm"
+                            style={{ display: "flex", alignItems: "center", gap: 5, whiteSpace: "nowrap" }}
+                            onClick={() => setHirePicker(hirePicker === errand.id ? null : errand.id)}
+                          >
+                            <Users size={13} /> Hire ({errand.candidates.length})
+                          </button>
+                          {hirePicker === errand.id && (
+                            <div style={{
+                              background: "var(--white)",
+                              border: "1px solid var(--gray-200)",
+                              borderRadius: 12,
+                              padding: "8px 0",
+                              boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
+                              minWidth: 160,
+                              zIndex: 100,
+                            }}>
+                              {errand.candidates.map((c, i) => {
+                                const cId = c?._id || c?.id || (typeof c === "string" ? c : null);
+                                const cName = c?.name || `Messenger ${i + 1}`;
+                                if (!cId) return null;
+                                return (
+                                  <button
+                                    key={cId}
+                                    disabled={hiringId === cId}
+                                    onClick={() => handleDirectHire(errand.id, cId)}
+                                    style={{
+                                      display: "block", width: "100%", textAlign: "left",
+                                      padding: "8px 14px", border: "none", background: "transparent",
+                                      fontSize: "0.82rem", fontWeight: 700, cursor: "pointer",
+                                      color: "var(--gray-800)",
+                                    }}
+                                  >
+                                    {hiringId === cId ? "Hiring…" : `Hire ${cName}`}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      )
                     )}
                     {/* Confirm Delivery button */}
                     {userRole === "sender" && ["pending_confirmation", "pending_sender_confirmation"].includes(errand.status) && (
@@ -1042,17 +1076,6 @@ const Dashboard = () => {
           </>
         )}
       </div>
-
-      {/* ── Applicants Sheet ── */}
-      <ApplicantsSheet
-        isOpen={!!applicantsSheet}
-        candidates={applicantsSheet?.candidates || []}
-        errandTitle={applicantsSheet?.errandTitle || ""}
-        onHire={handleHireFromSheet}
-        onClose={() => { setApplicantsSheet(null); setLoadingApplicants(false); }}
-        hiringId={hiringId}
-        loading={loadingApplicants}
-      />
 
       {/* ── Confirm Delivery Overlay ── */}
       <ConfirmDeliveryOverlay

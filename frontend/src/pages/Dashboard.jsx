@@ -101,6 +101,7 @@ const Dashboard = () => {
   // New: applicants sheet
   const [applicantsSheet, setApplicantsSheet] = useState(null); // { errandId, errandTitle, candidates }
   const [hiringId, setHiringId] = useState(null);
+  const [loadingApplicants, setLoadingApplicants] = useState(false);
   // New: confirm delivery overlay
   const [confirmOverlay, setConfirmOverlay] = useState(null); // { errandId, errandTitle, errandFee }
 
@@ -728,7 +729,23 @@ const Dashboard = () => {
                       <button
                         className="btn btn-primary btn-sm"
                         style={{ display: "flex", alignItems: "center", gap: 5 }}
-                        onClick={() => setApplicantsSheet({ errandId: errand.id, errandTitle: errand.title, candidates: errand.candidates })}
+                        onClick={async () => {
+                          // Open sheet immediately with what we have, then fetch fresh populated data
+                          setApplicantsSheet({ errandId: errand.id, errandTitle: errand.title, candidates: errand.candidates });
+                          setLoadingApplicants(true);
+                          try {
+                            const res = await api.get(`/errands/${errand.id}`);
+                            const freshData = res.data;
+                            const populatedCandidates = Array.isArray(freshData.candidates) ? freshData.candidates : [];
+                            setApplicantsSheet(prev =>
+                              prev ? { ...prev, candidates: populatedCandidates } : null
+                            );
+                          } catch (e) {
+                            console.error("Failed to load applicants:", e);
+                          } finally {
+                            setLoadingApplicants(false);
+                          }
+                        }}
                       >
                         <Users size={13} /> {errand.candidates.length} Applicant{errand.candidates.length > 1 ? "s" : ""}
                       </button>
@@ -1032,8 +1049,9 @@ const Dashboard = () => {
         candidates={applicantsSheet?.candidates || []}
         errandTitle={applicantsSheet?.errandTitle || ""}
         onHire={handleHireFromSheet}
-        onClose={() => setApplicantsSheet(null)}
+        onClose={() => { setApplicantsSheet(null); setLoadingApplicants(false); }}
         hiringId={hiringId}
+        loading={loadingApplicants}
       />
 
       {/* ── Confirm Delivery Overlay ── */}

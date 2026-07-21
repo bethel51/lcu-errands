@@ -391,20 +391,30 @@ const ErrandStream = () => {
         ) : (
           <div className="stream-feed-list">
             <AnimatePresence initial={false}>
-              {filteredErrands.map((errand) => {
+              {filteredErrands.map((errand, index) => {
                 const catStyle = getCategoryStyle(errand.category);
                 const isOwner = errand.posterId === userIdRef.current;
                 return (
                   <motion.div
                     key={errand.id}
                     layout
-                    initial={{ opacity: 0, y: -16 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.97, height: 0, marginBottom: 0 }}
-                    transition={{ type: "spring", stiffness: 420, damping: 30 }}
+                    initial={{ opacity: 0, y: 20, scale: 0.97 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.95, y: -10 }}
+                    transition={{ type: "spring", stiffness: 380, damping: 28, delay: index < 6 ? index * 0.06 : 0 }}
+                    whileHover={{ y: -3, transition: { type: "spring", stiffness: 500, damping: 30 } }}
                     className={`stream-card${errand.isNew ? " stream-card--new" : ""}`}
                   >
-                    {errand.isNew && <div className="stream-card-new-ribbon">NEW</div>}
+                    {errand.isNew && (
+                      <motion.div
+                        className="stream-card-new-ribbon"
+                        initial={{ scale: 0.7, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        transition={{ type: "spring", damping: 12, stiffness: 300 }}
+                      >
+                        NEW
+                      </motion.div>
+                    )}
 
                     {/* Sender info row */}
                     <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14, paddingBottom: 14, borderBottom: "1px solid var(--gray-100)" }}>
@@ -457,9 +467,14 @@ const ErrandStream = () => {
                       <div className="stream-card-info">
                         <h3 className="stream-card-title">{errand.title}</h3>
                         <div className="stream-card-meta">
-                          <span className="stream-cat-chip" style={{ background: catStyle.bg, color: catStyle.color, border: `1px solid ${catStyle.border}` }}>
-                            {errand.category}
-                          </span>
+                          <motion.span
+                            className="stream-cat-chip"
+                            style={{ background: catStyle.bg, color: catStyle.color, border: `1px solid ${catStyle.border}` }}
+                            whileHover={{ scale: 1.08 }}
+                            transition={{ type: "spring", stiffness: 500 }}
+                          >
+                            {CATEGORY_EMOJI[errand.category] || ""} {errand.category}
+                          </motion.span>
                           <span className="stream-meta-dot">·</span>
                           <span className="stream-meta-item">
                             <Clock size={11} />
@@ -468,14 +483,25 @@ const ErrandStream = () => {
                           {Array.isArray(errand.candidates) && errand.candidates.length > 0 && (
                             <>
                               <span className="stream-meta-dot">·</span>
-                              <span className="stream-meta-item" style={{ color: "var(--amber-600)", fontWeight: 700 }}>
+                              <motion.span
+                                className="stream-meta-item"
+                                style={{ color: "var(--amber-600)", fontWeight: 700 }}
+                                animate={{ scale: [1, 1.12, 1] }}
+                                transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
+                              >
                                 {errand.candidates.length} request{errand.candidates.length !== 1 ? "s" : ""}
-                              </span>
+                              </motion.span>
                             </>
                           )}
                         </div>
                       </div>
-                      <div className="stream-fee-badge">₦{errand.fee.toLocaleString()}</div>
+                      <motion.div
+                        className="stream-fee-badge"
+                        animate={errand.isNew ? { scale: [1, 1.08, 1] } : {}}
+                        transition={{ duration: 0.6, delay: 0.3 }}
+                      >
+                        ₦{errand.fee.toLocaleString()}
+                      </motion.div>
                     </div>
 
                     {/* Description */}

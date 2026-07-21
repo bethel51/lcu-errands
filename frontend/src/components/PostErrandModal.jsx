@@ -124,7 +124,7 @@ const PostErrandModal = ({ isOpen, onClose, onSubmit, isProcessing }) => {
                   style={{
                     position: "absolute",
                     inset: 0,
-                    background: "linear-gradient(135deg, #f0fdf4, #dcfce7)",
+                    background: "linear-gradient(135deg, #eff6ff, #dbeafe)",
                     display: "flex",
                     flexDirection: "column",
                     alignItems: "center",
@@ -139,10 +139,10 @@ const PostErrandModal = ({ isOpen, onClose, onSubmit, isProcessing }) => {
                     animate={{ scale: 1 }}
                     transition={{ type: "spring", damping: 12, stiffness: 260, delay: 0.1 }}
                   >
-                    <CheckCircle size={64} color="#16a34a" strokeWidth={1.5} />
+                    <CheckCircle size={64} color="#2563eb" strokeWidth={1.5} />
                   </motion.div>
-                  <p style={{ fontWeight: 900, fontSize: "1.3rem", color: "#15803d", margin: 0 }}>Errand Posted!</p>
-                  <p style={{ fontSize: "0.88rem", color: "#4ade80", margin: 0, fontWeight: 600 }}>Messengers will see it shortly</p>
+                  <p style={{ fontWeight: 900, fontSize: "1.3rem", color: "#1d4ed8", margin: 0 }}>Errand Posted!</p>
+                  <p style={{ fontSize: "0.88rem", color: "#60a5fa", margin: 0, fontWeight: 600 }}>Messengers will see it shortly</p>
                 </motion.div>
               )}
               {submitted && isProcessing && (

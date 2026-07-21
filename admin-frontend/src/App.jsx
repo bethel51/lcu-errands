@@ -289,8 +289,9 @@ const AdminPortal = () => {
     try {
       const res = await adminApi.get(`/management/errands/${errandId}/intel`);
       setErrandIntelModal(res.data);
-    } catch (_err) {
-      alert("Failed to fetch errand intel");
+    } catch (err) {
+      console.error("Failed to fetch errand intel:", err);
+      alert(err.response?.data?.message || "Failed to fetch errand intel. Make sure the errand ID is valid.");
     } finally {
       setErrandIntelLoading(false);
     }
@@ -2226,6 +2227,52 @@ const AdminPortal = () => {
         )}
       </AnimatePresence>
 
+      {/* Errand Intelligence Loading Indicator */}
+      <AnimatePresence>
+        {errandIntelLoading && (
+          <div
+            style={{
+              position: "fixed",
+              inset: 0,
+              background: "rgba(15,23,42,0.5)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              zIndex: 1300,
+            }}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              style={{
+                background: "white",
+                padding: "24px 36px",
+                borderRadius: 16,
+                display: "flex",
+                alignItems: "center",
+                gap: 14,
+                boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
+              }}
+            >
+              <div
+                style={{
+                  width: 24,
+                  height: 24,
+                  border: "3px solid #DBEAFE",
+                  borderTopColor: "#2563EB",
+                  borderRadius: "50%",
+                  animation: "spin 0.8s linear infinite",
+                }}
+              />
+              <span style={{ fontWeight: 800, color: "#1E293B", fontSize: "0.95rem" }}>
+                Loading Errand Intel...
+              </span>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
       {/* Errand Intelligence Modal */}
       <AnimatePresence>
         {errandIntelModal &&
@@ -2242,6 +2289,9 @@ const AdminPortal = () => {
 
             return (
               <div
+                onClick={(e) => {
+                  if (e.target === e.currentTarget) setErrandIntelModal(null);
+                }}
                 style={{
                   position: "fixed",
                   inset: 0,

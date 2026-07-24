@@ -925,24 +925,22 @@ const Profile = () => {
                     <Wallet size={32} /> ₦{user.balance?.toLocaleString() || 0}
                   </motion.div>
                   <div className="profile-wallet-actions">
-                    {user.role === "messenger" && (
-                      <button
-                        onClick={() => setIsWithdrawModalOpen(true)}
-                        className="btn btn-sm"
-                        style={{
-                          background: "rgba(255,255,255,0.1)",
-                          border: "1px solid rgba(255,255,255,0.3)",
-                          color: "white",
-                          borderRadius: 12,
-                          fontWeight: 700,
-                          padding: "10px 14px",
-                        }}
-                      >
-                        Withdraw
-                      </button>
-                    )}
                     <button
-                      onClick={() => setIsTopUpModalOpen(true)}
+                      onClick={() => navigate("/withdraw")}
+                      className="btn btn-sm"
+                      style={{
+                        background: "rgba(255,255,255,0.1)",
+                        border: "1px solid rgba(255,255,255,0.3)",
+                        color: "white",
+                        borderRadius: 12,
+                        fontWeight: 700,
+                        padding: "10px 14px",
+                      }}
+                    >
+                      Withdraw
+                    </button>
+                    <button
+                      onClick={() => navigate("/top-up")}
                       className="btn btn-sm"
                       style={{
                         background: "white",

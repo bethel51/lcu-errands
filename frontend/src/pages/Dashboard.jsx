@@ -629,7 +629,7 @@ const Dashboard = () => {
             <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
               <button
                 className="btn"
-                onClick={() => setIsTopUpModalOpen(true)}
+                onClick={() => navigate("/top-up")}
                 style={{
                   background: "#ffffff",
                   color: "#1e4db7",
@@ -645,7 +645,7 @@ const Dashboard = () => {
               </button>
               <button
                 className="btn"
-                onClick={() => setIsWithdrawModalOpen(true)}
+                onClick={() => navigate("/withdraw")}
                 style={{
                   background: "rgba(255, 255, 255, 0.15)",
                   color: "#ffffff",

@@ -24,6 +24,8 @@ export const PageImports = {
   History: () => import("./pages/History"),
   Profile: () => import("./pages/Profile"),
   ErrandStream: () => import("./pages/ErrandStream"),
+  TopUp: () => import("./pages/TopUp"),
+  Withdraw: () => import("./pages/Withdraw"),
 };
 
 // Lazy load pages for performance
@@ -35,6 +37,8 @@ const Dashboard = lazy(PageImports.Dashboard);
 const History = lazy(PageImports.History);
 const Profile = lazy(PageImports.Profile);
 const ErrandStream = lazy(PageImports.ErrandStream);
+const TopUp = lazy(PageImports.TopUp);
+const Withdraw = lazy(PageImports.Withdraw);
 
 const PageLoader = () => (
   <div className="page-loader">
@@ -121,6 +125,22 @@ const AppLayout = () => {
             element={
               <ProtectedRoute>
                 <ErrandStream />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/top-up"
+            element={
+              <ProtectedRoute>
+                <TopUp />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/withdraw"
+            element={
+              <ProtectedRoute>
+                <Withdraw />
               </ProtectedRoute>
             }
           />

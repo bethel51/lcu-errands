@@ -422,22 +422,45 @@ const History = () => {
             "All",
             "Pending Confirmation",
             "Completed"
-          ].map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setActiveStatusTab(tab)}
-              className={`chip ${activeStatusTab === tab ? "active" : ""}`}
-              style={{
-                fontSize: "0.82rem",
-                fontWeight: 800,
-                padding: "8px 16px",
-                whiteSpace: "nowrap",
-                borderRadius: "var(--radius-full)"
-              }}
-            >
-              {tab}
-            </button>
-          ))}
+          ].map((tab) => {
+            const isSelected = activeStatusTab === tab;
+            return (
+              <button
+                key={tab}
+                onClick={() => setActiveStatusTab(tab)}
+                style={{
+                  fontSize: "0.82rem",
+                  fontWeight: 800,
+                  padding: "8px 16px",
+                  whiteSpace: "nowrap",
+                  borderRadius: "var(--radius-full)",
+                  background: "transparent",
+                  color: isSelected ? "#ffffff" : "var(--gray-700)",
+                  border: "none",
+                  position: "relative",
+                  zIndex: 1,
+                  cursor: "pointer",
+                  transition: "color 0.2s"
+                }}
+              >
+                {isSelected && (
+                  <motion.div
+                    layoutId="historyStatusPill"
+                    style={{
+                      position: "absolute",
+                      inset: 0,
+                      background: "var(--blue-500)",
+                      borderRadius: "var(--radius-full)",
+                      zIndex: -1,
+                      boxShadow: "0 4px 12px rgba(37,99,235,0.2)"
+                    }}
+                    transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                  />
+                )}
+                <span style={{ position: "relative", zIndex: 2 }}>{tab}</span>
+              </button>
+            );
+          })}
         </div>
 
         {loading ? (
@@ -618,7 +641,9 @@ const History = () => {
                       <div style={{ display: "flex", gap: 8, width: "100%", justifyContent: "flex-end", flexWrap: "wrap" }}>
                         {/* Cancel Errand — only allowed if still open (no messenger assigned) */}
                         {item.status === "open" && (
-                          <button
+                          <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
                             onClick={() => {
                               setCancelErrandId(item.id);
                               setCancelModalOpen(true);
@@ -627,7 +652,7 @@ const History = () => {
                             style={{ borderColor: "var(--red-200)", color: "var(--red-600)" }}
                           >
                             Cancel Errand
-                          </button>
+                          </motion.button>
                         )}
                         {/* For assigned/in_progress/pending — no cancel button, errand is active */}
                         {["assigned", "in_progress"].includes(item.status) && (
@@ -640,18 +665,22 @@ const History = () => {
 
                     {/* ── MESSENGER ACTIONS ── */}
                     {filterType === "accepted" && item.status === "assigned" && (
-                      <button
+                      <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
                         onClick={() => handleStartErrand(item.id)}
                         className="btn btn-primary btn-sm"
                         style={{ background: "var(--green-600)", borderColor: "var(--green-600)", color: "var(--white)" }}
                       >
                         Start Errand 🚀
-                      </button>
+                      </motion.button>
                     )}
 
                     {filterType === "accepted" && item.status === "in_progress" && (
                       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                        <button
+                        <motion.button
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
                           onClick={() => {
                             setSelectedErrandId(item.id);
                             setProofModalOpen(true);
@@ -660,13 +689,15 @@ const History = () => {
                           style={{ borderColor: "var(--blue-300)", color: "var(--blue-600)", display: "flex", alignItems: "center", gap: 4 }}
                         >
                           <Camera size={12} /> Upload Proof
-                        </button>
-                        <button
+                        </motion.button>
+                        <motion.button
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
                           onClick={() => handleRequestCompletion(item.id)}
                           className="btn btn-primary btn-sm"
                         >
                           Mark Completed
-                        </button>
+                        </motion.button>
                       </div>
                     )}
 
@@ -698,7 +729,9 @@ const History = () => {
                           <Star size={12} fill="currentColor" /> Reviewed
                         </span>
                       ) : (
-                        <button
+                        <motion.button
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
                           className="btn btn-outline btn-sm"
                           style={{
                             borderColor: "var(--amber-200)",
@@ -713,13 +746,15 @@ const History = () => {
                           }}
                         >
                           <Star size={12} fill="currentColor" /> Rate
-                        </button>
+                        </motion.button>
                       )
                     )}
 
                     {/* Delete from history — only for completed or cancelled errands (not active ones) */}
                     {["completed", "confirmed_completed", "cancelled"].includes(item.status) && (
-                      <button
+                      <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
                         className="btn btn-outline btn-sm"
                         style={{
                           borderColor: "var(--red-200)",
@@ -733,7 +768,7 @@ const History = () => {
                         onClick={() => handleDeleteFromHistory(item.id)}
                       >
                         <X size={12} /> Delete
-                      </button>
+                      </motion.button>
                     )}
                   </div>
                 </div>

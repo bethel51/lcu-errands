@@ -353,8 +353,8 @@ const ErrandStream = () => {
                 style={{
                   padding: "8px 16px",
                   borderRadius: 20,
-                  border: isSelected ? "1px solid var(--blue-500)" : "1px solid var(--gray-200)",
-                  background: isSelected ? "var(--blue-500)" : "var(--white)",
+                  border: "none",
+                  background: "transparent",
                   color: isSelected ? "#ffffff" : "var(--gray-700)",
                   fontWeight: 600,
                   fontSize: "0.82rem",
@@ -363,12 +363,27 @@ const ErrandStream = () => {
                   display: "flex",
                   alignItems: "center",
                   gap: 6,
-                  transition: "all 0.2s ease",
-                  boxShadow: isSelected ? "0 4px 12px rgba(37,99,235,0.2)" : "none",
+                  position: "relative",
+                  zIndex: 1,
+                  transition: "color 0.2s ease",
                 }}
               >
+                {isSelected && (
+                  <motion.div
+                    layoutId="categoryPill"
+                    style={{
+                      position: "absolute",
+                      inset: 0,
+                      background: "var(--blue-500)",
+                      borderRadius: 20,
+                      zIndex: -1,
+                      boxShadow: "0 4px 12px rgba(37,99,235,0.2)",
+                    }}
+                    transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                  />
+                )}
                 {cat !== "All" && <span>{CATEGORY_EMOJI[cat]}</span>}
-                {cat}
+                <span style={{ position: "relative", zIndex: 2 }}>{cat}</span>
               </button>
             );
           })}
@@ -534,33 +549,39 @@ const ErrandStream = () => {
                         if (isExpanded) {
                           return (
                             <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
-                              <button
+                              <motion.button
+                                whileHover={{ scale: 1.05 }}
+                                whileTap={{ scale: 0.95 }}
                                 className="btn btn-outline btn-sm"
                                 style={{ borderRadius: 10, padding: "5px 10px", fontSize: "0.78rem" }}
                                 onClick={() => setPendingAcceptId(null)}
                               >
                                 Cancel
-                              </button>
-                              <button
+                              </motion.button>
+                              <motion.button
+                                whileHover={{ scale: 1.05 }}
+                                whileTap={{ scale: 0.95 }}
                                 id={`confirm-accept-${errand.id}`}
                                 className="btn btn-primary btn-sm"
                                 style={{ background: "linear-gradient(135deg,#1d4ed8,#2563eb)", borderRadius: 10, padding: "5px 12px", fontSize: "0.78rem", fontWeight: 800 }}
                                 onClick={() => { setPendingAcceptId(null); handleApplyForErrand(errand.id); }}
                               >
                                 ✓ Confirm Accept
-                              </button>
+                              </motion.button>
                             </div>
                           );
                         }
                         return (
-                          <button
+                          <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
                             id={`accept-errand-${errand.id}`}
                             onClick={() => setPendingAcceptId(errand.id)}
                             className="btn btn-primary btn-sm"
                             style={{ flexShrink: 0 }}
                           >
                             Accept <ArrowRight size={13} />
-                          </button>
+                          </motion.button>
                         );
                       })()}
 

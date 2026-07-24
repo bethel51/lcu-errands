@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { Link, useLocation, Navigate } from "react-router-dom";
 import { Eye, EyeOff, CheckCircle, ArrowLeft } from "lucide-react";
 import api from "../api";
@@ -69,40 +69,7 @@ const Login: React.FC = () => {
 
   return (
     <div className="clean-auth-wrapper">
-      <AnimatePresence>
-        {(processing || redirecting) && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            style={{
-              position: "fixed",
-              inset: 0,
-              background: "rgba(255, 255, 255, 0.85)",
-              backdropFilter: "blur(6px)",
-              zIndex: 9999,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              flexDirection: "column",
-              gap: 16,
-            }}
-          >
-            <div className="loader" style={{ width: 48, height: 48 }} />
-            <div
-              style={{
-                fontWeight: 700,
-                color: "#111827",
-                fontSize: "0.8rem",
-                letterSpacing: "0.15em",
-                textTransform: "uppercase",
-              }}
-            >
-              {redirecting ? "Loading Dashboard..." : "Authenticating..."}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Removed full screen loader for inline button loader */}
 
       <motion.div 
         initial={{ opacity: 0, y: 15 }}
@@ -158,21 +125,52 @@ const Login: React.FC = () => {
           </motion.div>
         )}
 
-        <div className="clean-auth-role-tabs">
-          <button
-            type="button"
-            onClick={() => setRole("sender")}
-            className={`clean-auth-role-btn ${role === "sender" ? "active" : ""}`}
-          >
-            Sender
-          </button>
-          <button
-            type="button"
-            onClick={() => setRole("messenger")}
-            className={`clean-auth-role-btn ${role === "messenger" ? "active" : ""}`}
-          >
-            Messenger
-          </button>
+        <div
+          style={{
+            display: "flex",
+            background: "var(--gray-100)",
+            padding: 4,
+            borderRadius: 12,
+            marginBottom: 24,
+            position: "relative",
+          }}
+        >
+          {["sender", "messenger"].map((r) => (
+            <button
+              key={r}
+              type="button"
+              onClick={() => setRole(r as LoginRole)}
+              style={{
+                flex: 1,
+                padding: "10px 0",
+                border: "none",
+                background: "transparent",
+                color: role === r ? "var(--blue-700)" : "var(--gray-500)",
+                fontWeight: role === r ? 800 : 600,
+                cursor: "pointer",
+                position: "relative",
+                zIndex: 1,
+                transition: "color 0.2s",
+                textTransform: "capitalize",
+              }}
+            >
+              {r}
+              {role === r && (
+                <motion.div
+                  layoutId="loginRolePill"
+                  style={{
+                    position: "absolute",
+                    inset: 0,
+                    background: "white",
+                    borderRadius: 10,
+                    boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
+                    zIndex: -1,
+                  }}
+                  transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                />
+              )}
+            </button>
+          ))}
         </div>
 
         <form onSubmit={handleLogin}>
@@ -240,9 +238,29 @@ const Login: React.FC = () => {
             </Link>
           </div>
 
-          <button type="submit" className="clean-auth-submit-btn" disabled={processing}>
-            Log in as {role.charAt(0).toUpperCase() + role.slice(1)}
-          </button>
+          <motion.button 
+            type="submit" 
+            className="clean-auth-submit-btn" 
+            disabled={processing || redirecting}
+            whileHover={{ scale: 1.01 }}
+            whileTap={{ scale: 0.98 }}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 8,
+              transition: "background 0.2s"
+            }}
+          >
+            {processing || redirecting ? (
+              <>
+                <div className="loader" style={{ width: 18, height: 18, borderWidth: 2, borderColor: "rgba(255,255,255,0.3)", borderTopColor: "white" }} />
+                {redirecting ? "Loading Dashboard..." : "Authenticating..."}
+              </>
+            ) : (
+              `Log in as ${role.charAt(0).toUpperCase() + role.slice(1)}`
+            )}
+          </motion.button>
         </form>
 
         <div style={{ marginTop: 24, textAlign: "center", borderTop: "1px solid var(--gray-200)", paddingTop: 20, display: "flex", flexDirection: "column", gap: 12 }}>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { ChevronRight, ArrowLeft } from "lucide-react";
 import api from "../api";
@@ -196,40 +196,7 @@ const Signup: React.FC = () => {
 
   return (
     <div className="clean-auth-wrapper">
-      <AnimatePresence>
-        {processing && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            style={{
-              position: "fixed",
-              inset: 0,
-              background: "rgba(255,255,255,0.85)",
-              backdropFilter: "blur(6px)",
-              zIndex: 9999,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              flexDirection: "column",
-              gap: 16,
-            }}
-          >
-            <div className="loader" style={{ width: 48, height: 48 }} />
-            <div
-              style={{
-                fontWeight: 700,
-                color: "#111827",
-                fontSize: "0.8rem",
-                letterSpacing: "0.15em",
-                textTransform: "uppercase",
-              }}
-            >
-              Processing...
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Removed full screen loader for inline button loaders */}
 
       <motion.div 
         initial={{ opacity: 0, y: 15 }}
@@ -266,21 +233,52 @@ const Signup: React.FC = () => {
 
         {step === 1 ? (
           <div>
-            <div className="clean-auth-role-tabs">
-              <button
-                type="button"
-                onClick={() => setRole("sender")}
-                className={`clean-auth-role-btn ${role === "sender" ? "active" : ""}`}
-              >
-                Sender
-              </button>
-              <button
-                type="button"
-                onClick={() => setRole("messenger")}
-                className={`clean-auth-role-btn ${role === "messenger" ? "active" : ""}`}
-              >
-                Messenger
-              </button>
+            <div
+              style={{
+                display: "flex",
+                background: "var(--gray-100)",
+                padding: 4,
+                borderRadius: 12,
+                marginBottom: 24,
+                position: "relative",
+              }}
+            >
+              {["sender", "messenger"].map((r) => (
+                <button
+                  key={r}
+                  type="button"
+                  onClick={() => setRole(r as UserRole)}
+                  style={{
+                    flex: 1,
+                    padding: "10px 0",
+                    border: "none",
+                    background: "transparent",
+                    color: role === r ? "var(--blue-700)" : "var(--gray-500)",
+                    fontWeight: role === r ? 800 : 600,
+                    cursor: "pointer",
+                    position: "relative",
+                    zIndex: 1,
+                    transition: "color 0.2s",
+                    textTransform: "capitalize",
+                  }}
+                >
+                  {r}
+                  {role === r && (
+                    <motion.div
+                      layoutId="signupRolePill"
+                      style={{
+                        position: "absolute",
+                        inset: 0,
+                        background: "white",
+                        borderRadius: 10,
+                        boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
+                        zIndex: -1,
+                      }}
+                      transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                    />
+                  )}
+                </button>
+              ))}
             </div>
 
             <div className="clean-auth-grid">
@@ -365,27 +363,39 @@ const Signup: React.FC = () => {
               </div>
             </div>
 
-            <button
+            <motion.button
               onClick={handleNext}
               disabled={processing}
               className="clean-auth-submit-btn"
+              whileHover={{ scale: 1.01 }}
+              whileTap={{ scale: 0.98 }}
               style={{
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
                 gap: 8,
                 marginTop: 20,
+                transition: "background 0.2s"
               }}
             >
-              Continue <ChevronRight size={16} />
-            </button>
+              {processing ? (
+                <>
+                  <div className="loader" style={{ width: 18, height: 18, borderWidth: 2, borderColor: "rgba(255,255,255,0.3)", borderTopColor: "white" }} />
+                  Processing...
+                </>
+              ) : (
+                <>
+                  Continue <ChevronRight size={16} />
+                </>
+              )}
+            </motion.button>
           </div>
         ) : (
           <div>
             {/* Monospace OTP Grid */}
             <div style={{ display: "flex", gap: 8, justifyContent: "center", marginBottom: 24 }}>
               {otp.map((digit, i) => (
-                <input
+                <motion.input
                   key={i}
                   id={`otp-${i}`}
                   type="text"
@@ -394,20 +404,22 @@ const Signup: React.FC = () => {
                   autoComplete={i === 0 ? "one-time-code" : "off"}
                   maxLength={6}
                   value={digit}
+                  whileFocus={{ scale: 1.05, borderColor: "var(--blue-500)", boxShadow: "0 0 0 3px rgba(37,99,235,0.15)" }}
                   onChange={(e) => handleOtpChange(e.target.value, i)}
                   onKeyDown={(e) => handleOtpKeyDown(e, i)}
                   style={{
-                    width: 44,
-                    height: 52,
+                    width: 48,
+                    height: 56,
                     textAlign: "center",
                     fontSize: "1.5rem",
                     fontWeight: 700,
-                    borderRadius: "var(--radius-sm)",
+                    borderRadius: "var(--radius-md)",
                     border: `1.5px solid ${digit ? "var(--blue-600)" : "var(--gray-300)"}`,
                     outline: "none",
                     background: digit ? "var(--blue-50)" : "var(--white)",
                     color: "var(--blue-900)",
                     fontFamily: "monospace",
+                    transition: "border-color 0.2s, background 0.2s"
                   }}
                 />
               ))}
@@ -432,18 +444,31 @@ const Signup: React.FC = () => {
               </div>
             )}
 
-            <button
+            <motion.button
               onClick={() => autoSubmitOtp(otp)}
               disabled={otp.some(d => !d) || processing}
               className="clean-auth-submit-btn"
+              whileHover={otp.some(d => !d) ? {} : { scale: 1.01 }}
+              whileTap={otp.some(d => !d) ? {} : { scale: 0.98 }}
               style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 8,
                 opacity: otp.some(d => !d) ? 0.6 : 1,
                 cursor: otp.some(d => !d) ? "not-allowed" : "pointer",
                 marginBottom: 20,
               }}
             >
-              Verify & Create Account
-            </button>
+              {processing ? (
+                <>
+                  <div className="loader" style={{ width: 18, height: 18, borderWidth: 2, borderColor: "rgba(255,255,255,0.3)", borderTopColor: "white" }} />
+                  Verifying...
+                </>
+              ) : (
+                "Verify & Create Account"
+              )}
+            </motion.button>
 
             <div style={{ textAlign: "center" }}>
               <button

@@ -56,6 +56,21 @@ const CATEGORY_STYLES = {
   Other: { backgroundColor: "var(--gray-50)", color: "var(--gray-600)", border: "1px solid var(--gray-200)" },
 };
 
+const containerVariants = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.08
+    }
+  }
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 15 },
+  show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 24 } }
+};
+
 const SenderAvatar = ({ picture, name }) => {
   const initials = (name || "U").charAt(0).toUpperCase();
   return picture ? (
@@ -559,9 +574,9 @@ const Dashboard = () => {
         )}
       </AnimatePresence>
 
-      <div className="container">
+      <motion.div className="container" variants={containerVariants} initial="hidden" animate="show">
         {/* ── Header ── */}
-        <div className="dashboard-header">
+        <motion.div className="dashboard-header" variants={itemVariants}>
           <div className="dashboard-title" style={{ flex: 1 }}>
             <h1>
               Hello, {user?.name?.split(" ")[0] || "Student"}! 👋
@@ -594,11 +609,12 @@ const Dashboard = () => {
               </button>
             )}
           </div>
-        </div>
+        </motion.div>
 
         {/* ── Wallet & Payouts Card ── */}
-        <div
+        <motion.div
           className="card dash-wallet-card"
+          variants={itemVariants}
         >
           {/* Left Column: Balance & Action */}
           <div style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", gap: 16 }}>
@@ -673,10 +689,10 @@ const Dashboard = () => {
               </div>
             )}
           </div>
-        </div>
+        </motion.div>
 
         {/* ── Search ── */}
-        <div className="search-bar">
+        <motion.div className="search-bar" variants={itemVariants}>
           <div className="search-input-wrapper">
             <Search size={18} />
             <input
@@ -687,22 +703,24 @@ const Dashboard = () => {
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
-        </div>
+        </motion.div>
 
         {/* ── Category Filters ── */}
-        <div className="filter-chips">
+        <motion.div className="filter-chips" variants={itemVariants}>
           {CATEGORIES.map((cat) => (
-            <button
+            <motion.button
               key={cat}
               id={`filter-${cat.toLowerCase()}`}
               onClick={() => setActiveCategory(cat)}
               className={`chip ${activeCategory === cat ? "active" : ""}`}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
             >
               {CATEGORY_EMOJI[cat] && <span>{CATEGORY_EMOJI[cat]}</span>}
               {cat}
-            </button>
+            </motion.button>
           ))}
-        </div>
+        </motion.div>
 
         {/* ── Action Required Banner (sender pending confirmation) ── */}
         {userRole === "sender" && activeRequests.some(e => ["pending_confirmation", "pending_sender_confirmation"].includes(e.status)) && (
@@ -1177,7 +1195,7 @@ const Dashboard = () => {
             )}
           </>
         )}
-      </div>
+      </motion.div>
 
       {/* ── Confirm Delivery Overlay ── */}
       <ConfirmDeliveryOverlay

@@ -55,7 +55,7 @@ const Profile = () => {
     initial: { y: "100%" },
     animate: { y: 0 },
     exit: { y: "100%" },
-    transition: { type: "spring", damping: 30, stiffness: 300 }
+    transition: { type: "tween", ease: "easeOut", duration: 0.28 }
   } : {
     initial: { opacity: 0, scale: 0.95 },
     animate: { opacity: 1, scale: 1 },

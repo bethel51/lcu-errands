@@ -50,6 +50,19 @@ const Profile = () => {
   const [isBoostModalOpen, setIsBoostModalOpen] = useState(false);
   const [processing, setProcessing] = useState(false);
 
+  const isMobile = typeof window !== "undefined" && window.innerWidth <= 768;
+  const modalAnimation = isMobile ? {
+    initial: { y: "100%" },
+    animate: { y: 0 },
+    exit: { y: "100%" },
+    transition: { type: "spring", damping: 30, stiffness: 300 }
+  } : {
+    initial: { opacity: 0, scale: 0.95 },
+    animate: { opacity: 1, scale: 1 },
+    exit: { opacity: 0, scale: 0.95 },
+    transition: { type: "spring", stiffness: 400, damping: 28 }
+  };
+
   // Verification flow state
   const [verifyStep, setVerifyStep] = useState(0); // 0=idle, 1=matric entry, 2=otp entry
   const [verifyMatric, setVerifyMatric] = useState("");
@@ -1279,23 +1292,22 @@ const Profile = () => {
       </div>
 
       {/* Top Up Modal */}
-      {isTopUpModalOpen && (
-        <>
+      <AnimatePresence>
+        {isTopUpModalOpen && (
           <div
             className="modal-overlay"
             onClick={() => setIsTopUpModalOpen(false)}
-          />
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="modal-container"
-            style={{
-              maxWidth: 420,
-              padding: 0,
-              overflow: "hidden",
-              transform: "translate(-50%, -50%)",
-            }}
           >
+            <motion.div
+              {...modalAnimation}
+              className="modal-container"
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                maxWidth: 420,
+                padding: 0,
+                overflow: "hidden"
+              }}
+            >
             <div
               style={{
                 background:
@@ -1440,21 +1452,22 @@ const Profile = () => {
               </p>
             </div>
           </motion.div>
-        </>
-      )}
+          </div>
+        )}
+      </AnimatePresence>
       {/* Withdrawal Modal */}
-      {isWithdrawModalOpen && (
-        <>
+      <AnimatePresence>
+        {isWithdrawModalOpen && (
           <div
             className="modal-overlay"
             onClick={() => setIsWithdrawModalOpen(false)}
-          />
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="modal-container"
-            style={{ maxWidth: 450 }}
           >
+            <motion.div
+              {...modalAnimation}
+              className="modal-container"
+              onClick={(e) => e.stopPropagation()}
+              style={{ maxWidth: 450 }}
+            >
             <div
               style={{
                 display: "flex",
@@ -1556,8 +1569,9 @@ const Profile = () => {
               {loading ? "Submitting..." : "Submit Request"}
             </button>
           </motion.div>
-        </>
-      )}
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Boost Modal */}
       {isBoostModalOpen && (

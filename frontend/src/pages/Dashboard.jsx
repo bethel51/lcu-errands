@@ -118,6 +118,18 @@ const Dashboard = () => {
   const [topUpAmount, setTopUpAmount] = useState("1000");
 
   const userRole = localStorage.getItem("userRole") || "messenger";
+  const isMobile = typeof window !== "undefined" && window.innerWidth <= 768;
+  const modalAnimation = isMobile ? {
+    initial: { y: "100%" },
+    animate: { y: 0 },
+    exit: { y: "100%" },
+    transition: { type: "spring", damping: 30, stiffness: 300 }
+  } : {
+    initial: { opacity: 0, scale: 0.95, y: 10 },
+    animate: { opacity: 1, scale: 1, y: 0 },
+    exit: { opacity: 0, scale: 0.95, y: 10 },
+    transition: { type: "spring", stiffness: 400, damping: 28 }
+  };
   const cachedUserId = (() => {
     try {
       return JSON.parse(localStorage.getItem("user") || "{}").id || "";
@@ -1187,10 +1199,7 @@ const Dashboard = () => {
             onClick={() => setIsWithdrawModalOpen(false)}
           >
             <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 10 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 10 }}
-              transition={{ type: "spring", stiffness: 400, damping: 28 }}
+              {...modalAnimation}
               className="modal-container"
               onClick={(e) => e.stopPropagation()}
               style={{
@@ -1319,10 +1328,7 @@ const Dashboard = () => {
             onClick={() => setIsTopUpModalOpen(false)}
           >
             <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 10 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 10 }}
-              transition={{ type: "spring", stiffness: 400, damping: 28 }}
+              {...modalAnimation}
               className="modal-container"
               onClick={(e) => e.stopPropagation()}
               style={{

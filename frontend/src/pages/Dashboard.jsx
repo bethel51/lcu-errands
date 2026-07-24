@@ -598,42 +598,45 @@ const Dashboard = () => {
                 <Wallet size={32} /> ₦{user?.balance?.toLocaleString() || "0"}
               </div>
             </div>
-            <div style={{ display: "flex", gap: 12 }}>
-              {userRole === "messenger" ? (
-                <button
-                  className="btn"
-                  onClick={() => setIsWithdrawModalOpen(true)}
-                  style={{
-                    background: "#ffffff",
-                    color: "#1e4db7",
-                    fontWeight: 800,
-                    borderRadius: 12,
-                    padding: "10px 18px",
-                    border: "none",
-                    cursor: "pointer",
-                    boxShadow: "0 4px 12px rgba(255,255,255,0.15)",
-                  }}
-                >
-                  Withdraw Funds
-                </button>
-              ) : (
-                <button
-                  className="btn"
-                  onClick={() => setIsTopUpModalOpen(true)}
-                  style={{
-                    background: "#ffffff",
-                    color: "#1e4db7",
-                    fontWeight: 800,
-                    borderRadius: 12,
-                    padding: "10px 18px",
-                    border: "none",
-                    cursor: "pointer",
-                    boxShadow: "0 4px 12px rgba(255,255,255,0.15)",
-                  }}
-                >
-                  Top Up Funds
-                </button>
-              )}
+            <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+              <button
+                className="btn"
+                onClick={() => setIsTopUpModalOpen(true)}
+                style={{
+                  background: "#ffffff",
+                  color: "#1e4db7",
+                  fontWeight: 800,
+                  borderRadius: 12,
+                  padding: "10px 18px",
+                  border: "none",
+                  cursor: "pointer",
+                  boxShadow: "0 4px 12px rgba(255,255,255,0.15)",
+                }}
+              >
+                Top Up Funds
+              </button>
+              <button
+                className="btn"
+                onClick={() => setIsWithdrawModalOpen(true)}
+                style={{
+                  background: "rgba(255, 255, 255, 0.15)",
+                  color: "#ffffff",
+                  fontWeight: 800,
+                  borderRadius: 12,
+                  padding: "10px 18px",
+                  border: "1px solid rgba(255, 255, 255, 0.3)",
+                  cursor: "pointer",
+                  transition: "all 0.2s",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = "rgba(255, 255, 255, 0.25)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = "rgba(255, 255, 255, 0.15)";
+                }}
+              >
+                Withdraw Funds
+              </button>
             </div>
           </div>
 

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, ArrowRight, MapPin, Banknote, CheckCircle } from "lucide-react";
 
@@ -33,6 +33,11 @@ const PostErrandModal = ({ isOpen, onClose, onSubmit, isProcessing }) => {
     category: "Meals",
   });
 
+  const titleRef = useRef(null);
+  const locationRef = useRef(null);
+  const feeRef = useRef(null);
+  const descRef = useRef(null);
+
   // Reset when modal opens
   useEffect(() => {
     if (isOpen) {
@@ -41,6 +46,21 @@ const PostErrandModal = ({ isOpen, onClose, onSubmit, isProcessing }) => {
       setFormData({ title: "", description: "", fee: "", location: "", category: "Meals" });
     }
   }, [isOpen]);
+
+  // Auto-focus inputs on step transition
+  useEffect(() => {
+    if (!isOpen) return;
+    const t = setTimeout(() => {
+      if (step === 0 && titleRef.current) {
+        titleRef.current.focus();
+      } else if (step === 1 && locationRef.current) {
+        locationRef.current.focus();
+      } else if (step === 2 && descRef.current) {
+        descRef.current.focus();
+      }
+    }, 150);
+    return () => clearTimeout(t);
+  }, [step, isOpen]);
 
   // Auto-submit when isProcessing goes from true to false after step 2
   useEffect(() => {
@@ -243,7 +263,7 @@ const PostErrandModal = ({ isOpen, onClose, onSubmit, isProcessing }) => {
                         Task Title
                       </label>
                       <input
-                        autoFocus
+                        ref={titleRef}
                         className="input-field"
                         placeholder="e.g. Buy Lunch at J-One"
                         value={formData.title}
@@ -261,10 +281,12 @@ const PostErrandModal = ({ isOpen, onClose, onSubmit, isProcessing }) => {
                           const c = CATEGORY_COLORS[cat];
                           const isActive = formData.category === cat;
                           return (
-                            <button
+                            <motion.button
                               key={cat}
                               type="button"
                               onClick={() => setFormData({ ...formData, category: cat })}
+                              whileHover={{ scale: 1.03 }}
+                              whileTap={{ scale: 0.97 }}
                               style={{
                                 padding: "12px 8px",
                                 borderRadius: 14,
@@ -283,7 +305,7 @@ const PostErrandModal = ({ isOpen, onClose, onSubmit, isProcessing }) => {
                             >
                               <span style={{ fontSize: "1.4rem" }}>{CATEGORY_EMOJI[cat]}</span>
                               {cat}
-                            </button>
+                            </motion.button>
                           );
                         })}
                       </div>
@@ -306,11 +328,16 @@ const PostErrandModal = ({ isOpen, onClose, onSubmit, isProcessing }) => {
                         <MapPin size={13} /> Drop-off Location
                       </label>
                       <input
-                        autoFocus
+                        ref={locationRef}
                         className="input-field"
                         placeholder="e.g. Block A, Room 202"
                         value={formData.location}
                         onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && formData.location.trim()) {
+                            feeRef.current?.focus();
+                          }
+                        }}
                         style={{ fontSize: "1rem", fontWeight: 600 }}
                       />
                     </div>
@@ -319,19 +346,26 @@ const PostErrandModal = ({ isOpen, onClose, onSubmit, isProcessing }) => {
                         <Banknote size={13} /> Reward (₦)
                       </label>
                       <input
+                        ref={feeRef}
                         className="input-field"
                         type="number"
                         placeholder="Min. ₦100"
                         value={formData.fee}
                         onChange={(e) => setFormData({ ...formData, fee: e.target.value })}
+                        onKeyDown={(e) => e.key === "Enter" && step1Valid && handleNext()}
                         style={{ fontSize: "1.2rem", fontWeight: 800, letterSpacing: "-0.01em" }}
                       />
                       <div style={{ display: "flex", gap: 6, marginTop: 10, flexWrap: "wrap" }}>
                         {["200", "500", "1000", "2000", "5000"].map((amt) => (
-                          <button
+                          <motion.button
                             key={amt}
                             type="button"
-                            onClick={() => setFormData({ ...formData, fee: amt })}
+                            onClick={() => {
+                              setFormData({ ...formData, fee: amt });
+                              setTimeout(() => feeRef.current?.focus(), 50);
+                            }}
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
                             style={{
                               padding: "7px 12px",
                               borderRadius: 20,
@@ -345,7 +379,7 @@ const PostErrandModal = ({ isOpen, onClose, onSubmit, isProcessing }) => {
                             }}
                           >
                             ₦{Number(amt).toLocaleString()}
-                          </button>
+                          </motion.button>
                         ))}
                       </div>
                     </div>
@@ -390,12 +424,17 @@ const PostErrandModal = ({ isOpen, onClose, onSubmit, isProcessing }) => {
                         Special Notes (Optional)
                       </label>
                       <textarea
-                        autoFocus
+                        ref={descRef}
                         className="input-field"
                         style={{ minHeight: 110, resize: "none", fontSize: "0.95rem", lineHeight: 1.6 }}
                         placeholder="Specific items, sizes, quantities, or anything the messenger should know…"
                         value={formData.description}
                         onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+                            handleNext();
+                          }
+                        }}
                       />
                     </div>
                   </motion.div>

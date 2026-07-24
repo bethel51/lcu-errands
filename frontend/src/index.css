@@ -1783,6 +1783,7 @@ ul { list-style: none; }
   /* Modal overlay: remove padding on mobile so it sits flush at the bottom */
   .modal-overlay {
     padding: 0 !important;
+    align-items: flex-end !important;
   }
 
   /* Modal: scrollable sheet on mobile */

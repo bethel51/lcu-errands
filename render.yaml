@@ -17,7 +17,7 @@ services:
       - key: JWT_SECRET
         generateValue: true
       - key: FRONTEND_URL
-        value: https://leadcityerrands-wt32.onrender.com
+        value: https://lcu-errands-1.onrender.com
 
       - key: ADMIN_JWT_SECRET
         generateValue: true
@@ -66,7 +66,7 @@ services:
       - key: ADMIN_FRONTEND_URL
         value: https://leadcity-admin-portal.onrender.com
       - key: FRONTEND_URL
-        value: https://leadcityerrands-wt32.onrender.com
+        value: https://lcu-errands-1.onrender.com
       - key: CRON_SECRET
         sync: false
       - key: SMTP_HOST

@@ -19,7 +19,7 @@ export default defineConfig({
             handler: 'NetworkOnly',
           },
           {
-            urlPattern: /^https:\/\/leadcityerrands-prod\.onrender\.com\/api\/.*/i,
+            urlPattern: /^https:\/\/lcu-errands\.onrender\.com\/api\/.*/i,
             handler: 'NetworkOnly',
           },
         ],

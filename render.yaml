@@ -95,7 +95,7 @@ services:
       - key: VITE_ADMIN_API_URL
         value: https://leadcity-admin-service.onrender.com
       - key: VITE_API_URL
-        value: https://leadcityerrands-prod.onrender.com
+        value: https://lcu-errands.onrender.com
       - key: VITE_CRON_SECRET
         sync: false
     routes:
@@ -112,7 +112,7 @@ services:
     publishPath: dist
     envVars:
       - key: VITE_API_URL
-        value: https://leadcityerrands-prod.onrender.com
+        value: https://lcu-errands.onrender.com
     routes:
       - type: rewrite
         source: /*

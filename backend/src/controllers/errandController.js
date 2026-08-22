@@ -94,7 +94,7 @@ const updateDigitalFootprint = async ({
   }
 
   const footprint = await DigitalFootprint.findOneAndUpdate({ errandId: errand._id }, update, {
-    new: true,
+    returnDocument: 'after',
     upsert: true,
     setDefaultsOnInsert: true,
     ...(session ? { session } : {}),
@@ -680,7 +680,7 @@ export const applyForErrand = catchAsync(async (req, res) => {
   const errand = await Errand.findByIdAndUpdate(
     id,
     { $addToSet: { candidates: erranderObjectId } },
-    { new: true }
+    { returnDocument: 'after' }
   ).populate("candidates", "name profilePicture rating location");
 
   // Send real-time notification to the poster
@@ -745,7 +745,7 @@ export const selectMessenger = catchAsync(async (req, res) => {
         acceptedAt: new Date(),
       }
     },
-    { new: true }
+    { returnDocument: 'after' }
   );
 
   // Fire digital footprint update in background — do NOT await so response returns immediately
@@ -863,7 +863,7 @@ export const deleteErrand = catchAsync(async (req, res) => {
           },
         },
       },
-      { new: true }
+      { returnDocument: 'after' }
     );
     if (footprint && req.io) {
       req.io.to(id.toString()).emit("footprint_updated", footprint);

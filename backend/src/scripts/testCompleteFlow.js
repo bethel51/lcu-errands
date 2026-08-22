@@ -99,7 +99,7 @@ try {
         }
       }
     },
-    { new: true, upsert: true, setDefaultsOnInsert: true }
+    { returnDocument: 'after', upsert: true, setDefaultsOnInsert: true }
   );
   console.log('✅ DigitalFootprint updated:', fp._id);
 } catch (err) {

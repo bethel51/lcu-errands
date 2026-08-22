@@ -22,7 +22,7 @@ export const updateProfile = catchAsync(async (req, res) => {
   const updatedUser = await User.findByIdAndUpdate(
     userId,
     { $set: updateFields },
-    { new: true },
+    { returnDocument: 'after' },
   ).select("-password");
 
   if (!updatedUser) {
@@ -319,7 +319,7 @@ export const uploadProfilePicture = catchAsync(async (req, res) => {
     const user = await User.findByIdAndUpdate(
       userId,
       { profilePicture: imageUrl },
-      { new: true },
+      { returnDocument: 'after' },
     ).select("-password");
 
     res.json(user);

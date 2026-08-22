@@ -427,7 +427,8 @@ const Dashboard = () => {
       showToast("Errand posted successfully!");
       navigate("/history");
     } catch (err) {
-      showToast(err.response?.data?.message || "Check balance.", "info");
+      showToast(err.response?.data?.message || "Could not post errand. Check balance.", "error");
+      throw err;
     } finally {
       setProcessing(false);
     }

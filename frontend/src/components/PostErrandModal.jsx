@@ -74,13 +74,16 @@ const PostErrandModal = ({ isOpen, onClose, onSubmit, isProcessing }) => {
     }
   }, [submitted, isProcessing, onClose]);
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (step === 0 && !formData.title.trim()) return;
     if (step === 1 && (!formData.location.trim() || !formData.fee)) return;
     if (step === 2) {
-      // AUTO SUBMIT
-      setSubmitted(true);
-      onSubmit(formData);
+      try {
+        setSubmitted(true);
+        await onSubmit(formData);
+      } catch (err) {
+        setSubmitted(false);
+      }
       return;
     }
     setStep((s) => s + 1);
@@ -132,6 +135,7 @@ const PostErrandModal = ({ isOpen, onClose, onSubmit, isProcessing }) => {
                 onClose();
               }
             }}
+            onClick={(e) => e.stopPropagation()}
             style={{
               background: "#ffffff",
               borderRadius: "28px 28px 0 0",

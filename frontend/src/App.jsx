@@ -49,8 +49,8 @@ const PageLoader = () => (
   </div>
 );
 
-// Auth pages where Navbar and BottomNav should be hidden
-const AUTH_PATHS = ["/login", "/register", "/forgot-password"];
+// Pages where Navbar and BottomNav should be hidden for full-screen view
+const HIDE_NAV_PATHS = ["/login", "/register", "/forgot-password", "/post-errand"];
 
 const AppLayout = () => {
   const location = useLocation();
@@ -77,11 +77,11 @@ const AppLayout = () => {
     setIsAuth(localStorage.getItem("isAuthenticated") === "true");
   }, [location.pathname]);
 
-  const isAuthPage = AUTH_PATHS.includes(location.pathname);
+  const hideNav = HIDE_NAV_PATHS.includes(location.pathname);
 
   return (
     <>
-      {!isAuthPage && <Navbar />}
+      {!hideNav && <Navbar />}
       <Suspense fallback={<PageLoader />}>
         <Routes>
           {/* Public home — redirect to dashboard if already logged in */}
@@ -162,7 +162,7 @@ const AppLayout = () => {
           />
         </Routes>
       </Suspense>
-      {!isAuthPage && isAuth && <BottomNav />}
+      {!hideNav && isAuth && <BottomNav />}
       <OfflineNotice />
     </>
   );

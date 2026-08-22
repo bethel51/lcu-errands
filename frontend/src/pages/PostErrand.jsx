@@ -1,8 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
-import { MapPin, Banknote, CheckCircle, Wallet, AlertCircle } from "lucide-react";
-import PageContainer from "../components/PageContainer";
+import { motion, AnimatePresence } from "framer-motion";
+import { X, MapPin, Banknote, CheckCircle, Wallet, AlertCircle, ArrowLeft } from "lucide-react";
 import api from "../api";
 import { useToast } from "../context/ToastContext";
 
@@ -38,6 +37,8 @@ const PostErrand = () => {
   const [submitting, setSubmitting] = useState(false);
   const [user, setUser] = useState(null);
 
+  const titleRef = useRef(null);
+
   useEffect(() => {
     const userStr = localStorage.getItem("user");
     if (userStr) {
@@ -45,6 +46,9 @@ const PostErrand = () => {
         setUser(JSON.parse(userStr));
       } catch (e) {}
     }
+    // Auto-focus title input on entry
+    const t = setTimeout(() => titleRef.current?.focus(), 300);
+    return () => clearTimeout(t);
   }, []);
 
   const feeNum = Number(formData.fee) || 0;
@@ -72,10 +76,10 @@ const PostErrand = () => {
         pickupLocation: "Campus",
       });
 
-      showToast("🚀 Errand posted successfully!");
+      showToast("🚀 Errand published successfully!");
       navigate("/history");
     } catch (err) {
-      const msg = err.response?.data?.message || "Failed to post errand. Check your balance.";
+      const msg = err.response?.data?.message || "Failed to publish errand. Check your balance.";
       showToast(msg, "error");
     } finally {
       setSubmitting(false);
@@ -83,314 +87,396 @@ const PostErrand = () => {
   };
 
   return (
-    <PageContainer
-      title="Post New Errand"
-      showHeader={true}
-      showBack={true}
-      onBack={() => navigate("/dashboard")}
-      showNotification={false}
-      showLive={false}
+    <motion.div
+      initial={{ y: "100%" }}
+      animate={{ y: 0 }}
+      exit={{ y: "100%" }}
+      transition={{ type: "spring", damping: 28, stiffness: 320, mass: 0.8 }}
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 99999,
+        background: "var(--gray-50)",
+        display: "flex",
+        flexDirection: "column",
+        height: "100vh",
+        height: "100dvh",
+        width: "100vw",
+        overflow: "hidden",
+      }}
     >
-      <motion.div
-        initial={{ opacity: 0, y: 15 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.25 }}
-        style={{ maxWidth: 560, margin: "0 auto", paddingBottom: 40 }}
+      {/* ── Cupertino Native Top Bar ── */}
+      <div
+        style={{
+          height: 64,
+          padding: "0 16px",
+          background: "rgba(255, 255, 255, 0.95)",
+          backdropFilter: "blur(20px)",
+          WebkitBackdropFilter: "blur(20px)",
+          borderBottom: "1px solid var(--gray-200)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          flexShrink: 0,
+          boxShadow: "0 2px 8px rgba(0,0,0,0.03)",
+        }}
       >
-        {/* Header Hero Banner */}
-        <div
+        <button
+          type="button"
+          onClick={() => navigate("/dashboard")}
           style={{
-            background: "linear-gradient(135deg, var(--blue-900), var(--blue-600))",
-            borderRadius: 20,
-            padding: "20px 24px",
-            color: "var(--white)",
-            marginBottom: 20,
-            boxShadow: "0 10px 25px rgba(30,77,183,0.25)",
+            width: 38,
+            height: 38,
+            borderRadius: "50%",
+            border: "1px solid var(--gray-200)",
+            background: "var(--gray-50)",
+            color: "var(--gray-700)",
             display: "flex",
-            justifyContent: "space-between",
             alignItems: "center",
+            justifyContent: "center",
+            cursor: "pointer",
+          }}
+          aria-label="Close"
+        >
+          <X size={20} />
+        </button>
+
+        <h1
+          style={{
+            fontSize: "1.1rem",
+            fontWeight: 900,
+            color: "var(--gray-900)",
+            margin: 0,
+            fontFamily: "Outfit, sans-serif",
+            letterSpacing: "-0.3px",
           }}
         >
-          <div>
-            <h2 style={{ fontSize: "1.25rem", fontWeight: 900, margin: 0, letterSpacing: "-0.3px" }}>
+          New Errand
+        </h1>
+
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 5,
+            padding: "5px 12px",
+            borderRadius: 20,
+            background: "var(--blue-50)",
+            border: "1px solid var(--blue-100)",
+            color: "var(--blue-700)",
+            fontWeight: 800,
+            fontSize: "0.8rem",
+          }}
+        >
+          <Wallet size={14} />
+          ₦{userBalance.toLocaleString()}
+        </div>
+      </div>
+
+      {/* ── Scrollable Form Area ── */}
+      <div
+        style={{
+          flex: 1,
+          overflowY: "auto",
+          WebkitOverflowScrolling: "touch",
+          padding: "20px 16px 120px",
+        }}
+      >
+        <div style={{ maxWidth: 540, margin: "0 auto" }}>
+          {/* Header Banner */}
+          <div
+            style={{
+              background: "linear-gradient(135deg, var(--blue-900), var(--blue-600))",
+              borderRadius: 20,
+              padding: "18px 20px",
+              color: "var(--white)",
+              marginBottom: 18,
+              boxShadow: "0 10px 24px rgba(30,77,183,0.22)",
+            }}
+          >
+            <h2 style={{ fontSize: "1.15rem", fontWeight: 900, margin: 0, letterSpacing: "-0.2px" }}>
               Request a Messenger
             </h2>
-            <p style={{ fontSize: "0.82rem", margin: "4px 0 0", opacity: 0.88, fontWeight: 500 }}>
-              Connect with reliable Lead City messengers instantly
+            <p style={{ fontSize: "0.8rem", margin: "4px 0 0", opacity: 0.88, fontWeight: 500 }}>
+              Dispatch an errand to available Lead City student messengers
             </p>
           </div>
-          <div
-            style={{
-              background: "rgba(255,255,255,0.15)",
-              backdropFilter: "blur(10px)",
-              padding: "8px 14px",
-              borderRadius: 14,
-              textAlign: "right",
-              border: "1px solid rgba(255,255,255,0.2)",
-            }}
-          >
-            <span style={{ fontSize: "0.7rem", textTransform: "uppercase", fontWeight: 800, opacity: 0.8, display: "block" }}>
-              Wallet
-            </span>
-            <span style={{ fontSize: "1.05rem", fontWeight: 900 }}>
-              ₦{userBalance.toLocaleString()}
-            </span>
-          </div>
-        </div>
 
-        {/* Form Container */}
-        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-          {/* Card 1: Errand Details */}
-          <div
-            style={{
-              background: "var(--white)",
-              borderRadius: 20,
-              padding: 20,
-              border: "1px solid var(--gray-200)",
-              boxShadow: "var(--shadow-sm)",
-            }}
-          >
-            <div style={{ marginBottom: 16 }}>
-              <label
-                style={{
-                  display: "block",
-                  fontSize: "0.78rem",
-                  fontWeight: 800,
-                  color: "var(--gray-700)",
-                  marginBottom: 8,
-                  textTransform: "uppercase",
-                  letterSpacing: "0.05em",
-                }}
-              >
-                Task Title *
-              </label>
-              <input
-                className="input-field"
-                placeholder="e.g. Buy Lunch at J-One / Print Assignment"
-                value={formData.title}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                required
-                style={{ fontSize: "0.98rem", fontWeight: 700 }}
-              />
-            </div>
-
-            {/* Category Selector */}
-            <div>
-              <label
-                style={{
-                  display: "block",
-                  fontSize: "0.78rem",
-                  fontWeight: 800,
-                  color: "var(--gray-700)",
-                  marginBottom: 10,
-                  textTransform: "uppercase",
-                  letterSpacing: "0.05em",
-                }}
-              >
-                Select Category *
-              </label>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
-                {CATEGORIES.map((cat) => {
-                  const c = CATEGORY_COLORS[cat];
-                  const isActive = formData.category === cat;
-                  return (
-                    <button
-                      key={cat}
-                      type="button"
-                      onClick={() => setFormData({ ...formData, category: cat })}
-                      style={{
-                        padding: "12px 8px",
-                        borderRadius: 16,
-                        border: `2px solid ${isActive ? c.active : c.border}`,
-                        background: isActive ? c.bg : "var(--gray-50)",
-                        color: isActive ? c.active : "var(--gray-700)",
-                        fontWeight: 800,
-                        fontSize: "0.82rem",
-                        cursor: "pointer",
-                        transition: "all 0.18s ease",
-                        display: "flex",
-                        flexDirection: "column",
-                        alignItems: "center",
-                        gap: 6,
-                      }}
-                    >
-                      <span style={{ fontSize: "1.4rem" }}>{CATEGORY_EMOJI[cat]}</span>
-                      {cat}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-
-          {/* Card 2: Location & Reward */}
-          <div
-            style={{
-              background: "var(--white)",
-              borderRadius: 20,
-              padding: 20,
-              border: "1px solid var(--gray-200)",
-              boxShadow: "var(--shadow-sm)",
-              display: "flex",
-              flexDirection: "column",
-              gap: 16,
-            }}
-          >
-            <div>
-              <label
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 6,
-                  fontSize: "0.78rem",
-                  fontWeight: 800,
-                  color: "var(--gray-700)",
-                  marginBottom: 8,
-                  textTransform: "uppercase",
-                  letterSpacing: "0.05em",
-                }}
-              >
-                <MapPin size={14} color="var(--blue-600)" /> Drop-off Location *
-              </label>
-              <input
-                className="input-field"
-                placeholder="e.g. Block A, Room 202 / Senate Building"
-                value={formData.location}
-                onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                required
-                style={{ fontSize: "0.95rem", fontWeight: 700 }}
-              />
-            </div>
-
-            <div>
-              <label
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 6,
-                  fontSize: "0.78rem",
-                  fontWeight: 800,
-                  color: "var(--gray-700)",
-                  marginBottom: 8,
-                  textTransform: "uppercase",
-                  letterSpacing: "0.05em",
-                }}
-              >
-                <Banknote size={14} color="var(--green-600)" /> Messenger Reward (₦) *
-              </label>
-              <input
-                className="input-field"
-                type="number"
-                placeholder="Min. ₦100"
-                value={formData.fee}
-                onChange={(e) => setFormData({ ...formData, fee: e.target.value })}
-                required
-                style={{ fontSize: "1.2rem", fontWeight: 900 }}
-              />
-
-              {/* Preset Chips */}
-              <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
-                {["200", "500", "1000", "2000", "5000"].map((amt) => (
-                  <button
-                    key={amt}
-                    type="button"
-                    onClick={() => setFormData({ ...formData, fee: amt })}
-                    style={{
-                      padding: "6px 14px",
-                      borderRadius: 20,
-                      border: `1.5px solid ${formData.fee === amt ? "var(--blue-600)" : "var(--gray-200)"}`,
-                      background: formData.fee === amt ? "var(--blue-50)" : "var(--gray-50)",
-                      color: formData.fee === amt ? "var(--blue-700)" : "var(--gray-700)",
-                      fontWeight: 800,
-                      fontSize: "0.82rem",
-                      cursor: "pointer",
-                      transition: "all 0.15s",
-                    }}
-                  >
-                    ₦{Number(amt).toLocaleString()}
-                  </button>
-                ))}
-              </div>
-
-              {/* Insufficient balance alert */}
-              {insufficientBalance && (
-                <div
-                  style={{
-                    marginTop: 12,
-                    padding: "10px 14px",
-                    borderRadius: 14,
-                    background: "var(--red-50)",
-                    border: "1px solid var(--red-200)",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 10,
-                    color: "var(--red-700)",
-                    fontSize: "0.82rem",
-                    fontWeight: 700,
-                  }}
-                >
-                  <AlertCircle size={16} flexShrink={0} />
-                  <span>
-                    Insufficient balance (₦{userBalance.toLocaleString()}).{" "}
-                    <button
-                      type="button"
-                      onClick={() => navigate("/top-up")}
-                      style={{
-                        background: "none",
-                        border: "none",
-                        color: "var(--blue-700)",
-                        fontWeight: 900,
-                        textDecoration: "underline",
-                        cursor: "pointer",
-                        padding: 0,
-                      }}
-                    >
-                      Top Up Wallet
-                    </button>
-                  </span>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Card 3: Notes */}
-          <div
-            style={{
-              background: "var(--white)",
-              borderRadius: 20,
-              padding: 20,
-              border: "1px solid var(--gray-200)",
-              boxShadow: "var(--shadow-sm)",
-            }}
-          >
-            <label
+          <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            {/* Card 1: Task Title & Category */}
+            <div
               style={{
-                display: "block",
-                fontSize: "0.78rem",
-                fontWeight: 800,
-                color: "var(--gray-700)",
-                marginBottom: 8,
-                textTransform: "uppercase",
-                letterSpacing: "0.05em",
+                background: "var(--white)",
+                borderRadius: 20,
+                padding: 18,
+                border: "1px solid var(--gray-200)",
+                boxShadow: "0 2px 10px rgba(0,0,0,0.03)",
               }}
             >
-              Special Notes / Instructions (Optional)
-            </label>
-            <textarea
-              className="input-field"
-              style={{ minHeight: 90, resize: "none", fontSize: "0.92rem", lineHeight: 1.6 }}
-              placeholder="e.g. Extra pepper on food, call when at gate..."
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-            />
-          </div>
+              <div style={{ marginBottom: 16 }}>
+                <label
+                  style={{
+                    display: "block",
+                    fontSize: "0.76rem",
+                    fontWeight: 800,
+                    color: "var(--gray-600)",
+                    marginBottom: 8,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.05em",
+                  }}
+                >
+                  Task Title *
+                </label>
+                <input
+                  ref={titleRef}
+                  className="input-field"
+                  placeholder="e.g. Buy Lunch at J-One / Print Assignment"
+                  value={formData.title}
+                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                  required
+                  style={{ fontSize: "0.98rem", fontWeight: 700 }}
+                />
+              </div>
 
-          {/* Action Button */}
-          <button
-            type="submit"
+              {/* Category Grid */}
+              <div>
+                <label
+                  style={{
+                    display: "block",
+                    fontSize: "0.76rem",
+                    fontWeight: 800,
+                    color: "var(--gray-600)",
+                    marginBottom: 10,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.05em",
+                  }}
+                >
+                  Category *
+                </label>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
+                  {CATEGORIES.map((cat) => {
+                    const c = CATEGORY_COLORS[cat];
+                    const isActive = formData.category === cat;
+                    return (
+                      <button
+                        key={cat}
+                        type="button"
+                        onClick={() => setFormData({ ...formData, category: cat })}
+                        style={{
+                          padding: "12px 6px",
+                          borderRadius: 16,
+                          border: `2px solid ${isActive ? c.active : c.border}`,
+                          background: isActive ? c.bg : "var(--gray-50)",
+                          color: isActive ? c.active : "var(--gray-700)",
+                          fontWeight: 800,
+                          fontSize: "0.8rem",
+                          cursor: "pointer",
+                          transition: "all 0.15s ease",
+                          display: "flex",
+                          flexDirection: "column",
+                          alignItems: "center",
+                          gap: 5,
+                        }}
+                      >
+                        <span style={{ fontSize: "1.35rem" }}>{CATEGORY_EMOJI[cat]}</span>
+                        {cat}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* Card 2: Drop-off Location & Reward */}
+            <div
+              style={{
+                background: "var(--white)",
+                borderRadius: 20,
+                padding: 18,
+                border: "1px solid var(--gray-200)",
+                boxShadow: "0 2px 10px rgba(0,0,0,0.03)",
+                display: "flex",
+                flexDirection: "column",
+                gap: 16,
+              }}
+            >
+              <div>
+                <label
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6,
+                    fontSize: "0.76rem",
+                    fontWeight: 800,
+                    color: "var(--gray-600)",
+                    marginBottom: 8,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.05em",
+                  }}
+                >
+                  <MapPin size={14} color="var(--blue-600)" /> Drop-off Location *
+                </label>
+                <input
+                  className="input-field"
+                  placeholder="e.g. Block A, Room 202 / Senate Building"
+                  value={formData.location}
+                  onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                  required
+                  style={{ fontSize: "0.95rem", fontWeight: 700 }}
+                />
+              </div>
+
+              <div>
+                <label
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6,
+                    fontSize: "0.76rem",
+                    fontWeight: 800,
+                    color: "var(--gray-600)",
+                    marginBottom: 8,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.05em",
+                  }}
+                >
+                  <Banknote size={14} color="var(--green-600)" /> Reward Amount (₦) *
+                </label>
+                <input
+                  className="input-field"
+                  type="number"
+                  placeholder="Min. ₦100"
+                  value={formData.fee}
+                  onChange={(e) => setFormData({ ...formData, fee: e.target.value })}
+                  required
+                  style={{ fontSize: "1.18rem", fontWeight: 900 }}
+                />
+
+                {/* Preset Chips */}
+                <div style={{ display: "flex", gap: 6, marginTop: 10, flexWrap: "wrap" }}>
+                  {["200", "500", "1000", "2000", "5000"].map((amt) => (
+                    <button
+                      key={amt}
+                      type="button"
+                      onClick={() => setFormData({ ...formData, fee: amt })}
+                      style={{
+                        padding: "6px 12px",
+                        borderRadius: 20,
+                        border: `1.5px solid ${formData.fee === amt ? "var(--blue-600)" : "var(--gray-200)"}`,
+                        background: formData.fee === amt ? "var(--blue-50)" : "var(--gray-50)",
+                        color: formData.fee === amt ? "var(--blue-700)" : "var(--gray-700)",
+                        fontWeight: 800,
+                        fontSize: "0.8rem",
+                        cursor: "pointer",
+                        transition: "all 0.15s",
+                      }}
+                    >
+                      ₦{Number(amt).toLocaleString()}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Card 3: Instructions */}
+            <div
+              style={{
+                background: "var(--white)",
+                borderRadius: 20,
+                padding: 18,
+                border: "1px solid var(--gray-200)",
+                boxShadow: "0 2px 10px rgba(0,0,0,0.03)",
+              }}
+            >
+              <label
+                style={{
+                  display: "block",
+                  fontSize: "0.76rem",
+                  fontWeight: 800,
+                  color: "var(--gray-600)",
+                  marginBottom: 8,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.05em",
+                }}
+              >
+                Special Instructions (Optional)
+              </label>
+              <textarea
+                className="input-field"
+                style={{ minHeight: 90, resize: "none", fontSize: "0.92rem", lineHeight: 1.6 }}
+                placeholder="Specific items, quantities, or instructions…"
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              />
+            </div>
+          </form>
+        </div>
+      </div>
+
+      {/* ── Fixed Bottom Sticky Action Bar ── */}
+      <div
+        style={{
+          position: "fixed",
+          bottom: 0,
+          left: 0,
+          right: 0,
+          background: "rgba(255, 255, 255, 0.96)",
+          backdropFilter: "blur(16px)",
+          WebkitBackdropFilter: "blur(16px)",
+          borderTop: "1px solid var(--gray-200)",
+          padding: "12px 16px calc(12px + env(safe-area-inset-bottom, 12px))",
+          boxShadow: "0 -8px 24px rgba(0,0,0,0.08)",
+          zIndex: 100000,
+        }}
+      >
+        <div style={{ maxWidth: 540, margin: "0 auto" }}>
+          {insufficientBalance && (
+            <div
+              style={{
+                marginBottom: 10,
+                padding: "8px 12px",
+                borderRadius: 12,
+                background: "var(--red-50)",
+                border: "1px solid var(--red-200)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                color: "var(--red-700)",
+                fontSize: "0.8rem",
+                fontWeight: 700,
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <AlertCircle size={15} />
+                <span>Insufficient balance (₦{userBalance.toLocaleString()})</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => navigate("/top-up")}
+                style={{
+                  background: "var(--red-600)",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: 8,
+                  padding: "4px 10px",
+                  fontSize: "0.75rem",
+                  fontWeight: 800,
+                  cursor: "pointer",
+                }}
+              >
+                Top Up
+              </button>
+            </div>
+          )}
+
+          <motion.button
+            whileTap={isFormValid ? { scale: 0.98 } : {}}
+            type="button"
+            onClick={handleSubmit}
             disabled={!isFormValid || submitting}
             style={{
-              height: 54,
+              width: "100%",
+              height: 52,
               borderRadius: 16,
               border: "none",
               background: isFormValid ? "var(--gradient-brand)" : "var(--gray-200)",
@@ -401,10 +487,9 @@ const PostErrand = () => {
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              gap: 10,
+              gap: 8,
               boxShadow: isFormValid ? "0 6px 20px rgba(30,77,183,0.32)" : "none",
-              transition: "all 0.2s ease",
-              marginTop: 6,
+              transition: "all 0.18s ease",
             }}
           >
             {submitting ? (
@@ -413,14 +498,12 @@ const PostErrand = () => {
                 <span>Publishing Errand…</span>
               </>
             ) : (
-              <>
-                <span>🚀 Publish Errand</span>
-              </>
+              <span>🚀 Publish Errand</span>
             )}
-          </button>
-        </form>
-      </motion.div>
-    </PageContainer>
+          </motion.button>
+        </div>
+      </div>
+    </motion.div>
   );
 };
 

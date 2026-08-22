@@ -113,25 +113,36 @@ const PostErrandModal = ({ isOpen, onClose, onSubmit, isProcessing }) => {
             WebkitBackdropFilter: "blur(6px)",
             zIndex: 9999,
             display: "flex",
-            alignItems: "center",
+            alignItems: "flex-end",
             justifyContent: "center",
-            padding: "20px 16px",
+            padding: 0,
           }}
         >
           <motion.div
             key="post-errand-card"
-            initial={{ scale: 0.92, opacity: 0, y: 20 }}
-            animate={{ scale: 1, opacity: 1, y: 0 }}
-            exit={{ scale: 0.92, opacity: 0, y: 20 }}
-            transition={{ type: "spring", damping: 22, stiffness: 320 }}
+            initial={{ y: "100%", opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: "100%", opacity: 0 }}
+            transition={{ type: "spring", damping: 26, stiffness: 340, mass: 0.8 }}
+            drag="y"
+            dragConstraints={{ top: 0 }}
+            dragElastic={0.15}
+            onDragEnd={(_, info) => {
+              if (info.offset.y > 90 || info.velocity.y > 400) {
+                onClose();
+              }
+            }}
             style={{
               background: "#ffffff",
-              borderRadius: 28,
+              borderRadius: "28px 28px 0 0",
               width: "100%",
-              maxWidth: 460,
-              overflow: "hidden",
-              boxShadow: "0 32px 80px rgba(0,0,0,0.22), 0 0 0 1px rgba(255,255,255,0.06)",
+              maxWidth: 480,
+              maxHeight: "90vh",
+              maxHeight: "90dvh",
+              overflowY: "auto",
+              boxShadow: "0 -12px 40px rgba(0,0,0,0.18)",
               position: "relative",
+              alignSelf: "flex-end",
             }}
           >
             {/* ── Success overlay ── */}

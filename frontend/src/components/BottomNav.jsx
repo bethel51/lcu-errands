@@ -28,24 +28,43 @@ const BottomNav = () => {
             className={`bottom-tab-item ${isActive ? "active" : ""}`}
             onMouseEnter={() => prefetch(PageImports[item.importKey])}
           >
+            {/* Perfectly Centered Top Indicator Bar */}
             {isActive && (
-              <motion.div
-                layoutId="activeTabIndicator"
-                className="bottom-tab-active-indicator"
-                transition={{ type: "spring", stiffness: 500, damping: 35 }}
-              />
+              <div
+                style={{
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  display: "flex",
+                  justifyContent: "center",
+                  pointerEvents: "none",
+                }}
+              >
+                <motion.div
+                  layoutId="bottomNavActiveBar"
+                  style={{
+                    width: 32,
+                    height: 3,
+                    borderRadius: "0 0 6px 6px",
+                    background: "var(--blue-600)",
+                    boxShadow: "0 2px 10px rgba(30,77,183,0.45)",
+                  }}
+                  transition={{ type: "spring", stiffness: 450, damping: 30 }}
+                />
+              </div>
             )}
             
             <div className="bottom-tab-icon-wrapper">
               <motion.div
-                animate={isActive ? { scale: 1.15, y: -1 } : { scale: 1, y: 0 }}
+                animate={isActive ? { scale: 1.14, y: -1 } : { scale: 1, y: 0 }}
                 transition={{ type: "spring", stiffness: 400, damping: 25 }}
               >
                 <IconComponent size={22} strokeWidth={isActive ? 2.5 : 1.8} />
               </motion.div>
             </div>
 
-            <span>{item.label}</span>
+            <span style={{ fontWeight: isActive ? 800 : 600 }}>{item.label}</span>
           </Link>
         );
       })}

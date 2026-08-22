@@ -3,9 +3,11 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
 import { useBodyScrollLock } from "../hooks/useBodyScrollLock";
 
+/* iOS / Flutter Cupertino Spring Physics */
 const backdropVariants = {
   hidden: { opacity: 0 },
-  visible: { opacity: 1 },
+  visible: { opacity: 1, transition: { duration: 0.25 } },
+  exit: { opacity: 0, transition: { duration: 0.2 } },
 };
 
 const sheetVariants = {
@@ -13,17 +15,36 @@ const sheetVariants = {
   visible: {
     y: 0,
     opacity: 1,
-    transition: { type: "spring", stiffness: 380, damping: 32 },
+    transition: {
+      type: "spring",
+      damping: 26,
+      stiffness: 340,
+      mass: 0.8,
+    },
   },
   exit: {
     y: "100%",
     opacity: 0,
-    transition: { ease: "easeInOut", duration: 0.22 },
+    transition: {
+      type: "tween",
+      ease: [0.32, 0.72, 0, 1],
+      duration: 0.26,
+    },
   },
 };
 
-const BottomSheet = ({ isOpen, onClose, title, children }) => {
+const BottomSheet = ({ isOpen, onClose, title, subtitle, children, style = {} }) => {
   useBodyScrollLock(isOpen);
+
+  useEffect(() => {
+    if (isOpen && typeof window !== "undefined" && window.navigator?.vibrate) {
+      try {
+        window.navigator.vibrate(8);
+      } catch (e) {
+        // Safe fallback if permission denied
+      }
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -38,16 +59,27 @@ const BottomSheet = ({ isOpen, onClose, title, children }) => {
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="bottom-sheet-backdrop">
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 1200,
+            display: "flex",
+            alignItems: "flex-end",
+            justifyContent: "center",
+          }}
+        >
+          {/* iOS Blur Backdrop */}
           <motion.div
             className="bottom-sheet-backdrop"
             variants={backdropVariants}
             initial="hidden"
             animate="visible"
-            exit="hidden"
+            exit="exit"
             onClick={onClose}
           />
 
+          {/* Flutter/iOS Drag Card Sheet */}
           <motion.div
             className="bottom-sheet-container"
             variants={sheetVariants}
@@ -56,55 +88,94 @@ const BottomSheet = ({ isOpen, onClose, title, children }) => {
             exit="exit"
             drag="y"
             dragConstraints={{ top: 0 }}
-            dragElastic={0.2}
+            dragElastic={0.15}
             onDragEnd={(_, info) => {
-              if (info.offset.y > 100 || info.velocity.y > 500) {
+              if (info.offset.y > 90 || info.velocity.y > 400) {
                 onClose();
               }
             }}
+            style={{
+              borderRadius: "28px 28px 0 0",
+              boxShadow: "0 -12px 40px rgba(0, 0, 0, 0.18)",
+              background: "var(--white)",
+              ...style,
+            }}
           >
-            <div className="bottom-sheet-handle" />
-
+            {/* iOS Pill Drag Handle */}
             <div
+              className="bottom-sheet-handle"
               style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                marginBottom: 16,
+                width: 38,
+                height: 5,
+                borderRadius: 99,
+                background: "var(--gray-300)",
+                margin: "4px auto 14px",
+                cursor: "grab",
               }}
-            >
-              {title ? (
-                <h3
-                  style={{
-                    fontSize: "1.2rem",
-                    fontWeight: 800,
-                    color: "var(--blue-900)",
-                    margin: 0,
-                    fontFamily: "Outfit, sans-serif",
-                  }}
-                >
-                  {title}
-                </h3>
-              ) : <div />}
+            />
 
-              <button
-                onClick={onClose}
+            {(title || subtitle) && (
+              <div
                 style={{
-                  width: 32,
-                  height: 32,
-                  borderRadius: "50%",
-                  border: "none",
-                  background: "var(--gray-100)",
-                  color: "var(--gray-600)",
                   display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  cursor: "pointer",
+                  alignItems: "flex-start",
+                  justifyContent: "space-between",
+                  marginBottom: 16,
+                  paddingBottom: 10,
+                  borderBottom: "1px solid var(--gray-100)",
                 }}
               >
-                <X size={18} />
-              </button>
-            </div>
+                <div>
+                  {title && (
+                    <h3
+                      style={{
+                        fontSize: "1.2rem",
+                        fontWeight: 800,
+                        color: "var(--blue-900)",
+                        margin: 0,
+                        fontFamily: "Outfit, sans-serif",
+                        letterSpacing: "-0.3px",
+                      }}
+                    >
+                      {title}
+                    </h3>
+                  )}
+                  {subtitle && (
+                    <p
+                      style={{
+                        fontSize: "0.8rem",
+                        color: "var(--gray-500)",
+                        margin: "2px 0 0",
+                        fontWeight: 500,
+                      }}
+                    >
+                      {subtitle}
+                    </p>
+                  )}
+                </div>
+
+                <motion.button
+                  whileTap={{ scale: 0.9 }}
+                  onClick={onClose}
+                  style={{
+                    width: 32,
+                    height: 32,
+                    borderRadius: "50%",
+                    border: "none",
+                    background: "var(--gray-100)",
+                    color: "var(--gray-600)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    cursor: "pointer",
+                    flexShrink: 0,
+                  }}
+                  aria-label="Close"
+                >
+                  <X size={18} />
+                </motion.button>
+              </div>
+            )}
 
             {children}
           </motion.div>

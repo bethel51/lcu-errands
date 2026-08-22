@@ -17,6 +17,7 @@ import {
   CheckCheck,
   Users,
   CheckCircle,
+  Activity,
 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import api from "../api";
@@ -31,6 +32,7 @@ import AppCard from "../components/AppCard";
 import AppButton from "../components/AppButton";
 import StatusBadge from "../components/StatusBadge";
 import LoadingState from "../components/LoadingState";
+import BottomSheet from "../components/BottomSheet";
 
 
 const CATEGORIES = [
@@ -136,6 +138,29 @@ const Dashboard = () => {
   });
   const [isTopUpModalOpen, setIsTopUpModalOpen] = useState(false);
   const [topUpAmount, setTopUpAmount] = useState("1000");
+
+  // Intel Footprint Modal States
+  const [intelFootprint, setIntelFootprint] = useState(null);
+  const [intelModalOpen, setIntelModalOpen] = useState(false);
+  const [loadingIntel, setLoadingIntel] = useState(false);
+  const [selectedIntelErrandId, setSelectedIntelErrandId] = useState(null);
+
+  const handleOpenIntel = async (id) => {
+    if (!id) return;
+    setSelectedIntelErrandId(id);
+    setIntelModalOpen(true);
+    setLoadingIntel(true);
+    setIntelFootprint(null);
+    try {
+      const res = await api.get(`/errands/${id}/footprint`);
+      setIntelFootprint(res.data);
+    } catch (err) {
+      console.error("Failed to load digital footprint", err);
+      showToast(err.response?.data?.message || "Could not load Intel data.", "error");
+    } finally {
+      setLoadingIntel(false);
+    }
+  };
 
   const userRole = localStorage.getItem("userRole") || "messenger";
   const isMobile = typeof window !== "undefined" && window.innerWidth <= 768;
@@ -790,13 +815,31 @@ const Dashboard = () => {
                     >
                       {errand.title}
                     </div>
-                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 5 }}>
+                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 5, alignItems: "center" }}>
                       <span style={{ fontSize: "0.75rem", color: "var(--gray-500)", fontWeight: 700 }}>
                         {errand.status?.replace(/_/g, " ")}
                       </span>
                       <span style={{ fontSize: "0.75rem", color: "var(--blue-600)", fontWeight: 800 }}>
                         ₦{errand.fee?.toLocaleString()}
                       </span>
+                      <button
+                        onClick={() => handleOpenIntel(errand.id)}
+                        style={{
+                          background: "var(--blue-50)",
+                          border: "1px solid var(--blue-100)",
+                          color: "var(--blue-700)",
+                          borderRadius: 8,
+                          padding: "2px 8px",
+                          fontSize: "0.7rem",
+                          fontWeight: 800,
+                          cursor: "pointer",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 4,
+                        }}
+                      >
+                        <Activity size={12} /> Intel
+                      </button>
                     </div>
                   </div>
                   <div style={{ display: "flex", gap: 8, alignItems: "center", flexShrink: 0, flexDirection: "column" }}>
@@ -1478,6 +1521,138 @@ const Dashboard = () => {
         }}
         role={userRole}
       />
+
+      {/* Digital Footprint / Communication Intel Timeline Bottom Sheet */}
+      <BottomSheet
+        isOpen={intelModalOpen}
+        onClose={() => setIntelModalOpen(false)}
+        title="Communication Intel"
+        subtitle="Secure cryptographic audit trail logs"
+      >
+        {loadingIntel ? (
+          <div style={{ padding: "40px 0", textAlign: "center" }}>
+            <div className="loader" style={{ margin: "0 auto 12px" }} />
+            <span style={{ fontSize: "0.85rem", color: "var(--gray-500)" }}>Synchronizing digital blueprint...</span>
+          </div>
+        ) : !intelFootprint || !intelFootprint.auditTrail || intelFootprint.auditTrail.length === 0 ? (
+          <div style={{ padding: "40px 20px", textAlign: "center", border: "1px dashed var(--gray-200)", borderRadius: 16 }}>
+            <p style={{ color: "var(--gray-500)", fontWeight: 700, margin: 0 }}>
+              No activity recorded yet. Activity logs will appear here automatically.
+            </p>
+          </div>
+        ) : (
+          <div>
+            {/* Activity Count Badge */}
+            <div style={{ marginBottom: 20, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span style={{ fontSize: "0.8rem", color: "var(--gray-500)", fontWeight: 800 }}>
+                Audit trail contains <strong style={{ color: "var(--blue-600)" }}>{intelFootprint.auditTrail.length}</strong> event records
+              </span>
+              <button
+                onClick={() => handleOpenIntel(selectedIntelErrandId)}
+                style={{
+                  background: "none", border: "1px solid var(--gray-200)", borderRadius: 10,
+                  padding: "4px 10px", fontSize: "0.75rem", fontWeight: 800, cursor: "pointer"
+                }}
+              >
+                Refresh
+              </button>
+            </div>
+
+            {/* Timeline Container */}
+            <div style={{ position: "relative", paddingLeft: 24 }}>
+              {/* Vertical line connector */}
+              <div style={{
+                position: "absolute", left: 6, top: 12, bottom: 12, width: 2,
+                background: "var(--gray-200)"
+              }} />
+
+              {intelFootprint.auditTrail.map((entry, index) => {
+                const isLast = index === intelFootprint.auditTrail.length - 1;
+                let roleColor = "var(--gray-600)";
+                let roleBg = "var(--gray-50)";
+                if (entry.actorRole === "sender") {
+                  roleColor = "var(--blue-700)";
+                  roleBg = "var(--blue-50)";
+                } else if (entry.actorRole === "messenger") {
+                  roleColor = "var(--green-700)";
+                  roleBg = "var(--green-50)";
+                } else if (entry.actorRole === "admin") {
+                  roleColor = "var(--red-700)";
+                  roleBg = "var(--red-50)";
+                }
+
+                return (
+                  <div key={index} style={{ position: "relative", marginBottom: 24 }}>
+                    {/* Dot indicator */}
+                    <div style={{
+                      position: "absolute", left: -24, top: 4, width: 14, height: 14,
+                      borderRadius: "50%", background: isLast ? "var(--blue-500)" : "var(--gray-300)",
+                      border: "3px solid var(--white)", boxShadow: isLast ? "0 0 0 3px rgba(37,99,235,0.2)" : "none"
+                    }} />
+
+                    <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "flex-start" }}>
+                      <div>
+                        <h4 style={{ fontWeight: 800, fontSize: "0.95rem", margin: "0 0 3px", color: "var(--gray-900)" }}>
+                          {entry.actionTitle || entry.action}
+                        </h4>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", marginBottom: 6 }}>
+                          <span style={{ fontSize: "0.78rem", fontWeight: 800, color: "var(--gray-800)" }}>
+                            {entry.actorName}
+                          </span>
+                          <span style={{
+                            fontSize: "0.65rem", padding: "1px 6px", borderRadius: 4,
+                            fontWeight: 900, textTransform: "uppercase", background: roleBg, color: roleColor
+                          }}>
+                            {entry.actorRole}
+                          </span>
+                        </div>
+                        <p style={{ fontSize: "0.86rem", color: "var(--gray-600)", margin: "0 0 6px" }}>
+                          {entry.actionDescription || entry.details}
+                        </p>
+
+                        {/* Metadata if any (e.g. proof image) */}
+                        {entry.metadata && entry.metadata.imageUrl && (
+                          <div style={{ marginTop: 8 }}>
+                            <span style={{ fontSize: "0.72rem", color: "var(--gray-500)", fontWeight: 800, display: "block", marginBottom: 4 }}>
+                              Attached Proof File:
+                            </span>
+                            <img
+                              src={entry.metadata.imageUrl}
+                              alt="Proof attachment"
+                              onClick={() => window.open(entry.metadata.imageUrl, "_blank")}
+                              style={{ width: "100%", maxWidth: 220, maxHeight: 130, objectFit: "cover", borderRadius: 12, border: "1px solid var(--gray-200)", cursor: "zoom-in" }}
+                            />
+                          </div>
+                        )}
+                      </div>
+
+                      <span style={{ fontSize: "0.74rem", color: "var(--gray-400)", fontWeight: 700, whiteSpace: "nowrap" }}>
+                        {new Date(entry.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Metadata summary (Devices, IPs, etc.) */}
+            <div style={{ marginTop: 24, paddingTop: 20, borderTop: "1px solid var(--gray-100)", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 14 }}>
+              <div style={{ background: "var(--gray-50)", padding: 12, borderRadius: 12 }}>
+                <span style={{ fontSize: "0.74rem", fontWeight: 800, color: "var(--gray-500)", display: "block", marginBottom: 4 }}>Device Log (Last)</span>
+                <span style={{ fontSize: "0.78rem", color: "var(--gray-800)", fontWeight: 700 }}>
+                  {intelFootprint.auditTrail[intelFootprint.auditTrail.length - 1]?.deviceInfo || "Unknown Device"}
+                </span>
+              </div>
+              <div style={{ background: "var(--gray-50)", padding: 12, borderRadius: 12 }}>
+                <span style={{ fontSize: "0.74rem", fontWeight: 800, color: "var(--gray-500)", display: "block", marginBottom: 4 }}>IP Address</span>
+                <span style={{ fontSize: "0.78rem", color: "var(--gray-800)", fontWeight: 700 }}>
+                  {intelFootprint.auditTrail[intelFootprint.auditTrail.length - 1]?.ipAddress || "127.0.0.1"}
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+      </BottomSheet>
 
     </PageContainer>
   );

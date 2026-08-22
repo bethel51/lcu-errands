@@ -38,7 +38,15 @@ const ApplicantsSheet = ({
             initial={{ y: "100%" }}
             animate={{ y: 0 }}
             exit={{ y: "100%" }}
-            transition={{ type: "spring", damping: 28, stiffness: 260 }}
+            transition={{ type: "spring", damping: 26, stiffness: 340, mass: 0.8 }}
+            drag="y"
+            dragConstraints={{ top: 0 }}
+            dragElastic={0.15}
+            onDragEnd={(_, info) => {
+              if (info.offset.y > 90 || info.velocity.y > 400) {
+                onClose();
+              }
+            }}
             className="applicants-sheet"
             style={{ zIndex: 9991 }}
           >

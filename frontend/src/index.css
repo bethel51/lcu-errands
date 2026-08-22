@@ -4573,21 +4573,50 @@ input, select, textarea {
    MOBILE NATIVE APP DESIGN SYSTEM COMPONENT STYLES
    ========================================================================== */
 
-/* Mobile App Layout Container */
-.app-page-wrapper {
-  min-height: 100vh;
-  min-height: 100dvh;
-  background-color: var(--gray-50);
-  padding-top: calc(var(--app-header-height) + var(--safe-top));
-  padding-bottom: calc(var(--app-bottom-nav-height) + var(--safe-bottom) + 16px);
-  display: flex;
-  flex-direction: column;
+/* ── 3-Tier Responsive Breakpoint System (Mobile, Tablet, Desktop) ── */
+
+/* Mobile Base (≤ 640px) */
+@media (max-width: 640px) {
+  :root {
+    --app-max-width: 100%;
+  }
 }
 
-@media (min-width: 1024px) {
+/* Tablet Sweep (641px - 1024px) */
+@media (min-width: 641px) and (max-width: 1024px) {
+  :root {
+    --app-max-width: 740px;
+  }
   .app-page-wrapper {
-    padding-top: 80px;
-    padding-bottom: 40px;
+    padding-top: calc(var(--app-header-height) + 12px);
+    padding-bottom: calc(var(--app-bottom-nav-height) + 24px);
+  }
+  .dashboard-grid, .errands-list-grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 16px !important;
+  }
+}
+
+/* Desktop Sweep (≥ 1025px) */
+@media (min-width: 1025px) {
+  :root {
+    --app-max-width: 980px;
+  }
+  .mobile-app-header {
+    display: none !important;
+  }
+  .bottom-nav-v2 {
+    display: none !important;
+  }
+  .app-page-wrapper {
+    padding-top: 84px !important;
+    padding-bottom: 48px !important;
+  }
+  .dashboard-grid, .errands-list-grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 20px !important;
   }
 }
 
@@ -4716,17 +4745,6 @@ input, select, textarea {
   justify-content: center;
   width: 32px;
   height: 28px;
-}
-
-.bottom-tab-active-indicator {
-  position: absolute;
-  top: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 24px;
-  height: 3px;
-  background: var(--blue-600);
-  border-radius: 0 0 4px 4px;
 }
 
 /* App Bottom Sheet */

@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Star, X, MessageSquare } from "lucide-react";
+import { Star, MessageSquare } from "lucide-react";
 import api from "../api";
+import BottomSheet from "./BottomSheet";
 
 const ReviewModal = ({
   errandId,
@@ -34,174 +34,131 @@ const ReviewModal = ({
   };
 
   return (
-    <AnimatePresence>
-      {isOpen && (
-        <div
-          className="modal-overlay-responsive"
-          onClick={onClose}
-          style={{
-            position: "fixed",
-            top: 0, left: 0, right: 0, bottom: 0,
-            background: "rgba(0, 0, 0, 0.4)",
-            backdropFilter: "blur(4px)",
-            zIndex: 9999,
-            display: "flex",
-            justifyContent: "center",
-          }}
-        >
-          <motion.div
-            initial={{ y: "100%", opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: "100%", opacity: 0 }}
-            transition={{ type: "spring", damping: 25, stiffness: 300 }}
-            className="bottom-sheet-responsive"
-            onClick={(e) => e.stopPropagation()}
+    <BottomSheet
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Rate Experience"
+      subtitle="How was your campus errand experience?"
+    >
+      <form onSubmit={handleSubmit} style={{ padding: "10px 0 20px" }}>
+        {error && (
+          <div
             style={{
-              background: "#ffffff",
-              width: "100%",
-              maxWidth: 450,
-              maxHeight: "90vh",
-              overflowY: "auto",
-              padding: "24px 20px 32px",
-              boxShadow: "0 -10px 40px rgba(0,0,0,0.1)",
-              position: "relative",
+              color: "var(--red-500)",
+              background: "var(--red-50)",
+              padding: 12,
+              borderRadius: "var(--radius-md)",
+              marginBottom: 16,
+              fontSize: "0.88rem",
+              fontWeight: 600,
             }}
           >
-            {/* Mobile Drag Handle */}
-            <div
-              className="mobile-drag-handle"
-              style={{
-                width: 40,
-                height: 5,
-                background: "var(--gray-200)",
-                borderRadius: 10,
-                margin: "0 auto 20px",
-              }}
-            />
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                marginBottom: 24,
-              }}
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <div
-                  style={{
-                    width: 48,
-                    height: 48,
-                    background: "var(--amber-50)",
-                    color: "var(--amber-500)",
-                    borderRadius: "50%",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  <Star size={24} fill="var(--amber-500)" />
-                </div>
-                <h2 style={{ fontSize: "1.25rem", fontWeight: 800 }}>
-                  Rate Experience
-                </h2>
-              </div>
-              <button onClick={onClose} className="btn-icon">
-                <X size={20} />
-              </button>
-            </div>
+            {error}
+          </div>
+        )}
 
-            <form onSubmit={handleSubmit}>
-              {error && (
-                <div
-                  style={{
-                    color: "var(--red-500)",
-                    background: "var(--red-50)",
-                    padding: 12,
-                    borderRadius: 8,
-                    marginBottom: 16,
-                    fontSize: "0.9rem",
-                  }}
-                >
-                  {error}
-                </div>
-              )}
+        <div style={{ textAlign: "center", marginBottom: 28 }}>
+          <div
+            style={{
+              width: 56,
+              height: 56,
+              background: "var(--amber-50)",
+              color: "var(--amber-500)",
+              borderRadius: "50%",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              margin: "0 auto 16px",
+            }}
+          >
+            <Star size={28} fill="var(--amber-500)" />
+          </div>
 
-              <div style={{ textAlign: "center", marginBottom: 32 }}>
-                <p
-                  style={{
-                    color: "var(--gray-500)",
-                    marginBottom: 16,
-                    fontWeight: 600,
-                  }}
-                >
-                  How would you rate the service?
-                </p>
-                <div
-                  style={{ display: "flex", justifyContent: "center", gap: 12 }}
-                >
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <button
-                      key={star}
-                      type="button"
-                      onMouseEnter={() => setHoverRating(star)}
-                      onMouseLeave={() => setHoverRating(0)}
-                      onClick={() => setRating(star)}
-                      style={{
-                        background: "none",
-                        border: "none",
-                        cursor: "pointer",
-                        transition: "transform 0.2s",
-                      }}
-                    >
-                      <Star
-                        size={40}
-                        fill={
-                          (hoverRating || rating) >= star
-                            ? "var(--amber-400)"
-                            : "none"
-                        }
-                        color={
-                          (hoverRating || rating) >= star
-                            ? "var(--amber-400)"
-                            : "var(--gray-300)"
-                        }
-                        strokeWidth={2}
-                      />
-                    </button>
-                  ))}
-                </div>
-              </div>
+          <p style={{ color: "var(--gray-600)", marginBottom: 14, fontWeight: 700, fontSize: "0.95rem" }}>
+            Tap stars to rate
+          </p>
 
-              <div className="form-group">
-                <label
-                  className="form-label"
-                  style={{ display: "flex", alignItems: "center", gap: 8 }}
-                >
-                  <MessageSquare size={16} /> Share your feedback (Optional)
-                </label>
-                <textarea
-                  className="input-field"
-                  rows={4}
-                  placeholder="Tell others about your experience..."
-                  value={comment}
-                  onChange={(e) => setComment(e.target.value)}
-                  style={{ resize: "none" }}
-                />
-              </div>
-
+          <div style={{ display: "flex", justifyContent: "center", gap: 10 }}>
+            {[1, 2, 3, 4, 5].map((star) => (
               <button
-                type="submit"
-                className="btn btn-primary"
-                style={{ width: "100%", padding: 14 }}
-                disabled={loading}
+                key={star}
+                type="button"
+                onMouseEnter={() => setHoverRating(star)}
+                onMouseLeave={() => setHoverRating(0)}
+                onClick={() => setRating(star)}
+                style={{
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  padding: 2,
+                  transition: "transform 0.15s ease",
+                  transform: (hoverRating || rating) >= star ? "scale(1.15)" : "scale(1)",
+                }}
               >
-                {loading ? "Submitting..." : "Submit Review"}
+                <Star
+                  size={36}
+                  fill={(hoverRating || rating) >= star ? "var(--amber-400)" : "none"}
+                  color={(hoverRating || rating) >= star ? "var(--amber-400)" : "var(--gray-300)"}
+                  strokeWidth={2}
+                />
               </button>
-            </form>
-          </motion.div>
+            ))}
+          </div>
         </div>
-      )}
-    </AnimatePresence>
+
+        <div style={{ marginBottom: 20 }}>
+          <label
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              fontSize: "0.85rem",
+              fontWeight: 700,
+              color: "var(--gray-700)",
+              marginBottom: 8,
+            }}
+          >
+            <MessageSquare size={16} /> Feedback (Optional)
+          </label>
+          <textarea
+            rows={3}
+            placeholder="Tell others how it went..."
+            value={comment}
+            onChange={(e) => setComment(e.target.value)}
+            style={{
+              width: "100%",
+              borderRadius: "var(--radius-lg)",
+              border: "1.5px solid var(--gray-300)",
+              padding: 12,
+              fontSize: "0.95rem",
+              outline: "none",
+              resize: "none",
+              boxSizing: "border-box",
+              fontFamily: "inherit",
+            }}
+          />
+        </div>
+
+        <button
+          type="submit"
+          disabled={loading}
+          style={{
+            width: "100%",
+            height: 48,
+            borderRadius: "var(--radius-lg)",
+            background: "var(--gradient-brand)",
+            color: "var(--white)",
+            border: "none",
+            fontWeight: 800,
+            fontSize: "0.95rem",
+            cursor: loading ? "not-allowed" : "pointer",
+            boxShadow: "0 4px 14px rgba(30,77,183,0.3)",
+          }}
+        >
+          {loading ? "Submitting..." : "Submit Review"}
+        </button>
+      </form>
+    </BottomSheet>
   );
 };
 

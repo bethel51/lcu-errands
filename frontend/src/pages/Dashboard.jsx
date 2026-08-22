@@ -568,7 +568,24 @@ const Dashboard = () => {
   }, [messengers, search]);
 
   return (
-    <PageContainer title="Marketplace" showHeader={true} showNotification={true} showLive={true}>
+    <PageContainer
+      title="Marketplace"
+      showHeader={true}
+      showNotification={true}
+      showLive={true}
+      action={
+        userRole === "sender" ? (
+          <button
+            onClick={() => setIsPostModalOpen(true)}
+            className="header-icon-btn"
+            style={{ background: "var(--gradient-brand)", color: "var(--white)", border: "none" }}
+            aria-label="Post Errand"
+          >
+            <Plus size={18} />
+          </button>
+        ) : null
+      }
+    >
       {/* Full-screen processing overlay */}
       <AnimatePresence>
         {processing && (

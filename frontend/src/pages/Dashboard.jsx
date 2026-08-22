@@ -1569,12 +1569,13 @@ const Dashboard = () => {
         isOpen={isReviewModalOpen}
         onClose={() => {
           setIsReviewModalOpen(false);
-          navigate("/history");
+          fetchActiveRequestsOnly();
         }}
         errandId={selectedErrandId || ""}
         onReviewComplete={() => {
           fetchErrands();
-          navigate("/history");
+          fetchActiveRequestsOnly();
+          setIsReviewModalOpen(false);
         }}
         role={userRole}
       />

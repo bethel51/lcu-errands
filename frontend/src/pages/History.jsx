@@ -966,6 +966,17 @@ const History = () => {
             fetchHistory();
           }}
         />
+
+        <ReviewModal
+          isOpen={isReviewModalOpen}
+          onClose={() => setIsReviewModalOpen(false)}
+          errandId={selectedErrandId || ""}
+          onReviewComplete={() => {
+            fetchHistory();
+            setIsReviewModalOpen(false);
+          }}
+          role={userRole}
+        />
       </div>
     </PageContainer>
 

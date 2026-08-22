@@ -21,6 +21,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useBodyScrollLock } from "../hooks/useBodyScrollLock";
 import api from "../api";
 import NotificationCenter from "../components/NotificationCenter";
+import PageContainer from "../components/PageContainer";
 
 const Profile = () => {
   const navigate = useNavigate();
@@ -296,7 +297,7 @@ const Profile = () => {
   if (!user) return null;
 
   return (
-    <div className="dashboard-page">
+    <PageContainer title="My Profile" showHeader={true} showNotification={true} showLive={true}>
       <div className="container" style={{ paddingTop: 20, paddingBottom: 100 }}>
         <AnimatePresence>
         {processing && (
@@ -1644,7 +1645,7 @@ const Profile = () => {
         </>
       )}
       </div>
-    </div>
+    </PageContainer>
   );
 };
 

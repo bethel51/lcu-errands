@@ -28,7 +28,9 @@ const Navbar = () => {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-
+  if (isMobile && isAuth) {
+    return null;
+  }
 
   return (
     <nav className="navbar">

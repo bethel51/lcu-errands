@@ -281,6 +281,13 @@ const Signup: React.FC = () => {
               ))}
             </div>
 
+            {/* Mobile Step Progress Indicator */}
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 20 }}>
+              <div style={{ flex: 1, height: 4, borderRadius: 2, background: "var(--blue-600)" }} />
+              <div style={{ flex: 1, height: 4, borderRadius: 2, background: "var(--gray-200)" }} />
+              <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--blue-600)" }}>Step 1 of 2</span>
+            </div>
+
             <div className="clean-auth-grid">
               <div className="clean-auth-form-group" style={{ gridColumn: "span 2" }}>
                 <label className="clean-auth-label">Full Name</label>
@@ -289,6 +296,7 @@ const Signup: React.FC = () => {
                   value={formData.name}
                   onChange={(e) => update("name", e.target.value)}
                   placeholder="Enter your full name"
+                  autoComplete="name"
                   required
                 />
               </div>
@@ -298,6 +306,8 @@ const Signup: React.FC = () => {
                 <input
                   className="clean-auth-input"
                   type="email"
+                  inputMode="email"
+                  autoComplete="email"
                   value={formData.email}
                   onChange={(e) => update("email", e.target.value)}
                   placeholder="student@lcu.edu.ng"
@@ -320,6 +330,9 @@ const Signup: React.FC = () => {
                 <label className="clean-auth-label">Phone Number</label>
                 <input
                   className="clean-auth-input"
+                  type="tel"
+                  inputMode="tel"
+                  autoComplete="tel"
                   value={formData.phoneNumber}
                   onChange={(e) => update("phoneNumber", e.target.value)}
                   placeholder="080..."

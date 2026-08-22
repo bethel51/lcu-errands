@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { ArrowLeft, Wallet, ShieldCheck, HelpCircle } from "lucide-react";
 import api from "../api";
 import { useToast } from "../context/ToastContext";
+import PageContainer from "../components/PageContainer";
 
 const QUICK_AMOUNTS = ["500", "1000", "2000", "5000", "10000", "20000"];
 
@@ -54,17 +55,7 @@ const TopUp = () => {
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 15 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -15 }}
-      style={{
-        minHeight: "100vh",
-        background: "var(--gray-50)",
-        paddingBottom: 100,
-        paddingTop: 24,
-      }}
-    >
+    <PageContainer title="Top Up Wallet" showBack={true} showNotification={false} showLive={false}>
       <div className="container" style={{ maxWidth: 480, margin: "0 auto", padding: "0 16px" }}>
         {/* Navigation Header */}
         <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 28 }}>
@@ -235,7 +226,7 @@ const TopUp = () => {
           </motion.button>
         </form>
       </div>
-    </motion.div>
+    </PageContainer>
   );
 };
 

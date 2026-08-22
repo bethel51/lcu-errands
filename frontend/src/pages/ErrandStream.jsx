@@ -20,6 +20,7 @@ import api from "../api";
 import { useSocket } from "../context/SocketContext";
 import NotificationCenter from "../components/NotificationCenter";
 import { useToast } from "../context/ToastContext";
+import PageContainer from "../components/PageContainer";
 
 /* ─── Category colour map ──────────────────────────────────────────── */
 const CATEGORY_COLORS = {
@@ -283,7 +284,7 @@ const ErrandStream = () => {
   });
 
   return (
-    <div className="errand-stream-page">
+    <PageContainer title="Errand Stream" showHeader={true} showNotification={true} showLive={true}>
 
       {/* ── Hero header ── */}
       <div className="stream-hero">
@@ -598,7 +599,7 @@ const ErrandStream = () => {
           </div>
         )}
       </div>
-    </div>
+    </PageContainer>
   );
 };
 

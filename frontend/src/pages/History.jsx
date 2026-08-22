@@ -9,6 +9,7 @@ import NotificationCenter from "../components/NotificationCenter";
 import { useToast } from "../context/ToastContext";
 import { useBodyScrollLock } from "../hooks/useBodyScrollLock";
 import ConfirmDeliveryOverlay from "../components/ConfirmDeliveryOverlay";
+import PageContainer from "../components/PageContainer";
 
 const History = () => {
   const navigate = useNavigate();
@@ -361,7 +362,7 @@ const History = () => {
   const cancelErrandItem = historyItems.find(i => i.id === cancelErrandId);
 
   return (
-    <div className="dashboard-page">
+    <PageContainer title="My Errands" showHeader={true} showNotification={true} showLive={true}>
       <div className="container" style={{ paddingTop: 20, paddingBottom: 100 }}>
         <AnimatePresence>
           {processing && (
@@ -1337,7 +1338,7 @@ const History = () => {
           )}
         </AnimatePresence>
       </div>
-    </div>
+    </PageContainer>
   );
 };
 

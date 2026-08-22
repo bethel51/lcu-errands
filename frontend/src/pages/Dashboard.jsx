@@ -26,6 +26,11 @@ import { useSocket } from "../context/SocketContext";
 import NotificationCenter from "../components/NotificationCenter";
 import { useToast } from "../context/ToastContext";
 import ConfirmDeliveryOverlay from "../components/ConfirmDeliveryOverlay";
+import PageContainer from "../components/PageContainer";
+import AppCard from "../components/AppCard";
+import AppButton from "../components/AppButton";
+import StatusBadge from "../components/StatusBadge";
+import LoadingState from "../components/LoadingState";
 
 
 const CATEGORIES = [
@@ -537,7 +542,7 @@ const Dashboard = () => {
   }, [messengers, search]);
 
   return (
-    <div className="dashboard-page">
+    <PageContainer title="Marketplace" showHeader={true} showNotification={true} showLive={true}>
       {/* Full-screen processing overlay */}
       <AnimatePresence>
         {processing && (
@@ -1474,7 +1479,7 @@ const Dashboard = () => {
         role={userRole}
       />
 
-    </div>
+    </PageContainer>
   );
 };
 

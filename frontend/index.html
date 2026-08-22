@@ -26,65 +26,82 @@
         left: 0;
         width: 100%;
         height: 100%;
-        background: #FFFFFF;
+        background: linear-gradient(135deg, #0C1E5B 0%, #1E4DB7 100%);
         display: flex;
         flex-direction: column;
         align-items: center;
         justify-content: center;
         z-index: 9999;
+        color: #FFFFFF;
+        font-family: 'Inter', system-ui, -apple-system, sans-serif;
       }
       .loader-bar {
         width: 140px;
         height: 4px;
-        background: #EFF6FF;
+        background: rgba(255, 255, 255, 0.2);
         border-radius: 10px;
         position: relative;
         overflow: hidden;
-        margin-top: 20px;
+        margin-top: 24px;
       }
       .loader-bar::after {
         content: '';
         position: absolute;
         width: 40%;
         height: 100%;
-        background: #2563EB;
+        background: #E91E63;
         border-radius: 10px;
-        animation: loading-slide 1s ease-in-out infinite;
+        animation: loading-slide 1.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
       }
       @keyframes loading-slide {
         0% { left: -40%; }
         100% { left: 100%; }
       }
       .logo-loading {
-        width: 60px;
-        height: 60px;
+        width: 72px;
+        height: 72px;
+        border-radius: 50%;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.25);
         animation: pulse 1.5s ease-in-out infinite;
       }
       @keyframes pulse {
-        0% { transform: scale(1); opacity: 0.8; }
-        50% { transform: scale(1.1); opacity: 1; }
-        100% { transform: scale(1); opacity: 0.8; }
+        0% { transform: scale(0.96); opacity: 0.9; }
+        50% { transform: scale(1.04); opacity: 1; }
+        100% { transform: scale(0.96); opacity: 0.9; }
+      }
+      .splash-title {
+        font-size: 1.3rem;
+        font-weight: 800;
+        margin-top: 16px;
+        letter-spacing: -0.5px;
+      }
+      .splash-sub {
+        font-size: 0.78rem;
+        opacity: 0.8;
+        font-weight: 500;
+        margin-top: 4px;
       }
     </style>
   </head>
   <body>
     <div id="app-preloader">
-      <img src="logo.png" alt="LCU" class="logo-loading" />
+      <img src="logo.png" alt="LCU Errands Logo" class="logo-loading" />
+      <div class="splash-title">LCU Errands</div>
+      <div class="splash-sub">LeadCity Campus Platform</div>
       <div class="loader-bar"></div>
     </div>
     <div id="root"></div>
     <script type="module" src="src/main.jsx"></script>
     <script>
-      // Fallback loader removal in case React fails to load/initialize
       setTimeout(() => {
         const loader = document.getElementById('app-preloader');
         if (loader) {
-          loader.style.transition = 'opacity 0.5s ease';
+          loader.style.transition = 'opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1)';
           loader.style.opacity = '0';
           loader.style.pointerEvents = 'none';
-          setTimeout(() => loader.remove(), 500);
+          setTimeout(() => loader.remove(), 600);
         }
-      }, 5000);
+      }, 4000);
     </script>
   </body>
 </html>

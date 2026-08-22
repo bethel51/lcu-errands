@@ -1,48 +1,55 @@
 import { Link, useLocation } from "react-router-dom";
-import { LayoutDashboard, History, User, Radio } from "lucide-react";
+import { motion } from "framer-motion";
+import { LayoutDashboard, Radio, History, User } from "lucide-react";
 import { PageImports } from "../App";
 import { usePrefetch } from "../hooks/usePrefetch";
+
+const NAV_ITEMS = [
+  { path: "/dashboard", label: "Market", icon: LayoutDashboard, importKey: "Dashboard" },
+  { path: "/stream", label: "Stream", icon: Radio, importKey: "ErrandStream" },
+  { path: "/history", label: "Errands", icon: History, importKey: "History" },
+  { path: "/profile", label: "Profile", icon: User, importKey: "Profile" },
+];
 
 const BottomNav = () => {
   const location = useLocation();
   const prefetch = usePrefetch();
-  const isActive = (path) => location.pathname === path;
 
   return (
-    <div className="bottom-nav">
-      <Link
-        to="/dashboard"
-        className={`bottom-nav-item ${isActive("/dashboard") ? "active" : ""}`}
-        onMouseEnter={() => prefetch(PageImports.Dashboard)}
-      >
-        <LayoutDashboard size={22} />
-        <span>Market</span>
-      </Link>
-      <Link
-        to="/stream"
-        className={`bottom-nav-item ${isActive("/stream") ? "active" : ""}`}
-        onMouseEnter={() => prefetch(PageImports.ErrandStream)}
-      >
-        <Radio size={22} />
-        <span>Stream</span>
-      </Link>
-      <Link
-        to="/history"
-        className={`bottom-nav-item ${isActive("/history") ? "active" : ""}`}
-        onMouseEnter={() => prefetch(PageImports.History)}
-      >
-        <History size={22} />
-        <span>Errands</span>
-      </Link>
-      <Link
-        to="/profile"
-        className={`bottom-nav-item ${isActive("/profile") ? "active" : ""}`}
-        onMouseEnter={() => prefetch(PageImports.Profile)}
-      >
-        <User size={22} />
-        <span>Profile</span>
-      </Link>
-    </div>
+    <nav className="bottom-nav-v2" aria-label="Bottom Navigation">
+      {NAV_ITEMS.map((item) => {
+        const isActive = location.pathname === item.path;
+        const IconComponent = item.icon;
+
+        return (
+          <Link
+            key={item.path}
+            to={item.path}
+            className={`bottom-tab-item ${isActive ? "active" : ""}`}
+            onMouseEnter={() => prefetch(PageImports[item.importKey])}
+          >
+            {isActive && (
+              <motion.div
+                layoutId="activeTabIndicator"
+                className="bottom-tab-active-indicator"
+                transition={{ type: "spring", stiffness: 500, damping: 35 }}
+              />
+            )}
+            
+            <div className="bottom-tab-icon-wrapper">
+              <motion.div
+                animate={isActive ? { scale: 1.15, y: -1 } : { scale: 1, y: 0 }}
+                transition={{ type: "spring", stiffness: 400, damping: 25 }}
+              >
+                <IconComponent size={22} strokeWidth={isActive ? 2.5 : 1.8} />
+              </motion.div>
+            </div>
+
+            <span>{item.label}</span>
+          </Link>
+        );
+      })}
+    </nav>
   );
 };
 

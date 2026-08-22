@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { ArrowLeft, Wallet, AlertCircle, HelpCircle } from "lucide-react";
 import api from "../api";
 import { useToast } from "../context/ToastContext";
+import PageContainer from "../components/PageContainer";
 
 const Withdraw = () => {
   const navigate = useNavigate();
@@ -68,17 +69,7 @@ const Withdraw = () => {
     Number(formData.amount) >= 1000;
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 15 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -15 }}
-      style={{
-        minHeight: "100vh",
-        background: "var(--gray-50)",
-        paddingBottom: 100,
-        paddingTop: 24,
-      }}
-    >
+    <PageContainer title="Withdraw Earnings" showBack={true} showNotification={false} showLive={false}>
       <div className="container" style={{ maxWidth: 480, margin: "0 auto", padding: "0 16px" }}>
         {/* Navigation Header */}
         <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 28 }}>
@@ -298,7 +289,7 @@ const Withdraw = () => {
           </motion.button>
         </form>
       </div>
-    </motion.div>
+    </PageContainer>
   );
 };
 

@@ -79,21 +79,13 @@ const BottomSheet = ({ isOpen, onClose, title, subtitle, children, style = {} })
             onClick={onClose}
           />
 
-          {/* Flutter/iOS Drag Card Sheet */}
+          {/* Flutter/iOS Spring Sheet Container */}
           <motion.div
             className="bottom-sheet-container"
             variants={sheetVariants}
             initial="hidden"
             animate="visible"
             exit="exit"
-            drag="y"
-            dragConstraints={{ top: 0 }}
-            dragElastic={0.15}
-            onDragEnd={(_, info) => {
-              if (info.offset.y > 90 || info.velocity.y > 400) {
-                onClose();
-              }
-            }}
             style={{
               borderRadius: "28px 28px 0 0",
               boxShadow: "0 -12px 40px rgba(0, 0, 0, 0.18)",

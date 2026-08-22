@@ -278,7 +278,16 @@ const NotificationCenter = ({
               </div>
 
               {/* Notification List */}
-              <div style={{ flex: 1, overflowY: "auto", padding: "12px 16px" }}>
+              <div
+                style={{
+                  flex: 1,
+                  overflowY: "auto",
+                  WebkitOverflowScrolling: "touch",
+                  overscrollBehavior: "contain",
+                  padding: "16px 16px 36px",
+                  maxHeight: "100%",
+                }}
+              >
                 {notifications.length === 0 ? (
                   <div style={{ padding: "60px 20px", textAlign: "center" }}>
                     <div

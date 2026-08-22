@@ -638,7 +638,7 @@ const Dashboard = () => {
               <button
                 id="post-errand-btn"
                 className="btn btn-primary"
-                onClick={() => setIsPostModalOpen(true)}
+                onClick={() => navigate("/post-errand")}
                 style={{
                   borderRadius: 14,
                   fontWeight: 800,
@@ -1398,13 +1398,7 @@ const Dashboard = () => {
 
       </PageContainer>
 
-      {/* ── Post Errand Modal (Rendered outside PageContainer transformed main) ── */}
-      <PostErrandModal
-        isOpen={isPostModalOpen}
-        onClose={() => setIsPostModalOpen(false)}
-        onSubmit={handlePostErrand}
-        isProcessing={processing}
-      />
+
 
       {/* ── Top Up Modal ── */}
       <AnimatePresence>

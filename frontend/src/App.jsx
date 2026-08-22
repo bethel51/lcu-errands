@@ -26,6 +26,7 @@ export const PageImports = {
   ErrandStream: () => import("./pages/ErrandStream"),
   TopUp: () => import("./pages/TopUp"),
   Withdraw: () => import("./pages/Withdraw"),
+  PostErrand: () => import("./pages/PostErrand"),
 };
 
 // Lazy load pages for performance
@@ -39,6 +40,7 @@ const Profile = lazy(PageImports.Profile);
 const ErrandStream = lazy(PageImports.ErrandStream);
 const TopUp = lazy(PageImports.TopUp);
 const Withdraw = lazy(PageImports.Withdraw);
+const PostErrand = lazy(PageImports.PostErrand);
 
 const PageLoader = () => (
   <div className="page-loader">
@@ -141,6 +143,14 @@ const AppLayout = () => {
             element={
               <ProtectedRoute>
                 <Withdraw />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/post-errand"
+            element={
+              <ProtectedRoute>
+                <PostErrand />
               </ProtectedRoute>
             }
           />

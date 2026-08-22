@@ -20,12 +20,14 @@ import {
 import { useNavigate, useLocation } from "react-router-dom";
 import { useBodyScrollLock } from "../hooks/useBodyScrollLock";
 import api from "../api";
+import { useToast } from "../context/ToastContext";
 import NotificationCenter from "../components/NotificationCenter";
 import PageContainer from "../components/PageContainer";
 
 const Profile = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { showToast } = useToast();
   const userStr = localStorage.getItem("user");
   const initialUser = userStr ? JSON.parse(userStr) : null;
   const [user, setUser] = useState(initialUser);
@@ -50,6 +52,8 @@ const Profile = () => {
   });
   const [isBoostModalOpen, setIsBoostModalOpen] = useState(false);
   const [processing, setProcessing] = useState(false);
+  // Inline delete account confirmation (replaces window.confirm + alert)
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
 
   const isMobile = typeof window !== "undefined" && window.innerWidth <= 768;
   const modalAnimation = isMobile ? {
@@ -85,6 +89,7 @@ const Profile = () => {
     try {
       const res = await api.get("/users/profile");
       setUser(res.data);
+      localStorage.setItem("user", JSON.stringify(res.data));
       setFormData({
         location: res.data.location || "",
         phoneNumber: res.data.phoneNumber || "",
@@ -120,19 +125,18 @@ const Profile = () => {
   };
 
   const handleDeleteAccount = async () => {
-    if (
-      !window.confirm(
-        "Are you sure you want to delete your account? This action is permanent and cannot be undone.",
-      )
-    )
+    if (!deleteConfirmOpen) {
+      setDeleteConfirmOpen(true);
       return;
+    }
+    setDeleteConfirmOpen(false);
     try {
       await api.delete("/users/profile");
       localStorage.clear();
       navigate("/login");
     } catch (err) {
       console.error("Failed to delete account", err);
-      alert("Failed to delete account. Please try again.");
+      showToast("Failed to delete account. Please try again.", "error");
     }
   };
 

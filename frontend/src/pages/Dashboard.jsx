@@ -124,6 +124,8 @@ const Dashboard = () => {
   const [hiringId, setHiringId] = useState(null); // candidateId being hired
   // New: confirm delivery overlay
   const [confirmOverlay, setConfirmOverlay] = useState(null); // { errandId, errandTitle, errandFee }
+  // Inline cancel confirmation (replaces window.confirm)
+  const [cancelConfirmId, setCancelConfirmId] = useState(null);
 
   const [transactions, setTransactions] = useState([]);
   const [withdrawals, setWithdrawals] = useState([]);
@@ -528,15 +530,19 @@ const Dashboard = () => {
   };
 
   const handleCancelErrand = async (id) => {
-    if (!window.confirm("Are you sure you want to cancel this errand? The fee will be refunded to your wallet.")) return;
-    
+    // First tap: show inline confirmation
+    if (cancelConfirmId !== id) {
+      setCancelConfirmId(id);
+      return;
+    }
+    // Second tap (confirmed): proceed
+    setCancelConfirmId(null);
     // Optimistic update
     setActiveRequests((prev) => prev.filter((e) => e.id !== id));
-    
     try {
       await api.delete(`/errands/${id}`);
-      fetchWalletData(); // Refresh wallet to show refund
-      showToast("Errand cancelled successfully.", "success");
+      fetchWalletData();
+      showToast("Errand cancelled. Funds refunded to your wallet.");
     } catch (err) {
       fetchActiveRequestsOnly();
       showToast(err.response?.data?.message || "Failed to cancel errand.", "error");
@@ -923,21 +929,43 @@ const Dashboard = () => {
                         </div>
                       )
                     )}
-                    {/* Cancel Errand button */}
+                    {/* Cancel Errand button — inline two-tap confirm */}
                     {userRole === "sender" && errand.status === "open" && (
-                      <button
-                        onClick={() => handleCancelErrand(errand.id)}
-                        className="btn btn-sm"
-                        style={{
-                          background: "var(--red-50)",
-                          color: "var(--red-600)",
-                          border: "1px solid var(--red-200)",
-                          fontWeight: 700,
-                          padding: "6px 12px",
-                        }}
-                      >
-                        Cancel
-                      </button>
+                      cancelConfirmId === errand.id ? (
+                        <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                          <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--red-600)" }}>
+                            Cancel errand?
+                          </span>
+                          <button
+                            onClick={() => handleCancelErrand(errand.id)}
+                            className="btn btn-sm"
+                            style={{ background: "var(--red-600)", color: "#fff", border: "none", fontWeight: 800, padding: "5px 10px", fontSize: "0.75rem" }}
+                          >
+                            Yes
+                          </button>
+                          <button
+                            onClick={() => setCancelConfirmId(null)}
+                            className="btn btn-sm"
+                            style={{ background: "var(--gray-100)", color: "var(--gray-700)", border: "1px solid var(--gray-200)", fontWeight: 700, padding: "5px 10px", fontSize: "0.75rem" }}
+                          >
+                            No
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => handleCancelErrand(errand.id)}
+                          className="btn btn-sm"
+                          style={{
+                            background: "var(--red-50)",
+                            color: "var(--red-600)",
+                            border: "1px solid var(--red-200)",
+                            fontWeight: 700,
+                            padding: "6px 12px",
+                          }}
+                        >
+                          Cancel
+                        </button>
+                      )
                     )}
                     {/* Confirm Delivery button */}
                     {userRole === "sender" && ["pending_confirmation", "pending_sender_confirmation"].includes(errand.status) && (

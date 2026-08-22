@@ -43,9 +43,24 @@ const Withdraw = lazy(PageImports.Withdraw);
 const PostErrand = lazy(PageImports.PostErrand);
 
 const PageLoader = () => (
-  <div className="page-loader">
-    <div className="loader" />
-    <span className="page-loader-text">Loading...</span>
+  <div style={{
+    position: "fixed", inset: 0, background: "#F8FAFC",
+    display: "flex", flexDirection: "column",
+    padding: "80px 20px 100px", gap: 16, overflowY: "hidden",
+  }}>
+    {/* Header shimmer */}
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+      <div style={{ width: 140, height: 28, borderRadius: 10, background: "linear-gradient(90deg, #E2E8F0 25%, #F1F5F9 50%, #E2E8F0 75%)", backgroundSize: "200% 100%", animation: "shimmer 1.4s infinite" }} />
+      <div style={{ width: 40, height: 40, borderRadius: "50%", background: "linear-gradient(90deg, #E2E8F0 25%, #F1F5F9 50%, #E2E8F0 75%)", backgroundSize: "200% 100%", animation: "shimmer 1.4s infinite" }} />
+    </div>
+    {/* Big card shimmer */}
+    <div style={{ height: 130, borderRadius: 24, background: "linear-gradient(90deg, #DBEAFE 25%, #EFF6FF 50%, #DBEAFE 75%)", backgroundSize: "200% 100%", animation: "shimmer 1.4s infinite" }} />
+    {/* Section title shimmer */}
+    <div style={{ width: 120, height: 18, borderRadius: 8, background: "linear-gradient(90deg, #E2E8F0 25%, #F1F5F9 50%, #E2E8F0 75%)", backgroundSize: "200% 100%", animation: "shimmer 1.4s infinite", marginTop: 4 }} />
+    {/* Card shimmers */}
+    {[0, 1, 2].map((i) => (
+      <div key={i} style={{ height: 88, borderRadius: 18, background: "linear-gradient(90deg, #E2E8F0 25%, #F1F5F9 50%, #E2E8F0 75%)", backgroundSize: "200% 100%", animation: `shimmer 1.4s ${i * 0.15}s infinite` }} />
+    ))}
   </div>
 );
 

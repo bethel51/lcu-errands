@@ -10,22 +10,22 @@ const QUICK_AMOUNTS = ["500", "1000", "2000", "5000", "10000", "20000"];
 const TopUp = () => {
   const navigate = useNavigate();
   const { showToast } = useToast();
-  const [user, setUser] = useState(null);
+  // Hydrate from localStorage instantly — no blank state
+  const [user, setUser] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("user") || "null"); } catch { return null; }
+  });
   const [amount, setAmount] = useState("1000");
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    fetchProfile();
+    // Background revalidate to get fresh balance
+    api.get("/users/profile")
+      .then((res) => {
+        setUser(res.data);
+        localStorage.setItem("user", JSON.stringify(res.data));
+      })
+      .catch(console.error);
   }, []);
-
-  const fetchProfile = async () => {
-    try {
-      const res = await api.get("/users/profile");
-      setUser(res.data);
-    } catch (err) {
-      console.error(err);
-    }
-  };
 
   const handleDeposit = async (e) => {
     if (e) e.preventDefault();
@@ -90,7 +90,7 @@ const TopUp = () => {
       >
         <button
           type="button"
-          onClick={() => navigate("/dashboard")}
+          onClick={() => navigate(-1)}
           style={{
             width: 40,
             height: 40,

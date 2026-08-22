@@ -35,17 +35,21 @@ const PostErrand = () => {
     category: "Meals",
   });
   const [submitting, setSubmitting] = useState(false);
-  const [user, setUser] = useState(null);
+  // Hydrate user instantly from localStorage — no blank balance
+  const [user, setUser] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("user") || "null"); } catch { return null; }
+  });
 
   const titleRef = useRef(null);
 
   useEffect(() => {
-    const userStr = localStorage.getItem("user");
-    if (userStr) {
-      try {
-        setUser(JSON.parse(userStr));
-      } catch (e) {}
-    }
+    // Background revalidate to get fresh balance
+    api.get("/users/profile")
+      .then((res) => {
+        setUser(res.data);
+        localStorage.setItem("user", JSON.stringify(res.data));
+      })
+      .catch(console.error);
     const t = setTimeout(() => titleRef.current?.focus(), 300);
     return () => clearTimeout(t);
   }, []);
@@ -74,6 +78,9 @@ const PostErrand = () => {
         dropoffLocation: formData.location.trim(),
         pickupLocation: "Campus",
       });
+
+      // Invalidate errand stream cache so it reloads with the new errand
+      localStorage.removeItem("errand_stream_cache");
 
       showToast("🚀 Errand published successfully!");
       navigate("/history");
@@ -120,7 +127,7 @@ const PostErrand = () => {
       >
         <button
           type="button"
-          onClick={() => navigate("/dashboard")}
+          onClick={() => navigate(-1)}
           style={{
             width: 40,
             height: 40,

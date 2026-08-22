@@ -36,6 +36,9 @@ const History = () => {
   const [cancelModalOpen, setCancelModalOpen] = useState(false);
   const [cancelErrandId, setCancelErrandId] = useState(null);
 
+  // Inline delete confirmation (replaces window.confirm)
+  const [deleteConfirmId, setDeleteConfirmId] = useState(null);
+
   // Digital Footprint Timeline States
   const [intelFootprint, setIntelFootprint] = useState(null);
   const [intelModalOpen, setIntelModalOpen] = useState(false);
@@ -141,14 +144,22 @@ const History = () => {
   };
 
   const handleDeleteFromHistory = async (id) => {
-    if (!window.confirm("Remove this errand from your history permanently?")) return;
+    // First tap: show inline confirmation
+    if (deleteConfirmId !== id) {
+      setDeleteConfirmId(id);
+      return;
+    }
+    // Second tap (confirmed): proceed
+    setDeleteConfirmId(null);
+    // Optimistic removal for snappy UX
+    setHistoryItems((prev) => prev.filter((item) => item.id !== id));
     setProcessing(true);
     try {
       const res = await api.delete(`/errands/${id}/history`);
       showToast(res.data?.message || "Removed from history.");
-      // Remove from local state immediately for snappy UX
-      setHistoryItems((prev) => prev.filter((item) => item.id !== id));
     } catch (err) {
+      // Rollback on failure
+      fetchHistory();
       showToast(err.response?.data?.message || "Could not remove from history.", "error");
     } finally {
       setProcessing(false);
@@ -755,25 +766,49 @@ const History = () => {
                       )
                     )}
 
-                    {/* Delete from history — only for completed or cancelled errands (not active ones) */}
+                    {/* Delete from history — inline two-tap confirm */}
                     {["completed", "confirmed_completed", "cancelled"].includes(item.status) && (
-                      <motion.button
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                        className="btn btn-outline btn-sm"
-                        style={{
-                          borderColor: "var(--red-200)",
-                          color: "var(--red-500)",
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 4,
-                          padding: "5px 10px",
-                        }}
-                        title="Remove from history"
-                        onClick={() => handleDeleteFromHistory(item.id)}
-                      >
-                        <X size={12} /> Delete
-                      </motion.button>
+                      deleteConfirmId === item.id ? (
+                        <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                          <span style={{ fontSize: "0.73rem", fontWeight: 700, color: "var(--red-600)" }}>
+                            Delete?
+                          </span>
+                          <motion.button
+                            whileTap={{ scale: 0.95 }}
+                            className="btn btn-sm"
+                            style={{ background: "var(--red-600)", color: "#fff", border: "none", fontWeight: 800, padding: "4px 10px", fontSize: "0.73rem" }}
+                            onClick={() => handleDeleteFromHistory(item.id)}
+                          >
+                            Yes
+                          </motion.button>
+                          <motion.button
+                            whileTap={{ scale: 0.95 }}
+                            className="btn btn-sm"
+                            style={{ background: "var(--gray-100)", color: "var(--gray-700)", border: "1px solid var(--gray-200)", fontWeight: 700, padding: "4px 10px", fontSize: "0.73rem" }}
+                            onClick={() => setDeleteConfirmId(null)}
+                          >
+                            No
+                          </motion.button>
+                        </div>
+                      ) : (
+                        <motion.button
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          className="btn btn-outline btn-sm"
+                          style={{
+                            borderColor: "var(--red-200)",
+                            color: "var(--red-500)",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 4,
+                            padding: "5px 10px",
+                          }}
+                          title="Remove from history"
+                          onClick={() => handleDeleteFromHistory(item.id)}
+                        >
+                          <X size={12} /> Delete
+                        </motion.button>
+                      )
                     )}
                   </div>
                 </div>

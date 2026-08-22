@@ -8,7 +8,10 @@ import { useToast } from "../context/ToastContext";
 const Withdraw = () => {
   const navigate = useNavigate();
   const { showToast } = useToast();
-  const [user, setUser] = useState(null);
+  // Hydrate from localStorage instantly — no blank state
+  const [user, setUser] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("user") || "null"); } catch { return null; }
+  });
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     amount: "",
@@ -18,17 +21,14 @@ const Withdraw = () => {
   });
 
   useEffect(() => {
-    fetchProfile();
+    // Background revalidate to get fresh balance
+    api.get("/users/profile")
+      .then((res) => {
+        setUser(res.data);
+        localStorage.setItem("user", JSON.stringify(res.data));
+      })
+      .catch(console.error);
   }, []);
-
-  const fetchProfile = async () => {
-    try {
-      const res = await api.get("/users/profile");
-      setUser(res.data);
-    } catch (err) {
-      console.error(err);
-    }
-  };
 
   const amt = Number(formData.amount) || 0;
   const userBalance = user?.balance || 0;
@@ -90,7 +90,7 @@ const Withdraw = () => {
       >
         <button
           type="button"
-          onClick={() => navigate("/dashboard")}
+          onClick={() => navigate(-1)}
           style={{
             width: 40,
             height: 40,

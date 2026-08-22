@@ -152,24 +152,37 @@ const ErrandStream = () => {
   }, []);
 
   const fetchErrands = useCallback(async (silent = false) => {
-    if (!silent) setLoading(true);
+    if (!silent && errands.length === 0) setLoading(true);
     try {
       const res = await api.get("/errands");
       const data = Array.isArray(res.data) ? res.data : [];
       const open = data.filter((e) => e.status === "open");
       const mapped = open.map(mapBackendToFrontend);
       mergeErrands(mapped);
+      localStorage.setItem("errand_stream_cache", JSON.stringify(mapped));
     } catch (err) {
       console.error("Failed to fetch errands for stream", err);
-      if (!silent) setErrands([]);
+      if (!silent && errands.length === 0) setErrands([]);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [mapBackendToFrontend, mergeErrands]);
+  }, [mapBackendToFrontend, mergeErrands, errands.length]);
 
-  // Initial load
+  // Initial load with instant cache
   useEffect(() => {
+    const cached = localStorage.getItem("errand_stream_cache");
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setErrands(parsed);
+          setLoading(false);
+          fetchErrands(true);
+          return;
+        }
+      } catch (e) {}
+    }
     fetchErrands();
   }, [fetchErrands]);
 

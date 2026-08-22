@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
-import { X, MapPin, Banknote, CheckCircle, Wallet, AlertCircle, ArrowLeft } from "lucide-react";
+import { motion } from "framer-motion";
+import { X, MapPin, Banknote, Wallet, AlertCircle } from "lucide-react";
 import api from "../api";
 import { useToast } from "../context/ToastContext";
 
@@ -19,7 +19,7 @@ const CATEGORY_COLORS = {
   Shopping: { bg: "#fdf2f8", border: "#f9a8d4", text: "#be185d", active: "#db2777" },
   Academic: { bg: "#eff6ff", border: "#bfdbfe", text: "#1d4ed8", active: "#2563eb" },
   Delivery: { bg: "#f0fdf4", border: "#bbf7d0", text: "#15803d", active: "#16a34a" },
-  Gates: { bg: "#f8fafc", border: "#e2e8f0", text: "#475569", active: "#64748b" },
+  Gates: { bg: "#f8fafc", border: "#cbd5e1", text: "#334155", active: "#475569" },
   Other: { bg: "#f5f3ff", border: "#ddd6fe", text: "#7c3aed", active: "#8b5cf6" },
 };
 
@@ -46,7 +46,6 @@ const PostErrand = () => {
         setUser(JSON.parse(userStr));
       } catch (e) {}
     }
-    // Auto-focus title input on entry
     const t = setTimeout(() => titleRef.current?.focus(), 300);
     return () => clearTimeout(t);
   }, []);
@@ -96,7 +95,7 @@ const PostErrand = () => {
         position: "fixed",
         inset: 0,
         zIndex: 99999,
-        background: "var(--gray-50)",
+        background: "#FFFFFF",
         display: "flex",
         flexDirection: "column",
         height: "100vh",
@@ -105,32 +104,30 @@ const PostErrand = () => {
         overflow: "hidden",
       }}
     >
-      {/* ── Cupertino Native Top Bar ── */}
+      {/* ── Ultra Bright Solid White Top Bar ── */}
       <div
         style={{
           height: 64,
           padding: "0 16px",
-          background: "rgba(255, 255, 255, 0.95)",
-          backdropFilter: "blur(20px)",
-          WebkitBackdropFilter: "blur(20px)",
-          borderBottom: "1px solid var(--gray-200)",
+          background: "#FFFFFF",
+          borderBottom: "1.5px solid #E2E8F0",
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
           flexShrink: 0,
-          boxShadow: "0 2px 8px rgba(0,0,0,0.03)",
+          boxShadow: "0 2px 12px rgba(0, 0, 0, 0.04)",
         }}
       >
         <button
           type="button"
           onClick={() => navigate("/dashboard")}
           style={{
-            width: 38,
-            height: 38,
+            width: 40,
+            height: 40,
             borderRadius: "50%",
-            border: "1px solid var(--gray-200)",
-            background: "var(--gray-50)",
-            color: "var(--gray-700)",
+            border: "1.5px solid #CBD5E1",
+            background: "#F8FAFC",
+            color: "#0F172A",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -138,14 +135,14 @@ const PostErrand = () => {
           }}
           aria-label="Close"
         >
-          <X size={20} />
+          <X size={20} color="#0F172A" />
         </button>
 
         <h1
           style={{
-            fontSize: "1.1rem",
+            fontSize: "1.15rem",
             fontWeight: 900,
-            color: "var(--gray-900)",
+            color: "#0F172A",
             margin: 0,
             fontFamily: "Outfit, sans-serif",
             letterSpacing: "-0.3px",
@@ -158,68 +155,69 @@ const PostErrand = () => {
           style={{
             display: "flex",
             alignItems: "center",
-            gap: 5,
-            padding: "5px 12px",
+            gap: 6,
+            padding: "6px 14px",
             borderRadius: 20,
-            background: "var(--blue-50)",
-            border: "1px solid var(--blue-100)",
-            color: "var(--blue-700)",
+            background: "#EFF6FF",
+            border: "1.5px solid #BFDBFE",
+            color: "#1D4ED8",
             fontWeight: 800,
-            fontSize: "0.8rem",
+            fontSize: "0.82rem",
           }}
         >
-          <Wallet size={14} />
+          <Wallet size={15} color="#1D4ED8" />
           ₦{userBalance.toLocaleString()}
         </div>
       </div>
 
-      {/* ── Scrollable Form Area ── */}
+      {/* ── Scrollable Form Area with Vibrant Crisp Contrast ── */}
       <div
         style={{
           flex: 1,
           overflowY: "auto",
           WebkitOverflowScrolling: "touch",
-          padding: "20px 16px 120px",
+          padding: "20px 16px 130px",
+          background: "#F8FAFC",
         }}
       >
         <div style={{ maxWidth: 540, margin: "0 auto" }}>
-          {/* Header Banner */}
+          {/* Vibrant Gradient Banner */}
           <div
             style={{
-              background: "linear-gradient(135deg, var(--blue-900), var(--blue-600))",
+              background: "linear-gradient(135deg, #1E4DB7, #2563EB)",
               borderRadius: 20,
-              padding: "18px 20px",
-              color: "var(--white)",
-              marginBottom: 18,
-              boxShadow: "0 10px 24px rgba(30,77,183,0.22)",
+              padding: "20px 22px",
+              color: "#FFFFFF",
+              marginBottom: 20,
+              boxShadow: "0 10px 28px rgba(37,99,235,0.28)",
             }}
           >
-            <h2 style={{ fontSize: "1.15rem", fontWeight: 900, margin: 0, letterSpacing: "-0.2px" }}>
+            <h2 style={{ fontSize: "1.2rem", fontWeight: 900, margin: 0, letterSpacing: "-0.2px", color: "#FFFFFF" }}>
               Request a Messenger
             </h2>
-            <p style={{ fontSize: "0.8rem", margin: "4px 0 0", opacity: 0.88, fontWeight: 500 }}>
+            <p style={{ fontSize: "0.82rem", margin: "4px 0 0", color: "#DBEAFE", fontWeight: 600 }}>
               Dispatch an errand to available Lead City student messengers
             </p>
           </div>
 
-          <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 18 }}>
             {/* Card 1: Task Title & Category */}
             <div
               style={{
-                background: "var(--white)",
+                background: "#FFFFFF",
                 borderRadius: 20,
-                padding: 18,
-                border: "1px solid var(--gray-200)",
-                boxShadow: "0 2px 10px rgba(0,0,0,0.03)",
+                padding: 20,
+                border: "1.5px solid #E2E8F0",
+                boxShadow: "0 4px 16px rgba(0,0,0,0.03)",
               }}
             >
-              <div style={{ marginBottom: 16 }}>
+              <div style={{ marginBottom: 18 }}>
                 <label
                   style={{
                     display: "block",
-                    fontSize: "0.76rem",
+                    fontSize: "0.78rem",
                     fontWeight: 800,
-                    color: "var(--gray-600)",
+                    color: "#475569",
                     marginBottom: 8,
                     textTransform: "uppercase",
                     letterSpacing: "0.05em",
@@ -234,7 +232,13 @@ const PostErrand = () => {
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                   required
-                  style={{ fontSize: "0.98rem", fontWeight: 700 }}
+                  style={{
+                    fontSize: "1rem",
+                    fontWeight: 700,
+                    background: "#FFFFFF",
+                    border: "1.5px solid #CBD5E1",
+                    color: "#0F172A",
+                  }}
                 />
               </div>
 
@@ -243,17 +247,17 @@ const PostErrand = () => {
                 <label
                   style={{
                     display: "block",
-                    fontSize: "0.76rem",
+                    fontSize: "0.78rem",
                     fontWeight: 800,
-                    color: "var(--gray-600)",
+                    color: "#475569",
                     marginBottom: 10,
                     textTransform: "uppercase",
                     letterSpacing: "0.05em",
                   }}
                 >
-                  Category *
+                  Select Category *
                 </label>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
                   {CATEGORIES.map((cat) => {
                     const c = CATEGORY_COLORS[cat];
                     const isActive = formData.category === cat;
@@ -263,22 +267,23 @@ const PostErrand = () => {
                         type="button"
                         onClick={() => setFormData({ ...formData, category: cat })}
                         style={{
-                          padding: "12px 6px",
+                          padding: "14px 8px",
                           borderRadius: 16,
                           border: `2px solid ${isActive ? c.active : c.border}`,
-                          background: isActive ? c.bg : "var(--gray-50)",
-                          color: isActive ? c.active : "var(--gray-700)",
+                          background: isActive ? c.bg : "#FFFFFF",
+                          color: isActive ? c.active : "#334155",
                           fontWeight: 800,
-                          fontSize: "0.8rem",
+                          fontSize: "0.82rem",
                           cursor: "pointer",
                           transition: "all 0.15s ease",
                           display: "flex",
                           flexDirection: "column",
                           alignItems: "center",
-                          gap: 5,
+                          gap: 6,
+                          boxShadow: isActive ? "0 4px 14px rgba(0,0,0,0.06)" : "none",
                         }}
                       >
-                        <span style={{ fontSize: "1.35rem" }}>{CATEGORY_EMOJI[cat]}</span>
+                        <span style={{ fontSize: "1.4rem" }}>{CATEGORY_EMOJI[cat]}</span>
                         {cat}
                       </button>
                     );
@@ -290,14 +295,14 @@ const PostErrand = () => {
             {/* Card 2: Drop-off Location & Reward */}
             <div
               style={{
-                background: "var(--white)",
+                background: "#FFFFFF",
                 borderRadius: 20,
-                padding: 18,
-                border: "1px solid var(--gray-200)",
-                boxShadow: "0 2px 10px rgba(0,0,0,0.03)",
+                padding: 20,
+                border: "1.5px solid #E2E8F0",
+                boxShadow: "0 4px 16px rgba(0,0,0,0.03)",
                 display: "flex",
                 flexDirection: "column",
-                gap: 16,
+                gap: 18,
               }}
             >
               <div>
@@ -306,15 +311,15 @@ const PostErrand = () => {
                     display: "flex",
                     alignItems: "center",
                     gap: 6,
-                    fontSize: "0.76rem",
+                    fontSize: "0.78rem",
                     fontWeight: 800,
-                    color: "var(--gray-600)",
+                    color: "#475569",
                     marginBottom: 8,
                     textTransform: "uppercase",
                     letterSpacing: "0.05em",
                   }}
                 >
-                  <MapPin size={14} color="var(--blue-600)" /> Drop-off Location *
+                  <MapPin size={15} color="#2563EB" /> Drop-off Location *
                 </label>
                 <input
                   className="input-field"
@@ -322,7 +327,13 @@ const PostErrand = () => {
                   value={formData.location}
                   onChange={(e) => setFormData({ ...formData, location: e.target.value })}
                   required
-                  style={{ fontSize: "0.95rem", fontWeight: 700 }}
+                  style={{
+                    fontSize: "0.98rem",
+                    fontWeight: 700,
+                    background: "#FFFFFF",
+                    border: "1.5px solid #CBD5E1",
+                    color: "#0F172A",
+                  }}
                 />
               </div>
 
@@ -332,15 +343,15 @@ const PostErrand = () => {
                     display: "flex",
                     alignItems: "center",
                     gap: 6,
-                    fontSize: "0.76rem",
+                    fontSize: "0.78rem",
                     fontWeight: 800,
-                    color: "var(--gray-600)",
+                    color: "#475569",
                     marginBottom: 8,
                     textTransform: "uppercase",
                     letterSpacing: "0.05em",
                   }}
                 >
-                  <Banknote size={14} color="var(--green-600)" /> Reward Amount (₦) *
+                  <Banknote size={15} color="#16A34A" /> Reward Amount (₦) *
                 </label>
                 <input
                   className="input-field"
@@ -349,24 +360,30 @@ const PostErrand = () => {
                   value={formData.fee}
                   onChange={(e) => setFormData({ ...formData, fee: e.target.value })}
                   required
-                  style={{ fontSize: "1.18rem", fontWeight: 900 }}
+                  style={{
+                    fontSize: "1.25rem",
+                    fontWeight: 900,
+                    background: "#FFFFFF",
+                    border: "1.5px solid #CBD5E1",
+                    color: "#0F172A",
+                  }}
                 />
 
                 {/* Preset Chips */}
-                <div style={{ display: "flex", gap: 6, marginTop: 10, flexWrap: "wrap" }}>
+                <div style={{ display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" }}>
                   {["200", "500", "1000", "2000", "5000"].map((amt) => (
                     <button
                       key={amt}
                       type="button"
                       onClick={() => setFormData({ ...formData, fee: amt })}
                       style={{
-                        padding: "6px 12px",
+                        padding: "7px 14px",
                         borderRadius: 20,
-                        border: `1.5px solid ${formData.fee === amt ? "var(--blue-600)" : "var(--gray-200)"}`,
-                        background: formData.fee === amt ? "var(--blue-50)" : "var(--gray-50)",
-                        color: formData.fee === amt ? "var(--blue-700)" : "var(--gray-700)",
+                        border: `1.5px solid ${formData.fee === amt ? "#2563EB" : "#CBD5E1"}`,
+                        background: formData.fee === amt ? "#EFF6FF" : "#FFFFFF",
+                        color: formData.fee === amt ? "#1D4ED8" : "#334155",
                         fontWeight: 800,
-                        fontSize: "0.8rem",
+                        fontSize: "0.82rem",
                         cursor: "pointer",
                         transition: "all 0.15s",
                       }}
@@ -381,19 +398,19 @@ const PostErrand = () => {
             {/* Card 3: Instructions */}
             <div
               style={{
-                background: "var(--white)",
+                background: "#FFFFFF",
                 borderRadius: 20,
-                padding: 18,
-                border: "1px solid var(--gray-200)",
-                boxShadow: "0 2px 10px rgba(0,0,0,0.03)",
+                padding: 20,
+                border: "1.5px solid #E2E8F0",
+                boxShadow: "0 4px 16px rgba(0,0,0,0.03)",
               }}
             >
               <label
                 style={{
                   display: "block",
-                  fontSize: "0.76rem",
+                  fontSize: "0.78rem",
                   fontWeight: 800,
-                  color: "var(--gray-600)",
+                  color: "#475569",
                   marginBottom: 8,
                   textTransform: "uppercase",
                   letterSpacing: "0.05em",
@@ -403,7 +420,15 @@ const PostErrand = () => {
               </label>
               <textarea
                 className="input-field"
-                style={{ minHeight: 90, resize: "none", fontSize: "0.92rem", lineHeight: 1.6 }}
+                style={{
+                  minHeight: 90,
+                  resize: "none",
+                  fontSize: "0.95rem",
+                  lineHeight: 1.6,
+                  background: "#FFFFFF",
+                  border: "1.5px solid #CBD5E1",
+                  color: "#0F172A",
+                }}
                 placeholder="Specific items, quantities, or instructions…"
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
@@ -413,19 +438,17 @@ const PostErrand = () => {
         </div>
       </div>
 
-      {/* ── Fixed Bottom Sticky Action Bar ── */}
+      {/* ── Solid White Bottom Sticky Action Bar ── */}
       <div
         style={{
           position: "fixed",
           bottom: 0,
           left: 0,
           right: 0,
-          background: "rgba(255, 255, 255, 0.96)",
-          backdropFilter: "blur(16px)",
-          WebkitBackdropFilter: "blur(16px)",
-          borderTop: "1px solid var(--gray-200)",
-          padding: "12px 16px calc(12px + env(safe-area-inset-bottom, 12px))",
-          boxShadow: "0 -8px 24px rgba(0,0,0,0.08)",
+          background: "#FFFFFF",
+          borderTop: "1.5px solid #E2E8F0",
+          padding: "14px 16px calc(14px + env(safe-area-inset-bottom, 14px))",
+          boxShadow: "0 -10px 30px rgba(0,0,0,0.06)",
           zIndex: 100000,
         }}
       >
@@ -433,34 +456,34 @@ const PostErrand = () => {
           {insufficientBalance && (
             <div
               style={{
-                marginBottom: 10,
-                padding: "8px 12px",
-                borderRadius: 12,
-                background: "var(--red-50)",
-                border: "1px solid var(--red-200)",
+                marginBottom: 12,
+                padding: "10px 14px",
+                borderRadius: 14,
+                background: "#FEF2F2",
+                border: "1.5px solid #FECACA",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "space-between",
-                color: "var(--red-700)",
-                fontSize: "0.8rem",
-                fontWeight: 700,
+                color: "#991B1B",
+                fontSize: "0.82rem",
+                fontWeight: 800,
               }}
             >
               <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <AlertCircle size={15} />
+                <AlertCircle size={16} color="#DC2626" />
                 <span>Insufficient balance (₦{userBalance.toLocaleString()})</span>
               </div>
               <button
                 type="button"
                 onClick={() => navigate("/top-up")}
                 style={{
-                  background: "var(--red-600)",
-                  color: "#fff",
+                  background: "#DC2626",
+                  color: "#FFFFFF",
                   border: "none",
-                  borderRadius: 8,
-                  padding: "4px 10px",
-                  fontSize: "0.75rem",
-                  fontWeight: 800,
+                  borderRadius: 10,
+                  padding: "5px 12px",
+                  fontSize: "0.78rem",
+                  fontWeight: 900,
                   cursor: "pointer",
                 }}
               >
@@ -476,19 +499,19 @@ const PostErrand = () => {
             disabled={!isFormValid || submitting}
             style={{
               width: "100%",
-              height: 52,
+              height: 54,
               borderRadius: 16,
               border: "none",
-              background: isFormValid ? "var(--gradient-brand)" : "var(--gray-200)",
-              color: isFormValid ? "var(--white)" : "var(--gray-400)",
+              background: isFormValid ? "linear-gradient(135deg, #1E4DB7, #2563EB)" : "#E2E8F0",
+              color: isFormValid ? "#FFFFFF" : "#94A3B8",
               fontWeight: 900,
-              fontSize: "1rem",
+              fontSize: "1.02rem",
               cursor: isFormValid ? "pointer" : "not-allowed",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               gap: 8,
-              boxShadow: isFormValid ? "0 6px 20px rgba(30,77,183,0.32)" : "none",
+              boxShadow: isFormValid ? "0 8px 24px rgba(37,99,235,0.35)" : "none",
               transition: "all 0.18s ease",
             }}
           >

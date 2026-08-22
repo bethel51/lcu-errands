@@ -333,7 +333,22 @@ const Dashboard = () => {
       // Surgical targeted refresh — only reload the slice that changed
       if (["wallet_credited", "payment_released", "errand_payment"].includes(type)) {
         fetchWalletData();
-      } else if (["errand_requested", "errand_accepted", "errand_delivered", "errand_started"].includes(type)) {
+      } else if (["errand_requested", "errand_accepted", "errand_started"].includes(type)) {
+        fetchActiveRequestsOnly();
+      } else if (type === "errand_delivered") {
+        // ── Instant optimistic update ──
+        // Flip the errand status immediately so the sender sees the
+        // "Confirm Delivery" button right away without waiting for a re-fetch.
+        if (data.relatedId) {
+          setActiveRequests((prev) =>
+            prev.map((e) =>
+              e.id === data.relatedId
+                ? { ...e, status: "pending_sender_confirmation" }
+                : e
+            )
+          );
+        }
+        // Re-fetch in background to fully sync (handles edge cases / new errands)
         fetchActiveRequestsOnly();
       }
       // Toast logic is now handled globally in NotificationCenter.jsx

@@ -115,7 +115,19 @@ const History = () => {
     // Debounce: wait 800ms after last notification before re-fetching
     // Prevents multiple rapid socket events from causing multiple re-fetches
     let debounceTimer = null;
-    const handleNotification = () => {
+    const handleNotification = (data) => {
+      // ── Instant optimistic update for errand_delivered ──
+      // When the messenger marks as complete, flip the status immediately
+      // in the sender's history so the "Confirm Delivery" button shows at once.
+      if (data?.type === "errand_delivered" && data?.relatedId) {
+        setHistoryItems((prev) =>
+          prev.map((item) =>
+            item.id === data.relatedId || item._id === data.relatedId
+              ? { ...item, status: "pending_sender_confirmation" }
+              : item
+          )
+        );
+      }
       clearTimeout(debounceTimer);
       debounceTimer = setTimeout(() => {
         fetchHistory();

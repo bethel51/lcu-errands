@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { createPortal } from "react-dom";
 import { CheckCircle2, AlertCircle, Info, AlertTriangle, X } from "lucide-react";
 
 const ToastContext = createContext(undefined);
@@ -12,141 +12,200 @@ export const useToast = () => {
   return context;
 };
 
+// Helper: cleans leading raw emojis from string if present (since icon badge handles type visual)
+const cleanMessage = (msg) => {
+  if (typeof msg !== "string") return msg;
+  return msg.replace(/^[✅❌🚀📦💸⚠️ℹ️🎉⭐🔥⏳]+\s*/, "").trim();
+};
+
 export const ToastProvider = ({ children }) => {
-  const [toast, setToast] = useState(null);
+  const [toasts, setToasts] = useState([]);
 
-  const showToast = useCallback((message, type = "success", duration = 3000) => {
-    setToast({ message, type, id: Date.now() });
-    const timer = setTimeout(() => {
-      setToast((prev) => (prev && prev.message === message ? null : prev));
+  const hideToast = useCallback((id) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id));
+  }, []);
+
+  const showToast = useCallback((message, type = "success", duration = 3500) => {
+    const id = Date.now() + Math.random().toString(36).substring(2, 5);
+    const cleanedMsg = cleanMessage(message);
+
+    setToasts((prev) => {
+      // Keep at most 3 active toasts stacked
+      const updated = [...prev, { id, message: cleanedMsg || message, type, duration, createdAt: Date.now() }];
+      if (updated.length > 3) return updated.slice(updated.length - 3);
+      return updated;
+    });
+
+    setTimeout(() => {
+      hideToast(id);
     }, duration);
-    return () => clearTimeout(timer);
-  }, []);
+  }, [hideToast]);
 
-  const hideToast = useCallback(() => {
-    setToast(null);
-  }, []);
-
-  // Icon mapping for different toast types
-  const getIcon = (type) => {
-    switch (type) {
-      case "success":
-        return <CheckCircle2 className="w-5 h-5 text-emerald-500" style={{ color: "#10b981" }} />;
-      case "error":
-        return <AlertCircle className="w-5 h-5 text-rose-500" style={{ color: "#f43f5e" }} />;
-      case "warning":
-        return <AlertTriangle className="w-5 h-5 text-amber-500" style={{ color: "#f59e0b" }} />;
-      case "info":
-      default:
-        return <Info className="w-5 h-5 text-blue-500" style={{ color: "#3b82f6" }} />;
-    }
-  };
-
-  // Border and accent color styling mapping
-  const getStyles = (type) => {
+  const getBadge = (type) => {
     switch (type) {
       case "success":
         return {
-          borderLeft: "4px solid #10b981",
-          background: "rgba(255, 255, 255, 0.9)",
+          icon: <CheckCircle2 size={16} color="#fff" strokeWidth={2.5} />,
+          gradient: "linear-gradient(135deg, #10b981, #059669)",
+          boxShadow: "0 2px 10px rgba(16,185,129,0.35)",
         };
       case "error":
         return {
-          borderLeft: "4px solid #f43f5e",
-          background: "rgba(255, 255, 255, 0.9)",
+          icon: <AlertCircle size={16} color="#fff" strokeWidth={2.5} />,
+          gradient: "linear-gradient(135deg, #ef4444, #dc2626)",
+          boxShadow: "0 2px 10px rgba(239,68,68,0.35)",
         };
       case "warning":
         return {
-          borderLeft: "4px solid #f59e0b",
-          background: "rgba(255, 255, 255, 0.9)",
+          icon: <AlertTriangle size={16} color="#fff" strokeWidth={2.5} />,
+          gradient: "linear-gradient(135deg, #f59e0b, #d97706)",
+          boxShadow: "0 2px 10px rgba(245,158,11,0.35)",
         };
       case "info":
       default:
         return {
-          borderLeft: "4px solid #3b82f6",
-          background: "rgba(255, 255, 255, 0.9)",
+          icon: <Info size={16} color="#fff" strokeWidth={2.5} />,
+          gradient: "linear-gradient(135deg, #6366f1, #3b82f6)",
+          boxShadow: "0 2px 10px rgba(99,102,241,0.35)",
         };
     }
   };
+
+  const portalNode = typeof document !== "undefined" ? document.body : null;
 
   return (
-    <ToastContext.Provider value={{ showToast, hideToast }}>
+    <ToastContext.Provider value={{ showToast, hideToast: () => setToasts([]) }}>
       {children}
-      
-      {/* Toast Render Node */}
-      <AnimatePresence>
-        {toast && (
-          <motion.div
-            key={toast.id}
-            initial={{ opacity: 0, y: 50, scale: 0.9, x: "-50%" }}
-            animate={{ opacity: 1, y: 0, scale: 1, x: "-50%" }}
-            exit={{ opacity: 0, y: 20, scale: 0.95, x: "-50%" }}
-            transition={{ type: "spring", damping: 25, stiffness: 350 }}
-            style={{
-              position: "fixed",
-              bottom: "95px",
-              left: "50%",
-              zIndex: 99999,
-              width: "calc(100% - 32px)",
-              maxWidth: "400px",
-              padding: "14px 18px",
-              borderRadius: "16px",
-              boxShadow: "0 20px 40px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.02)",
-              backdropFilter: "blur(12px)",
-              WebkitBackdropFilter: "blur(12px)",
-              display: "flex",
-              alignItems: "center",
-              gap: "12px",
-              color: "#1e293b",
-              fontFamily: "Inter, system-ui, sans-serif",
-              fontSize: "0.9rem",
-              fontWeight: 500,
-              lineHeight: 1.4,
-              boxSizing: "border-box",
-              ...getStyles(toast.type),
-            }}
-          >
-            {/* Left Status Icon */}
-            <div style={{ flexShrink: 0, display: "flex", alignItems: "center" }}>
-              {getIcon(toast.type)}
-            </div>
 
-            {/* Notification Message Text */}
-            <div style={{ flexGrow: 1, wordBreak: "break-word" }}>
-              {toast.message}
-            </div>
+      {portalNode && createPortal(
+        <div
+          style={{
+            position: "fixed",
+            top: "max(12px, env(safe-area-inset-top, 12px))",
+            left: "50%",
+            transform: "translateX(-50%)",
+            zIndex: 999999,
+            width: "calc(100% - 24px)",
+            maxWidth: 380,
+            display: "flex",
+            flexDirection: "column",
+            gap: 8,
+            pointerEvents: "none",
+          }}
+        >
+          {toasts.map((toast) => {
+            const badge = getBadge(toast.type);
+            return (
+              <div
+                key={toast.id}
+                onClick={() => hideToast(toast.id)}
+                style={{
+                  pointerEvents: "auto",
+                  position: "relative",
+                  width: "100%",
+                  background: "rgba(15, 23, 42, 0.92)",
+                  backdropFilter: "blur(16px)",
+                  WebkitBackdropFilter: "blur(16px)",
+                  border: "1px solid rgba(255, 255, 255, 0.12)",
+                  borderRadius: 18,
+                  padding: "11px 14px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 11,
+                  color: "#ffffff",
+                  boxShadow: "0 16px 36px rgba(0, 0, 0, 0.3), 0 2px 8px rgba(0, 0, 0, 0.15)",
+                  animation: "toastSlideDown 0.24s cubic-bezier(0.16, 1, 0.3, 1)",
+                  overflow: "hidden",
+                  cursor: "pointer",
+                  boxSizing: "border-box",
+                }}
+              >
+                {/* Icon Badge */}
+                <div
+                  style={{
+                    width: 28,
+                    height: 28,
+                    borderRadius: "50%",
+                    background: badge.gradient,
+                    boxShadow: badge.boxShadow,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    flexShrink: 0,
+                  }}
+                >
+                  {badge.icon}
+                </div>
 
-            {/* Dismiss Button */}
-            <button
-              onClick={hideToast}
-              style={{
-                background: "none",
-                border: "none",
-                padding: "4px",
-                cursor: "pointer",
-                color: "#94a3b8",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                borderRadius: "50%",
-                transition: "background 0.2s, color 0.2s",
-                marginLeft: "auto",
-                flexShrink: 0,
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = "#f1f5f9";
-                e.currentTarget.style.color = "#475569";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = "none";
-                e.currentTarget.style.color = "#94a3b8";
-              }}
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </motion.div>
-        )}
-      </AnimatePresence>
+                {/* Message */}
+                <div
+                  style={{
+                    flex: 1,
+                    fontSize: "0.86rem",
+                    fontWeight: 600,
+                    lineHeight: 1.35,
+                    color: "#f8fafc",
+                    fontFamily: "Outfit, Inter, system-ui, sans-serif",
+                    wordBreak: "break-word",
+                  }}
+                >
+                  {toast.message}
+                </div>
+
+                {/* Dismiss Button */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    hideToast(toast.id);
+                  }}
+                  style={{
+                    background: "rgba(255,255,255,0.1)",
+                    border: "none",
+                    width: 22,
+                    height: 22,
+                    borderRadius: "50%",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "#94a3b8",
+                    cursor: "pointer",
+                    flexShrink: 0,
+                  }}
+                >
+                  <X size={13} />
+                </button>
+
+                {/* Timer Shrinking Line Indicator */}
+                <div
+                  style={{
+                    position: "absolute",
+                    bottom: 0,
+                    left: 0,
+                    height: 2.5,
+                    background: badge.gradient,
+                    width: "100%",
+                    animation: `toastTimerProgress ${toast.duration}ms linear forwards`,
+                    borderRadius: "0 0 18px 18px",
+                  }}
+                />
+              </div>
+            );
+          })}
+
+          <style>{`
+            @keyframes toastSlideDown {
+              from { opacity: 0; transform: translateY(-16px) scale(0.94); }
+              to { opacity: 1; transform: translateY(0) scale(1); }
+            }
+            @keyframes toastTimerProgress {
+              from { width: 100%; }
+              to { width: 0%; }
+            }
+          `}</style>
+        </div>,
+        portalNode
+      )}
     </ToastContext.Provider>
   );
 };
+

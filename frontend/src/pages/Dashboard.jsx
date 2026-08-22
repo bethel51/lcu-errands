@@ -628,7 +628,7 @@ const Dashboard = () => {
             </div>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 12, flexShrink: 0, marginTop: 4 }}>
-            <NotificationCenter />
+            <NotificationCenter renderTrigger={true} />
             {userRole === "sender" && (
               <button
                 className="btn btn-primary"

@@ -409,7 +409,7 @@ const History = () => {
             </p>
           </div>
           <div style={{ flexShrink: 0, marginTop: 4 }}>
-            <NotificationCenter />
+            <NotificationCenter renderTrigger={true} />
           </div>
         </div>
 

@@ -337,7 +337,7 @@ const Profile = () => {
           <p>Manage your account and view your status.</p>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 12, flexShrink: 0, marginTop: 4 }}>
-          <NotificationCenter />
+          <NotificationCenter renderTrigger={true} />
           {!isEditing ? (
           <button
             onClick={() => setIsEditing(true)}

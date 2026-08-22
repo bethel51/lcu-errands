@@ -7,22 +7,35 @@ import { useToast } from "../context/ToastContext";
 import { useBodyScrollLock } from "../hooks/useBodyScrollLock";
 
 // Module-level cache: shared across all mounts, survives re-renders
-// Avoids re-fetching on every tab switch / page navigation
 let notifCache = [];
 let lastFetchedAt = 0;
 const CACHE_TTL_MS = 30_000; // 30 seconds
 
-const NotificationCenter = () => {
+const NotificationCenter = ({
+  isOpen: propIsOpen,
+  onClose,
+  renderTrigger = false,
+}) => {
   const { socket } = useSocket();
   const { showToast } = useToast();
   const [notifications, setNotifications] = useState(notifCache);
-  const [isOpen, setIsOpen] = useState(false);
+  const [internalIsOpen, setInternalIsOpen] = useState(false);
   const panelRef = useRef(null);
+
+  // Controlled or uncontrolled open state (default to true if propIsOpen is explicit, else internal state)
+  const isOpen = propIsOpen !== undefined ? propIsOpen : internalIsOpen;
+
+  const handleClose = () => {
+    if (onClose) {
+      onClose();
+    } else {
+      setInternalIsOpen(false);
+    }
+  };
 
   const fetchNotifications = async (force = false) => {
     const now = Date.now();
     if (!force && now - lastFetchedAt < CACHE_TTL_MS && notifCache.length > 0) {
-      // Use cached data — no network call needed
       setNotifications(notifCache);
       return;
     }
@@ -46,15 +59,12 @@ const NotificationCenter = () => {
 
     const handleNewNotification = (data) => {
       const type = data.type || "";
-      
-      // Add new notification at the top and update cache
       setNotifications((prev) => {
         const updated = [data, ...prev];
         notifCache = updated;
         return updated;
       });
 
-      // Show toast globally
       showToast(
         data.message || data.title || "New update",
         type === "errand_requested" ? "info" : "success"
@@ -67,13 +77,17 @@ const NotificationCenter = () => {
     };
   }, [socket]);
 
-  // Click outside to close drawer
   useBodyScrollLock(isOpen);
 
   useEffect(() => {
     const handleClickOutside = (e) => {
-      if (panelRef.current && !panelRef.current.contains(e.target) && !e.target.closest(".notif-bell-btn")) {
-        setIsOpen(false);
+      if (
+        panelRef.current &&
+        !panelRef.current.contains(e.target) &&
+        !e.target.closest(".notif-bell-btn") &&
+        !e.target.closest(".header-icon-btn")
+      ) {
+        handleClose();
       }
     };
     if (isOpen) {
@@ -116,52 +130,54 @@ const NotificationCenter = () => {
 
   return (
     <>
-      {/* Bell Button */}
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="notif-bell-btn"
-        style={{
-          position: "relative",
-          background: "var(--white)",
-          border: "1px solid var(--gray-200)",
-          borderRadius: 14,
-          width: 44,
-          height: 44,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          cursor: "pointer",
-          color: "var(--gray-700)",
-          boxShadow: "var(--shadow-sm)",
-          transition: "all 0.2s ease",
-        }}
-        title="Notifications"
-      >
-        <Bell size={20} className={unreadCount > 0 ? "pulse-bell" : ""} />
-        {unreadCount > 0 && (
-          <span
-            style={{
-              position: "absolute",
-              top: -4,
-              right: -4,
-              background: "var(--red-500)",
-              color: "white",
-              fontSize: "0.68rem",
-              fontWeight: 900,
-              borderRadius: "50%",
-              width: 18,
-              height: 18,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              border: "2.5px solid var(--white)",
-              boxShadow: "0 2px 6px rgba(239, 68, 68, 0.4)",
-            }}
-          >
-            {unreadCount}
-          </span>
-        )}
-      </button>
+      {/* Optional Trigger Button (Only rendered if renderTrigger is true) */}
+      {renderTrigger && (
+        <button
+          onClick={() => setInternalIsOpen(!internalIsOpen)}
+          className="notif-bell-btn"
+          style={{
+            position: "relative",
+            background: "var(--white)",
+            border: "1px solid var(--gray-200)",
+            borderRadius: 14,
+            width: 44,
+            height: 44,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            cursor: "pointer",
+            color: "var(--gray-700)",
+            boxShadow: "var(--shadow-sm)",
+            transition: "all 0.2s ease",
+          }}
+          title="Notifications"
+        >
+          <Bell size={20} className={unreadCount > 0 ? "pulse-bell" : ""} />
+          {unreadCount > 0 && (
+            <span
+              style={{
+                position: "absolute",
+                top: -4,
+                right: -4,
+                background: "var(--red-500)",
+                color: "white",
+                fontSize: "0.68rem",
+                fontWeight: 900,
+                borderRadius: "50%",
+                width: 18,
+                height: 18,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                border: "2.5px solid var(--white)",
+                boxShadow: "0 2px 6px rgba(239, 68, 68, 0.4)",
+              }}
+            >
+              {unreadCount}
+            </span>
+          )}
+        </button>
+      )}
 
       {/* Slide-out Drawer Panel */}
       <AnimatePresence>
@@ -175,11 +191,11 @@ const NotificationCenter = () => {
               style={{
                 position: "fixed",
                 inset: 0,
-                background: "rgba(15,23,42,0.4)",
-                backdropFilter: "blur(3px)",
+                background: "rgba(15,23,42,0.45)",
+                backdropFilter: "blur(4px)",
                 zIndex: 99990,
               }}
-              onClick={() => setIsOpen(false)}
+              onClick={handleClose}
             />
 
             {/* Notification panel container */}
@@ -188,7 +204,7 @@ const NotificationCenter = () => {
               initial={{ x: "100%" }}
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
-              transition={{ type: "spring", damping: 25, stiffness: 220 }}
+              transition={{ type: "spring", damping: 26, stiffness: 320 }}
               style={{
                 position: "fixed",
                 top: 0,
@@ -197,7 +213,7 @@ const NotificationCenter = () => {
                 width: "90%",
                 maxWidth: 400,
                 background: "var(--white)",
-                boxShadow: "-10px 0 30px rgba(0,0,0,0.15)",
+                boxShadow: "-10px 0 30px rgba(0,0,0,0.18)",
                 zIndex: 99995,
                 display: "flex",
                 flexDirection: "column",
@@ -211,125 +227,99 @@ const NotificationCenter = () => {
                   display: "flex",
                   justifyContent: "space-between",
                   alignItems: "center",
+                  background: "var(--gray-50)",
                 }}
               >
                 <div>
                   <h3 style={{ margin: 0, fontWeight: 900, fontSize: "1.15rem", color: "var(--gray-900)" }}>
                     Notifications
                   </h3>
-                  <p style={{ margin: "2px 0 0 0", fontSize: "0.75rem", color: "var(--gray-500)" }}>
-                    Updates on your active errands
+                  <p style={{ margin: "2px 0 0 0", fontSize: "0.78rem", color: "var(--gray-500)", fontWeight: 600 }}>
+                    {unreadCount > 0 ? `${unreadCount} unread update(s)` : "All caught up!"}
                   </p>
                 </div>
-                <button
-                  onClick={() => setIsOpen(false)}
-                  style={{
-                    background: "var(--gray-50)",
-                    border: "none",
-                    borderRadius: "50%",
-                    width: 32,
-                    height: 32,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    cursor: "pointer",
-                    color: "var(--gray-500)",
-                  }}
-                >
-                  <X size={16} />
-                </button>
-              </div>
-
-              {/* Action Bar */}
-              {notifications.length > 0 && unreadCount > 0 && (
-                <div
-                  style={{
-                    padding: "8px 18px",
-                    background: "var(--gray-50)",
-                    borderBottom: "1px solid var(--gray-100)",
-                    display: "flex",
-                    justifyContent: "flex-end",
-                  }}
-                >
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  {unreadCount > 0 && (
+                    <button
+                      onClick={handleMarkAllRead}
+                      style={{
+                        background: "none",
+                        border: "none",
+                        color: "var(--blue-600)",
+                        fontSize: "0.78rem",
+                        fontWeight: 800,
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 4,
+                      }}
+                    >
+                      <CheckCheck size={14} /> Read all
+                    </button>
+                  )}
                   <button
-                    onClick={handleMarkAllRead}
+                    onClick={handleClose}
                     style={{
-                      background: "none",
+                      background: "var(--gray-200)",
                       border: "none",
-                      color: "var(--blue-600)",
-                      fontSize: "0.75rem",
-                      fontWeight: 800,
-                      cursor: "pointer",
+                      borderRadius: "50%",
+                      width: 32,
+                      height: 32,
                       display: "flex",
-                      alignItems: "center",
-                      gap: 4,
-                    }}
-                  >
-                    <CheckCheck size={14} /> Mark all as read
-                  </button>
-                </div>
-              )}
-
-              {/* Notification List */}
-              <div
-                style={{
-                  flex: 1,
-                  overflowY: "auto",
-                  padding: "16px 18px",
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 12,
-                }}
-              >
-                {notifications.length === 0 ? (
-                  <div
-                    style={{
-                      padding: "80px 24px",
-                      textAlign: "center",
-                      display: "flex",
-                      flexDirection: "column",
                       alignItems: "center",
                       justifyContent: "center",
+                      cursor: "pointer",
+                      color: "var(--gray-700)",
                     }}
                   >
+                    <X size={18} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Notification List */}
+              <div style={{ flex: 1, overflowY: "auto", padding: "12px 16px" }}>
+                {notifications.length === 0 ? (
+                  <div style={{ padding: "60px 20px", textAlign: "center" }}>
                     <div
                       style={{
-                        width: 64,
-                        height: 64,
+                        width: 56,
+                        height: 56,
                         borderRadius: "50%",
-                        background: "var(--gray-50)",
+                        background: "var(--blue-50)",
+                        color: "var(--blue-500)",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
-                        color: "var(--gray-400)",
-                        marginBottom: 16,
+                        margin: "0 auto 12px",
                       }}
                     >
-                      <Bell size={24} />
+                      <Bell size={26} />
                     </div>
-                    <h4 style={{ margin: "0 0 6px 0", fontWeight: 800, color: "var(--gray-800)" }}>All Quiet Here</h4>
-                    <p style={{ margin: 0, fontSize: "0.78rem", color: "var(--gray-500)", lineHeight: 1.5 }}>
-                      No new updates at the moment. We'll alert you here when errands change status.
+                    <p style={{ fontWeight: 800, color: "var(--gray-800)", margin: "0 0 4px" }}>
+                      No notifications yet
+                    </p>
+                    <p style={{ fontSize: "0.82rem", color: "var(--gray-500)", margin: 0 }}>
+                      We will notify you here when there are errand updates.
                     </p>
                   </div>
                 ) : (
-                  notifications.map((notif) => (
+                  notifications.map((item) => (
                     <div
-                      key={notif._id}
-                      onClick={() => handleMarkAsRead(notif._id)}
+                      key={item._id || item.id || Math.random()}
+                      onClick={() => handleMarkAsRead(item._id)}
                       style={{
                         padding: 14,
-                        borderRadius: 16,
-                        background: notif.isRead ? "var(--white)" : "linear-gradient(135deg, #EFF6FF 0%, #F8FAFC 100%)",
-                        border: notif.isRead ? "1px solid var(--gray-100)" : "1px solid var(--blue-200)",
-                        boxShadow: "var(--shadow-sm)",
-                        position: "relative",
+                        borderRadius: 14,
+                        marginBottom: 10,
+                        background: item.isRead ? "var(--white)" : "var(--blue-50)",
+                        border: `1px solid ${item.isRead ? "var(--gray-200)" : "var(--blue-100)"}`,
                         cursor: "pointer",
-                        transition: "all 0.2s ease",
+                        transition: "all 0.15s ease",
+                        position: "relative",
                       }}
                     >
-                      {/* Unread blue dot indicator */}
-                      {!notif.isRead && (
+                      {!item.isRead && (
                         <span
                           style={{
                             position: "absolute",
@@ -337,42 +327,22 @@ const NotificationCenter = () => {
                             right: 14,
                             width: 8,
                             height: 8,
-                            background: "var(--blue-600)",
                             borderRadius: "50%",
+                            background: "var(--blue-600)",
                           }}
                         />
                       )}
-                      
-                      <div style={{ fontWeight: 800, fontSize: "0.85rem", color: "var(--gray-900)", marginBottom: 4, paddingRight: 12 }}>
-                        {notif.title}
-                      </div>
-                      
-                      <div style={{ fontSize: "0.8rem", color: "var(--gray-600)", lineHeight: 1.4, marginBottom: 8 }}>
-                        {notif.message}
-                      </div>
-                      
-                      <div
-                        style={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          alignItems: "center",
-                          fontSize: "0.72rem",
-                          color: "var(--gray-400)",
-                          fontWeight: 700,
-                        }}
-                      >
-                        <span>
-                          {new Date(notif.createdAt).toLocaleDateString([], {
-                            month: "short",
-                            day: "numeric",
-                          })}{" "}
-                          at{" "}
-                          {new Date(notif.createdAt).toLocaleTimeString([], {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
-                        </span>
-                      </div>
+                      <h4 style={{ margin: "0 0 4px", fontSize: "0.88rem", fontWeight: 800, color: "var(--gray-900)" }}>
+                        {item.title || item.message || "Notification"}
+                      </h4>
+                      {item.message && item.title && (
+                        <p style={{ margin: "0 0 6px", fontSize: "0.82rem", color: "var(--gray-600)" }}>
+                          {item.message}
+                        </p>
+                      )}
+                      <span style={{ fontSize: "0.72rem", color: "var(--gray-400)", fontWeight: 700 }}>
+                        {item.createdAt ? new Date(item.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "Just now"}
+                      </span>
                     </div>
                   ))
                 )}

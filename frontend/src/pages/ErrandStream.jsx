@@ -302,7 +302,7 @@ const ErrandStream = () => {
             </div>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <NotificationCenter />
+            <NotificationCenter renderTrigger={true} />
             <button
               onClick={handleManualRefresh}
               className="stream-refresh-btn"

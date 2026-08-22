@@ -128,7 +128,11 @@ const AppHeader = ({
 
       {/* Notification Center Popover */}
       {isNotificationsOpen && (
-        <NotificationCenter onClose={() => setIsNotificationsOpen(false)} />
+        <NotificationCenter
+          isOpen={true}
+          onClose={() => setIsNotificationsOpen(false)}
+          renderTrigger={false}
+        />
       )}
     </>
   );

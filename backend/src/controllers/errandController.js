@@ -691,11 +691,20 @@ export const applyForErrand = catchAsync(async (req, res) => {
     message: `${user.name} has requested to do your errand "${errand.title}".`,
     type: "errand_requested",
     relatedId: errand._id,
+    candidate: {
+      _id: user._id,
+      name: user.name,
+      profilePicture: user.profilePicture || "",
+      rating: user.rating || 0,
+      location: user.location || "",
+    },
+    candidates: errand.candidates,
   };
 
   await Notification.create(notificationData);
   if (io) {
     io.to(errand.posterId.toString()).emit("notification", notificationData);
+    io.to(errand.posterId.toString()).emit("errand_updated", errand);
   }
 
   res.json(errand);

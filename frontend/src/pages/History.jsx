@@ -127,6 +127,23 @@ const History = () => {
               : item
           )
         );
+      } else if (data?.type === "errand_requested" && data?.relatedId) {
+        setHistoryItems((prev) =>
+          prev.map((item) => {
+            if (item.id === data.relatedId || item._id === data.relatedId) {
+              const candidateObj = data.candidate || null;
+              let newCandidates = data.candidates;
+              if (!newCandidates && candidateObj) {
+                const exists = (item.candidates || []).some(
+                  (c) => (c._id || c.id || c) === candidateObj._id
+                );
+                newCandidates = exists ? item.candidates : [...(item.candidates || []), candidateObj];
+              }
+              return { ...item, candidates: newCandidates || item.candidates };
+            }
+            return item;
+          })
+        );
       }
       clearTimeout(debounceTimer);
       debounceTimer = setTimeout(() => {

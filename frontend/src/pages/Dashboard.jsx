@@ -328,12 +328,46 @@ const Dashboard = () => {
       setErrands((prev) => prev.filter((e) => e.id !== errandId));
     };
 
+    const handleErrandUpdated = (updatedErrand) => {
+      if (!updatedErrand?._id) return;
+      const mapped = mapBackendToFrontend(updatedErrand);
+      setActiveRequests((prev) =>
+        prev.map((e) => (e.id === mapped.id ? { ...e, ...mapped } : e))
+      );
+      setErrands((prev) =>
+        prev.map((e) => (e.id === mapped.id ? { ...e, ...mapped } : e))
+      );
+    };
+
     const handleNotification = (data) => {
       const type = data.type || "";
       // Surgical targeted refresh — only reload the slice that changed
       if (["wallet_credited", "payment_released", "errand_payment"].includes(type)) {
         fetchWalletData();
-      } else if (["errand_requested", "errand_accepted", "errand_started"].includes(type)) {
+      } else if (type === "errand_requested") {
+        // ── Instant optimistic candidate update ──
+        // Instantly append the applicant to the sender's active errand card in state
+        // so the "Hire" button appears immediately without waiting for an API call.
+        if (data.relatedId) {
+          setActiveRequests((prev) =>
+            prev.map((e) => {
+              if (e.id === data.relatedId || e.id === data.relatedId.toString()) {
+                const candidateObj = data.candidate || null;
+                let newCandidates = data.candidates;
+                if (!newCandidates && candidateObj) {
+                  const exists = (e.candidates || []).some(
+                    (c) => (c._id || c.id || c) === candidateObj._id
+                  );
+                  newCandidates = exists ? e.candidates : [...(e.candidates || []), candidateObj];
+                }
+                return { ...e, candidates: newCandidates || e.candidates };
+              }
+              return e;
+            })
+          );
+        }
+        fetchActiveRequestsOnly();
+      } else if (["errand_accepted", "errand_started"].includes(type)) {
         fetchActiveRequestsOnly();
       } else if (type === "errand_delivered") {
         // ── Instant optimistic update ──
@@ -356,11 +390,13 @@ const Dashboard = () => {
 
     socket.on("new_errand", handleNewErrand);
     socket.on("errand_removed", handleErrandRemoved);
+    socket.on("errand_updated", handleErrandUpdated);
     socket.on("notification", handleNotification);
 
     return () => {
       socket.off("new_errand", handleNewErrand);
       socket.off("errand_removed", handleErrandRemoved);
+      socket.off("errand_updated", handleErrandUpdated);
       socket.off("notification", handleNotification);
     };
   }, [socket, fetchWalletData, fetchActiveRequestsOnly]);

@@ -105,8 +105,7 @@ const History = () => {
     fetchHistory();
   }, [user?.id, user?._id, filterType]);
 
-  const isAnyModalOpen = !!confirmOverlay || cancelModalOpen || intelModalOpen || proofModalOpen || isReviewModalOpen;
-  useBodyScrollLock(isAnyModalOpen);
+  // Note: BottomSheet handles scroll locking independently
 
   useEffect(() => {
     if (!socket) return;
@@ -366,7 +365,8 @@ const History = () => {
   const cancelErrandItem = historyItems.find(i => i.id === cancelErrandId);
 
   return (
-    <PageContainer title="My Errands" showHeader={true} showNotification={true} showLive={true}>
+    <>
+      <PageContainer title="My Errands" showHeader={true} showNotification={true} showLive={true}>
       <div className="container" style={{ paddingTop: 20, paddingBottom: 100 }}>
         <AnimatePresence>
           {processing && (
@@ -919,8 +919,11 @@ const History = () => {
             fetchHistory();
           }}
         />
+      </div>
+    </PageContainer>
 
-        <AnimatePresence>
+      {/* ── Modals rendered outside transformed PageContainer ── */}
+      <AnimatePresence>
           {cancelModalOpen && (
             <motion.div
               key="cancel-modal"
@@ -1292,8 +1295,7 @@ const History = () => {
             </div>
           )}
         </BottomSheet>
-      </div>
-    </PageContainer>
+    </>
   );
 };
 

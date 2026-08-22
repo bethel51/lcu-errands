@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { useBodyScrollLock } from "../hooks/useBodyScrollLock";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Search,

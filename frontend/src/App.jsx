@@ -50,7 +50,7 @@ const PageLoader = () => (
 );
 
 // Pages where Navbar and BottomNav should be hidden for full-screen view
-const HIDE_NAV_PATHS = ["/login", "/register", "/forgot-password", "/post-errand"];
+const HIDE_NAV_PATHS = ["/login", "/register", "/forgot-password", "/post-errand", "/top-up", "/withdraw"];
 
 const AppLayout = () => {
   const location = useLocation();

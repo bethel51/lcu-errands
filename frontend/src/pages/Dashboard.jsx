@@ -566,12 +566,13 @@ const Dashboard = () => {
   }, [messengers, search]);
 
   return (
-    <PageContainer
-      title="Marketplace"
-      showHeader={true}
-      showNotification={true}
-      showLive={true}
-    >
+    <>
+      <PageContainer
+        title="Marketplace"
+        showHeader={true}
+        showNotification={true}
+        showLive={true}
+      >
       {/* Full-screen processing overlay */}
       <AnimatePresence>
         {processing && (
@@ -1395,7 +1396,9 @@ const Dashboard = () => {
         )}
       </AnimatePresence>
 
-      {/* ── Post Errand Modal ── */}
+      </PageContainer>
+
+      {/* ── Post Errand Modal (Rendered outside PageContainer transformed main) ── */}
       <PostErrandModal
         isOpen={isPostModalOpen}
         onClose={() => setIsPostModalOpen(false)}
@@ -1674,8 +1677,7 @@ const Dashboard = () => {
           </div>
         )}
       </BottomSheet>
-
-    </PageContainer>
+    </>
   );
 };
 

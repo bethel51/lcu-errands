@@ -63,7 +63,7 @@ const BottomSheet = ({ isOpen, onClose, title, subtitle, children, style = {} })
           style={{
             position: "fixed",
             inset: 0,
-            zIndex: 1200,
+            zIndex: 99999,
             display: "flex",
             alignItems: "flex-end",
             justifyContent: "center",

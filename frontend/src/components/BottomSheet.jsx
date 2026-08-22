@@ -177,7 +177,17 @@ const BottomSheet = ({ isOpen, onClose, title, subtitle, children, style = {} })
               </div>
             )}
 
-            {children}
+            <div
+              style={{
+                flex: 1,
+                overflowY: "auto",
+                WebkitOverflowScrolling: "touch",
+                overscrollBehavior: "contain",
+                paddingBottom: "env(safe-area-inset-bottom, 24px)",
+              }}
+            >
+              {children}
+            </div>
           </motion.div>
         </div>
       )}

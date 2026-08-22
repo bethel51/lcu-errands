@@ -1,10 +1,8 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
-import { useBodyScrollLock } from "../hooks/useBodyScrollLock";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Search,
   MapPin,
-  Plus,
   X,
   Wallet,
   ArrowRight,
@@ -315,8 +313,8 @@ const Dashboard = () => {
     }
   }, []);
 
-  const isAnyModalOpen = isPostModalOpen || isWithdrawModalOpen || isTopUpModalOpen || isReviewModalOpen || !!confirmOverlay;
-  useBodyScrollLock(isAnyModalOpen);
+  // Note: individual modals (BottomSheet, etc.) handle their own scroll locking
+  // via the reference-counted useBodyScrollLock hook — no need to double-lock here.
 
   useEffect(() => {
     if (!socket) return;
@@ -573,18 +571,6 @@ const Dashboard = () => {
       showHeader={true}
       showNotification={true}
       showLive={true}
-      action={
-        userRole === "sender" ? (
-          <button
-            onClick={() => setIsPostModalOpen(true)}
-            className="header-icon-btn"
-            style={{ background: "var(--gradient-brand)", color: "var(--white)", border: "none" }}
-            aria-label="Post Errand"
-          >
-            <Plus size={18} />
-          </button>
-        ) : null
-      }
     >
       {/* Full-screen processing overlay */}
       <AnimatePresence>
@@ -649,11 +635,21 @@ const Dashboard = () => {
             <NotificationCenter renderTrigger={true} />
             {userRole === "sender" && (
               <button
+                id="post-errand-btn"
                 className="btn btn-primary"
                 onClick={() => setIsPostModalOpen(true)}
-                style={{ borderRadius: 12 }}
+                style={{
+                  borderRadius: 14,
+                  fontWeight: 800,
+                  fontSize: "0.88rem",
+                  padding: "10px 18px",
+                  background: "var(--gradient-brand)",
+                  border: "none",
+                  boxShadow: "0 4px 14px rgba(30,77,183,0.28)",
+                  letterSpacing: "-0.2px",
+                }}
               >
-                <Plus size={18} /> Post Errand
+                Post Errand
               </button>
             )}
           </div>
@@ -841,22 +837,25 @@ const Dashboard = () => {
                         ₦{errand.fee?.toLocaleString()}
                       </span>
                       <button
-                        onClick={() => handleOpenIntel(errand.id)}
+                        id={`intel-btn-${errand.id}`}
+                        onClick={(e) => { e.stopPropagation(); handleOpenIntel(errand.id); }}
                         style={{
-                          background: "var(--blue-50)",
-                          border: "1px solid var(--blue-100)",
+                          background: "linear-gradient(135deg, var(--blue-50), #e0eaff)",
+                          border: "1.5px solid var(--blue-100)",
                           color: "var(--blue-700)",
-                          borderRadius: 8,
-                          padding: "2px 8px",
-                          fontSize: "0.7rem",
+                          borderRadius: 20,
+                          padding: "3px 10px",
+                          fontSize: "0.72rem",
                           fontWeight: 800,
                           cursor: "pointer",
                           display: "inline-flex",
                           alignItems: "center",
                           gap: 4,
+                          letterSpacing: "0.02em",
+                          transition: "all 0.15s ease",
                         }}
                       >
-                        <Activity size={12} /> Intel
+                        <Activity size={11} /> Intel
                       </button>
                     </div>
                   </div>
@@ -1545,7 +1544,11 @@ const Dashboard = () => {
         isOpen={intelModalOpen}
         onClose={() => setIntelModalOpen(false)}
         title="Communication Intel"
-        subtitle="Secure cryptographic audit trail logs"
+        subtitle={
+          activeRequests.find(e => e.id === selectedIntelErrandId)?.title
+            ? `"${activeRequests.find(e => e.id === selectedIntelErrandId)?.title}" · Cryptographic audit trail`
+            : "Secure cryptographic audit trail logs"
+        }
       >
         {loadingIntel ? (
           <div style={{ padding: "40px 0", textAlign: "center" }}>

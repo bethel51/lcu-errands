@@ -4782,12 +4782,14 @@ input, select, textarea {
   max-width: 540px;
   background: var(--white);
   border-radius: 28px 28px 0 0;
-  padding: 12px 20px 24px;
+  padding: 12px 20px 0;
   box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.15);
-  max-height: 90vh;
-  max-height: 90dvh;
-  overflow-y: auto;
+  max-height: 92vh;
+  max-height: 92dvh;
+  overflow: hidden;
   position: relative;
+  display: flex;
+  flex-direction: column;
 }
 
 .bottom-sheet-handle {

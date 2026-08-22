@@ -339,6 +339,8 @@ export const completeErrand = catchAsync(async (req, res) => {
         notifications.forEach((n) => {
           if (n.userId) io.to(n.userId.toString()).emit("notification", n);
         });
+        if (errand.posterId) io.to(errand.posterId.toString()).emit("errand_updated", errand);
+        if (errand.erranderId) io.to(errand.erranderId.toString()).emit("errand_updated", errand);
       }
     } catch (notifErr) {
       console.error("[completeErrand] Notification insertion failed (non-fatal):", notifErr.message);
@@ -803,6 +805,8 @@ export const selectMessenger = catchAsync(async (req, res) => {
   await Notification.create(notificationData);
   if (io) {
     io.to(messengerId.toString()).emit("notification", notificationData);
+    if (errand.posterId) io.to(errand.posterId.toString()).emit("errand_updated", errand);
+    io.to(messengerId.toString()).emit("errand_updated", errand);
     // Broadcast to ALL connected clients so the ErrandStream removes this card immediately
     io.emit("errand_removed", { errandId: errand._id.toString(), reason: "assigned" });
   }
@@ -949,6 +953,8 @@ export const requestCompletion = catchAsync(async (req, res) => {
   const io = req.io;
   if (io) {
     io.to(errand.posterId.toString()).emit("notification", notificationData);
+    io.to(errand.posterId.toString()).emit("errand_updated", errand);
+    if (errand.erranderId) io.to(errand.erranderId.toString()).emit("errand_updated", errand);
   }
 
   // Send email to poster — fire-and-forget, do NOT block the response
@@ -1018,11 +1024,18 @@ export const startErrand = catchAsync(async (req, res) => {
     const notification = {
       type: "errand_started",
       errandId: errand._id,
+      relatedId: errand._id,
       status: "in_progress",
       message: "Messenger has started the errand.",
     };
-    if (errand.posterId) io.to(errand.posterId.toString()).emit("notification", notification);
-    io.to(errand.erranderId.toString()).emit("notification", notification);
+    if (errand.posterId) {
+      io.to(errand.posterId.toString()).emit("notification", notification);
+      io.to(errand.posterId.toString()).emit("errand_updated", errand);
+    }
+    if (errand.erranderId) {
+      io.to(errand.erranderId.toString()).emit("notification", notification);
+      io.to(errand.erranderId.toString()).emit("errand_updated", errand);
+    }
     io.to("admin").emit("notification", notification);
   }
 

@@ -51,6 +51,15 @@ const AdminPortal = () => {
   const [password, setPassword] = useState("");
   const [securityKey, setSecurityKey] = useState("");
   const [error, setError] = useState("");
+  const [authSuccess, setAuthSuccess] = useState("");
+  // Lightweight admin toast { msg, type: "success"|"error"|"info" }
+  const [adminToast, setAdminToast] = useState(null);
+  const showAdminToast = (msg, type = "success") => {
+    setAdminToast({ msg, type });
+    setTimeout(() => setAdminToast(null), 3500);
+  };
+  // Inline confirm dialog state (replaces window.confirm)
+  const [confirmDialog, setConfirmDialog] = useState(null); // { msg, onConfirm }
   const [authLoading, setAuthLoading] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(
     localStorage.getItem("isAdminLoggedIn") === "true",
@@ -124,6 +133,7 @@ const AdminPortal = () => {
     e.preventDefault();
     setAuthLoading(true);
     setError("");
+    setAuthSuccess("");
     try {
       await adminApi.post("/auth/init", {
         name: setupName,
@@ -131,7 +141,7 @@ const AdminPortal = () => {
         password,
         securityKey,
       });
-      alert("Master Admin Created! You can now login.");
+      setAuthSuccess("Master Admin Created! You can now login.");
       setShowSetup(false);
     } catch (err) {
       setError(
@@ -257,28 +267,27 @@ const AdminPortal = () => {
 
   const handleSendBroadcast = async (e) => {
     e.preventDefault();
-    if (
-      !window.confirm(
-        `Are you sure you want to send this broadcast to ${users.length} users?`,
-      )
-    )
-      return;
-
-    setBroadcastLoading(true);
-    try {
-      await adminApi.post("/management/broadcast", {
-        subject: broadcastSubject,
-        message: broadcastMessage,
-      });
-      alert("Broadcast sent successfully!");
-      setBroadcastSubject("");
-      setBroadcastMessage("");
-      fetchData();
-    } catch (_err) {
-      alert("Failed to send broadcast");
-    } finally {
-      setBroadcastLoading(false);
-    }
+    setConfirmDialog({
+      msg: `Send this broadcast to ${users.length} users?`,
+      onConfirm: async () => {
+        setConfirmDialog(null);
+        setBroadcastLoading(true);
+        try {
+          await adminApi.post("/management/broadcast", {
+            subject: broadcastSubject,
+            message: broadcastMessage,
+          });
+          showAdminToast("Broadcast sent successfully!");
+          setBroadcastSubject("");
+          setBroadcastMessage("");
+          fetchData();
+        } catch (_err) {
+          showAdminToast("Failed to send broadcast", "error");
+        } finally {
+          setBroadcastLoading(false);
+        }
+      },
+    });
   };
 
   const fetchErrandIntel = async (errandId) => {
@@ -291,7 +300,7 @@ const AdminPortal = () => {
       setErrandIntelModal(res.data);
     } catch (err) {
       console.error("Failed to fetch errand intel:", err);
-      alert(err.response?.data?.message || "Failed to fetch errand intel. Make sure the errand ID is valid.");
+      showAdminToast(err.response?.data?.message || "Failed to fetch errand intel. Make sure the errand ID is valid.", "error");
     } finally {
       setErrandIntelLoading(false);
     }
@@ -312,7 +321,7 @@ const AdminPortal = () => {
       setErrandIntelModal(null);
       fetchData();
     } catch (err) {
-      alert(err.response?.data?.message || `Failed to ${action} errand`);
+      showAdminToast(err.response?.data?.message || `Failed to ${action} errand`, "error");
     } finally {
       setIntelActionLoading("");
     }
@@ -323,7 +332,7 @@ const AdminPortal = () => {
       const res = await adminApi.get(`/management/chat/${errandId}`);
       setSelectedErrandChat(Array.isArray(res.data) ? res.data : []);
     } catch (_err) {
-      alert("Failed to fetch chat log");
+      showAdminToast("Failed to fetch chat log", "error");
       setSelectedErrandChat([]);
     }
   };
@@ -335,7 +344,7 @@ const AdminPortal = () => {
       const res = await adminApi.get(`/management/withdrawal-evidence/${userId}`);
       setWithdrawalEvidence(Array.isArray(res.data) ? res.data : []);
     } catch (_err) {
-      alert("Failed to fetch evidence");
+      showAdminToast("Failed to fetch evidence", "error");
       setWithdrawalEvidence([]);
     } finally {
       setEvidenceLoading(false);
@@ -346,6 +355,7 @@ const AdminPortal = () => {
     e.preventDefault();
     setAuthLoading(true);
     setError("");
+    setAuthSuccess("");
     try {
       const response = await adminApi.post("/auth/login", {
         email,
@@ -372,18 +382,19 @@ const AdminPortal = () => {
   };
 
   const handleToggleSuspend = async (id, currentStatus) => {
-    if (
-      !window.confirm(
-        `Confirm protocol: ${currentStatus ? "REACTIVE" : "SUSPEND"} user?`,
-      )
-    )
-      return;
-    try {
-      await adminApi.patch(`/management/users/${id}/suspend`);
-      fetchData();
-    } catch (_err) {
-      alert("System Error");
-    }
+    setConfirmDialog({
+      msg: `Confirm: ${currentStatus ? "REACTIVATE" : "SUSPEND"} this user?`,
+      onConfirm: async () => {
+        setConfirmDialog(null);
+        try {
+          await adminApi.patch(`/management/users/${id}/suspend`);
+          fetchData();
+          showAdminToast(`User ${currentStatus ? "reactivated" : "suspended"} successfully.`);
+        } catch (_err) {
+          showAdminToast("System Error: failed to update user status.", "error");
+        }
+      },
+    });
   };
 
   const handleProcessWithdrawal = async (id, status) => {
@@ -397,7 +408,7 @@ const AdminPortal = () => {
       });
       fetchData();
     } catch (_err) {
-      alert("Transaction Error");
+      showAdminToast("Transaction Error: failed to process withdrawal.", "error");
     }
   };
 
@@ -412,7 +423,7 @@ const AdminPortal = () => {
       });
       fetchData();
     } catch (_err) {
-      alert("Verification Error");
+      showAdminToast("Verification Error: failed to update verification status.", "error");
     }
   };
 
@@ -435,7 +446,7 @@ const AdminPortal = () => {
       setRejectionReason("");
       fetchData();
     } catch (_err) {
-      alert("Failed to process rejection");
+      showAdminToast("Failed to process rejection", "error");
     } finally {
       setRejectionLoading(false);
     }
@@ -609,6 +620,21 @@ const AdminPortal = () => {
               {error}
             </div>
           )}
+          {authSuccess && (
+            <div
+              style={{
+                color: "#16A34A",
+                background: "#DCFCE7",
+                padding: 12,
+                borderRadius: 10,
+                marginBottom: 20,
+                textAlign: "center",
+                fontSize: "0.9rem",
+              }}
+            >
+              {authSuccess}
+            </div>
+          )}
 
           <form onSubmit={showSetup ? handleInitialSetup : handleLogin}>
             {showSetup && (
@@ -753,6 +779,52 @@ const AdminPortal = () => {
         transition: "background-color 0.3s ease",
       }}
     >
+      {/* Admin Toast Notification */}
+      {adminToast && (
+        <div style={{
+          position: "fixed", top: 20, right: 20, zIndex: 99999,
+          background: adminToast.type === "error" ? "#EF4444" : adminToast.type === "info" ? "#2563EB" : "#16A34A",
+          color: "#fff", padding: "12px 20px", borderRadius: 12,
+          fontWeight: 700, fontSize: "0.9rem",
+          boxShadow: "0 8px 24px rgba(0,0,0,0.18)",
+          maxWidth: 360, wordBreak: "break-word",
+          animation: "fadeInDown 0.2s ease",
+        }}>
+          {adminToast.msg}
+        </div>
+      )}
+      {/* Inline Confirm Dialog (replaces window.confirm) */}
+      {confirmDialog && (
+        <div style={{
+          position: "fixed", inset: 0, zIndex: 99998,
+          background: "rgba(0,0,0,0.45)", display: "flex",
+          alignItems: "center", justifyContent: "center",
+        }}>
+          <div style={{
+            background: "#fff", borderRadius: 16, padding: "28px 24px",
+            maxWidth: 380, width: "90%", boxShadow: "0 16px 48px rgba(0,0,0,0.2)",
+            textAlign: "center",
+          }}>
+            <p style={{ fontSize: "1rem", fontWeight: 600, color: "#1E293B", marginBottom: 20 }}>
+              {confirmDialog.msg}
+            </p>
+            <div style={{ display: "flex", gap: 12, justifyContent: "center" }}>
+              <button
+                onClick={() => setConfirmDialog(null)}
+                style={{ padding: "10px 24px", borderRadius: 10, border: "1px solid #E2E8F0", background: "#F8FAFC", fontWeight: 700, cursor: "pointer", color: "#64748B" }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDialog.onConfirm}
+                style={{ padding: "10px 24px", borderRadius: 10, border: "none", background: "#EF4444", color: "#fff", fontWeight: 700, cursor: "pointer" }}
+              >
+                Confirm
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Top Nav */}
       <nav
         style={{

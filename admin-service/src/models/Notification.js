@@ -19,6 +19,8 @@ const notificationSchema = new mongoose.Schema({
     type: String,
     enum: [
       "errand_accepted",
+      "errand_requested",
+      "errand_started",
       "errand_completed",
       "errand_delivered",
       "payment_released",

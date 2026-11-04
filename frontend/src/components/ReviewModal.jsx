@@ -25,9 +25,8 @@ const ReviewModal = ({ errandId, isOpen, onClose, onSuccess, onReviewComplete })
     }
   }, [isOpen]);
 
+  // handleClose: dismiss without firing success callbacks — just closes the modal
   const handleClose = () => {
-    const callback = onSuccess || onReviewComplete;
-    if (callback) callback();
     onClose();
   };
 
@@ -39,7 +38,10 @@ const ReviewModal = ({ errandId, isOpen, onClose, onSuccess, onReviewComplete })
       await api.post("/reviews", { errandId, rating, comment: comment.trim() });
       setSubmitted(true);
       setTimeout(() => {
-        handleClose();
+        // Fire success callback only after a successful submission
+        const callback = onSuccess || onReviewComplete;
+        if (callback) callback();
+        onClose();
       }, 1600);
     } catch (err) {
       setError(err.response?.data?.message || "Failed to submit review. Try again.");

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import imageCompression from "browser-image-compression";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -147,10 +147,10 @@ const Profile = () => {
       setUser(res.data);
       localStorage.setItem("user", JSON.stringify(res.data));
       setIsEditing(false);
-      alert("✅ Profile updated successfully!");
+      showToast("Profile updated successfully!");
     } catch (err) {
       console.error("Failed to update profile", err);
-      alert("Failed to update profile. Please try again.");
+      showToast(err.response?.data?.message || "Failed to update profile. Please try again.", "error");
     } finally {
       setProcessing(false);
     }
@@ -171,9 +171,9 @@ const Profile = () => {
       await fetchProfile();
       await fetchTransactions();
       setIsTopUpModalOpen(false);
-      alert(`✅ ₦${Number(topUpAmount).toLocaleString()} added to your wallet!`);
+      showToast(`₦${Number(topUpAmount).toLocaleString()} added to your wallet!`);
     } catch (err) {
-      alert(`❌ ${err.response?.data?.message || "Payment failed. Please try again."}`);
+      showToast(err.response?.data?.message || "Payment failed. Please try again.", "error");
     } finally {
       setProcessing(false);
     }
@@ -181,13 +181,15 @@ const Profile = () => {
 
   const handleWithdraw = async () => {
     if (!withdrawData.accountNumber || !withdrawData.bankName || !withdrawData.accountName) {
-      alert("❌ Please fill in all bank details");
-      return;
+      showToast("Please fill in all bank details", "error"); return;
+    }
+
+    if (Number(withdrawData.amount) < 1000) {
+      showToast("Minimum withdrawal is ₦1,000", "error"); return;
     }
 
     if (Number(withdrawData.amount) > (user?.balance || 0)) {
-      alert("❌ Insufficient balance");
-      return;
+      showToast("Insufficient balance", "error"); return;
     }
     setProcessing(true);
     try {
@@ -195,9 +197,9 @@ const Profile = () => {
       setIsWithdrawModalOpen(false);
       fetchProfile();
       fetchTransactions();
-      alert("✅ Withdrawal request submitted!");
+      showToast("Withdrawal request submitted!");
     } catch (err) {
-      alert(`❌ ${err.response?.data?.message || "Withdrawal failed"}`);
+      showToast(err.response?.data?.message || "Withdrawal failed", "error");
     } finally {
       setProcessing(false);
     }
@@ -205,8 +207,7 @@ const Profile = () => {
 
   const handleBoost = async () => {
     if ((user?.balance || 0) < 200) {
-      alert("❌ Insufficient balance to boost (₦200 required)");
-      return;
+      showToast("Insufficient balance", "error"); return;
     }
     setLoading(true);
     try {
@@ -215,11 +216,9 @@ const Profile = () => {
       localStorage.setItem("user", JSON.stringify(res.data.user));
       setIsBoostModalOpen(false);
       fetchTransactions();
-      alert(
-        "🚀 Profile boosted! You are now featured at the top for 24 hours.",
-      );
+      showToast("🚀 Profile boosted! You are now featured at the top for 24 hours.");
     } catch (err) {
-      alert("❌ Boost failed. Please try again.");
+      showToast("Boost failed. Please try again.", "error");
     } finally {
       setLoading(false);
     }
@@ -250,10 +249,10 @@ const Profile = () => {
         ...prev,
         profilePicture: res.data.profilePicture,
       }));
-      alert("Profile picture updated!");
+      showToast("Profile picture updated!");
     } catch (err) {
       console.error("Image upload failed", err);
-      alert("Failed to upload image. Please try again.");
+      showToast("Failed to upload image. Please try again.", "error");
     } finally {
       setLoading(false);
     }

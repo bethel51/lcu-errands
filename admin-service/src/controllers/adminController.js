@@ -199,6 +199,18 @@ export const approveErrandTransaction = catchAsync(async (req, res) => {
       return;
     }
 
+    if (errand.status === "cancelled") {
+      await session.abortTransaction();
+      res.status(400).json({ message: "Errand is already cancelled" });
+      return;
+    }
+
+    if (errand.paymentReleased || ["completed", "confirmed_completed"].includes(errand.status)) {
+      await session.abortTransaction();
+      res.status(400).json({ message: "Cannot reject an errand whose payment has already been released to the messenger" });
+      return;
+    }
+
     if (["completed", "confirmed_completed"].includes(errand.status)) {
       await session.abortTransaction();
       res.status(400).json({ message: "Errand is already completed" });
@@ -293,6 +305,18 @@ export const rejectErrandTransaction = catchAsync(async (req, res) => {
     if (!errand) {
       await session.abortTransaction();
       res.status(404).json({ message: "Errand not found" });
+      return;
+    }
+
+    if (errand.status === "cancelled") {
+      await session.abortTransaction();
+      res.status(400).json({ message: "Errand is already cancelled" });
+      return;
+    }
+
+    if (errand.paymentReleased || ["completed", "confirmed_completed"].includes(errand.status)) {
+      await session.abortTransaction();
+      res.status(400).json({ message: "Cannot reject an errand whose payment has already been released to the messenger" });
       return;
     }
 

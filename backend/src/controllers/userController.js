@@ -30,7 +30,8 @@ export const updateProfile = catchAsync(async (req, res) => {
     return;
   }
 
-  res.json(updatedUser);
+  const userObj = updatedUser.toObject ? updatedUser.toObject() : updatedUser;
+  res.json({ id: userObj._id, ...userObj });
 });
 
 export const getProfile = catchAsync(async (req, res) => {
@@ -46,7 +47,7 @@ export const getProfile = catchAsync(async (req, res) => {
     return;
   }
 
-  res.json(user);
+  res.json({ id: user._id, ...user });
 });
 
 export const getMessengers = catchAsync(async (req, res) => {
@@ -232,7 +233,7 @@ export const handlePaystackWebhook = catchAsync(async (req, res) => {
               amount: Number(amount),
               type: "credit",
               description: "Wallet Deposit (Paystack)",
-              errandId: data.reference,
+              reference: data.reference,
             },
           ],
           { session },
@@ -381,14 +382,18 @@ export const requestVerificationOtp = catchAsync(async (req, res) => {
     res.status(400).json({ message: "Your account is already verified." }); return;
   }
 
-  // Validate matric number matches the one on file
-  const storedMatric = (user.matricNumber || "").trim().toLowerCase();
-  const providedMatric = (matricNumber || "").trim().toLowerCase();
+  // Validate matric number matches the one on file (accounting for LCU prefix formatting)
+  const normalizeMatric = (m = "") =>
+    String(m).trim().toUpperCase().replace(/[^A-Z0-9]/g, "/").replace(/^LCU\//, "");
+
+  const storedMatric = normalizeMatric(user.matricNumber);
+  const providedMatric = normalizeMatric(matricNumber);
+
   if (!storedMatric) {
     res.status(400).json({ message: "No matric number found on your account. Please update your profile first." }); return;
   }
   if (storedMatric !== providedMatric) {
-    res.status(400).json({ message: "Matric number does not match. Please enter the exact matric number used during registration." }); return;
+    res.status(400).json({ message: "Matric number does not match. Please enter the matric number used during registration." }); return;
   }
 
   // Generate 6-digit OTP
@@ -396,9 +401,9 @@ export const requestVerificationOtp = catchAsync(async (req, res) => {
   const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
   const { OTP } = await import("../models/OTP.js");
-  // Delete any existing verification OTPs for this user
-  await OTP.deleteMany({ email: user.email, formData: { type: "account_verification" } });
-  await OTP.create({ email: user.email, otp, expiresAt, formData: { type: "account_verification", userId } });
+  // Delete any existing verification OTPs for this user using dot notation
+  await OTP.deleteMany({ email: user.email, "formData.type": "account_verification" });
+  await OTP.create({ email: user.email, otp, expiresAt, formData: { type: "account_verification", userId: userId.toString() } });
 
   await sendAccountVerificationOtpEmail(user.email, user.name, otp).catch(console.error);
 
@@ -417,7 +422,11 @@ export const confirmVerificationOtp = catchAsync(async (req, res) => {
   if (user.isVerified) { res.status(400).json({ message: "Account is already verified." }); return; }
 
   const { OTP } = await import("../models/OTP.js");
-  const otpRecord = await OTP.findOne({ email: user.email, formData: { type: "account_verification", userId: userId.toString() } });
+  const otpRecord = await OTP.findOne({
+    email: user.email,
+    "formData.type": "account_verification",
+    "formData.userId": userId.toString(),
+  });
 
   if (!otpRecord) {
     res.status(400).json({ message: "No pending OTP found. Please request a new code." }); return;
@@ -454,24 +463,43 @@ export const deleteAccount = catchAsync(async (req, res) => {
     return;
   }
 
+  const { Errand } = await import("../models/Errand.js");
+
+  // Prevent account deletion if user has active errands in progress
+  const hasActiveErrands = await Errand.exists({
+    $or: [{ posterId: userId }, { erranderId: userId }],
+    status: { $in: ["assigned", "in_progress", "pending_sender_confirmation", "pending_confirmation"] },
+  });
+
+  if (hasActiveErrands) {
+    res.status(400).json({
+      message: "You cannot delete your account while you have active errands in progress. Please complete or resolve them first.",
+    });
+    return;
+  }
+
   try {
     // 1. Delete the user
     await User.findByIdAndDelete(userId);
 
-    // 2. Cascade delete all user-related documents dynamically to avoid circular dependencies
-    const { Errand } = await import("../models/Errand.js");
+    // 2. Clean up user-specific documents (cancel open unassigned errands, remove notifications, etc.)
     const { Review } = await import("../models/Review.js");
     const { Notification } = await import("../models/Notification.js");
-    // const { Message } = await import("../models/Message.js"); // Chat removed
     const { OTP } = await import("../models/OTP.js");
     const { WithdrawalRequest } = await import("../models/WithdrawalRequest.js");
 
-    await Errand.deleteMany({ $or: [{ posterId: userId }, { erranderId: userId }] });
+    // Only delete unassigned open errands posted by this user
+    await Errand.deleteMany({ posterId: userId, status: "open", erranderId: { $exists: false } });
+    // For completed errands, simply hide them from the deleted user's view
+    await Errand.updateMany(
+      { $or: [{ posterId: userId }, { erranderId: userId }] },
+      { $addToSet: { hiddenBy: userId } }
+    );
+
     await Transaction.deleteMany({ userId });
     await Notification.deleteMany({ userId });
     await Review.deleteMany({ $or: [{ reviewerId: userId }, { revieweeId: userId }] });
-    // Message.deleteMany removed — chat system has been disabled
-    await WithdrawalRequest.deleteMany({ userId });
+    await WithdrawalRequest.deleteMany({ userId, status: "pending" });
     await OTP.deleteMany({ email: user.email });
   } catch (error) {
     console.error("Error during cascade deletion:", error);

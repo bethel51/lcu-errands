@@ -1,7 +1,7 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import { User } from "../models/User";
-import { catchAsync } from "./catchAsync";
+import { User } from "../models/User.js";
+import { catchAsync } from "./catchAsync.js";
 
 export const adminLogin = catchAsync(async (req, res) => {
   const { email, password } = req.body;

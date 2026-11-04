@@ -118,10 +118,10 @@ app.use("/api/auth", authLimiter);
 
 const errandCreationLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
-  max: 10, // Limit each IP to 10 errands per hour
+  max: 20, // Limit each IP to 20 errands per hour
   message: "Errand creation limit reached. Please try again later.",
 });
-app.use("/api/errands/create", errandCreationLimiter);
+app.post("/api/errands", errandCreationLimiter);
 
 // Attach socket.io to req
 app.use((req, res, next) => {
@@ -170,8 +170,11 @@ const AUTO_RELEASE_MINUTES = 45;
 const autoReleaseStalePendingErrands = async () => {
   const cutoff = new Date(Date.now() - AUTO_RELEASE_MINUTES * 60 * 1000);
   const staleErrands = await Errand.find({
-    status: "pending_sender_confirmation",
-    messengerCompletedAt: { $lte: cutoff },
+    status: { $in: ["pending_sender_confirmation", "pending_confirmation"] },
+    $or: [
+      { messengerCompletedAt: { $lte: cutoff } },
+      { messengerCompletedAt: { $exists: false }, updatedAt: { $lte: cutoff } },
+    ],
     paymentReleased: { $ne: true },
   });
 

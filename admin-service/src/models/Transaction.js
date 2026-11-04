@@ -5,6 +5,7 @@ const transactionSchema = new mongoose.Schema({
   amount: { type: Number, required: true },
   type: { type: String, enum: ["credit", "debit", "errand_earning"], required: true },
   description: { type: String, required: true },
+  reference: { type: String },
   errandId: { type: mongoose.Schema.Types.ObjectId, ref: "Errand" },
   senderId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
   messengerId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },

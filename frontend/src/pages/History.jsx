@@ -91,7 +91,7 @@ const History = () => {
         };
       });
       const filteredHistory = formatted.filter((item) =>
-        ["completed", "confirmed_completed", "pending_confirmation", "pending_sender_confirmation"].includes(item.status)
+        ["open", "assigned", "accepted", "in_progress", "completed", "confirmed_completed", "pending_confirmation", "pending_sender_confirmation"].includes(item.status)
       );
       setHistoryItems(filteredHistory);
       // Always overwrite cache with fresh data
@@ -465,6 +465,7 @@ const History = () => {
         }}>
           {[
             "All",
+            "Active",
             "Pending Confirmation",
             "Completed"
           ].map((tab) => {
@@ -705,6 +706,18 @@ const History = () => {
                             In progress — cannot cancel
                           </span>
                         )}
+                        {/* Confirm Delivery — sender confirms messenger has delivered */}
+                        {item.status === "pending_sender_confirmation" && (
+                          <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={() => setConfirmOverlay({ errandId: item.id, errandTitle: item.title, errandFee: item.fee })}
+                            className="btn btn-primary btn-sm"
+                            style={{ background: "var(--green-600)", borderColor: "var(--green-600)", color: "var(--white)", display: "flex", alignItems: "center", gap: 4 }}
+                          >
+                            ✅ Confirm Delivery
+                          </motion.button>
+                        )}
                       </div>
                     )}
 
@@ -756,7 +769,8 @@ const History = () => {
                       </button>
                     )}
 
-                    {["completed", "confirmed_completed"].includes(item.status) && (
+                    {/* Review button — only senders can review messengers */}
+                    {["completed", "confirmed_completed"].includes(item.status) && filterType === "posted" && (
                       item.hasReviewed ? (
                         <span
                           style={{
@@ -1150,14 +1164,6 @@ const History = () => {
           )}
         </AnimatePresence>
 
-        {selectedErrandId && (
-          <ReviewModal
-            errandId={selectedErrandId}
-            isOpen={isReviewModalOpen}
-            onClose={() => setIsReviewModalOpen(false)}
-            onSuccess={() => fetchHistory()}
-          />
-        )}
 
         {/* Proof Upload Modal */}
         <AnimatePresence>

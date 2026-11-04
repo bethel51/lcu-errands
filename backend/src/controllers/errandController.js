@@ -381,7 +381,7 @@ export const getUserHistory = catchAsync(async (req, res) => {
   res.json(errands);
 });
 
-// Permanently hide/delete an errand from a user's history view
+// Permanently hide an errand from a user's history view
 export const deleteFromHistory = catchAsync(async (req, res) => {
   const { id } = req.params;
   const userId = req.user.id;
@@ -400,29 +400,35 @@ export const deleteFromHistory = catchAsync(async (req, res) => {
     return;
   }
 
-  // If the Sender is deleting an active errand (not completed yet), refund them
-  if (isPoster) {
-    const isActive = ["open", "assigned", "in_progress", "pending_sender_confirmation", "pending_confirmation"].includes(errand.status);
-    
-    if (isActive) {
-      const user = await User.findById(userId);
-      if (user && errand.fee > 0) {
-        user.balance += errand.fee;
-        await user.save();
-        await Transaction.create({ userId, amount: errand.fee, type: "credit", description: `Refund for cancelled errand: ${errand.title}`, errandId: errand._id });
-      }
-      await Errand.findByIdAndDelete(errand._id);
-      res.json({ message: "Errand cancelled and permanently deleted. Funds refunded to your balance." });
-      return;
-    } else {
-      // Completed or cancelled errand being deleted by poster - no refund, just delete
-      await Errand.findByIdAndDelete(errand._id);
-      res.json({ message: "Errand permanently deleted from your history." });
-      return;
+  // Active errands in delivery cannot simply be removed from history
+  const isInDelivery = ["assigned", "in_progress", "pending_sender_confirmation", "pending_confirmation"].includes(errand.status);
+  if (isInDelivery) {
+    res.status(400).json({ message: "Cannot remove an active errand from history while it is in progress." });
+    return;
+  }
+
+  // If the poster is cancelling an open errand from history, cancel and refund
+  if (isPoster && errand.status === "open") {
+    const user = await User.findById(userId);
+    if (user && errand.fee > 0) {
+      user.balance += errand.fee;
+      await user.save();
+      await Transaction.create({
+        userId,
+        amount: errand.fee,
+        type: "credit",
+        description: `Refund for cancelled errand: ${errand.title}`,
+        errandId: errand._id,
+      });
+    }
+    errand.status = "cancelled";
+    await errand.save();
+    if (req.io) {
+      req.io.emit("errand_removed", { errandId: id, reason: "cancelled" });
     }
   }
 
-  // If it's the messenger doing the hiding, just hide it for them
+  // Hide the errand for the requesting user (preserves record for the other party & audit trail)
   await Errand.findByIdAndUpdate(id, { $addToSet: { hiddenBy: userId } });
   res.json({ message: "Errand removed from your history." });
 });
@@ -600,7 +606,7 @@ export const getErrands = catchAsync(async (req, res) => {
   // AND the poster is still active
   const query = {
     status: "open",
-    $or: [{ erranderId: { $exists: false } }],
+    $or: [{ erranderId: { $exists: false } }, { erranderId: null }],
   };
 
   if (userId) {
@@ -653,9 +659,13 @@ export const applyForErrand = catchAsync(async (req, res) => {
     return;
   }
 
-  // Check if the user is verified
+  // Check if the user is verified and has messenger role
   const user = await User.findById(erranderId);
-  if (!user || !user.isVerified) {
+  if (!user || user.role !== "messenger") {
+    res.status(403).json({ message: "Only registered messengers can apply for errands." });
+    return;
+  }
+  if (!user.isVerified) {
     res.status(403).json({
       message: "Your account is not verified. Please contact admin for verification.",
     });
@@ -988,8 +998,8 @@ export const startErrand = catchAsync(async (req, res) => {
     return;
   }
 
-  if (errand.status !== "assigned") {
-    res.status(400).json({ message: `Errand cannot be started (current status: ${errand.status}). It must be in assigned status.` });
+  if (errand.status !== "assigned" && errand.status !== "accepted") {
+    res.status(400).json({ message: `Errand cannot be started (current status: ${errand.status}). It must be in assigned or accepted status.` });
     return;
   }
 

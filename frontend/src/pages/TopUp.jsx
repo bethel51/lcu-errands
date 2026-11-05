@@ -146,7 +146,7 @@ const TopUp = () => {
           flex: 1,
           overflowY: "auto",
           WebkitOverflowScrolling: "touch",
-          padding: "20px 16px 130px",
+          padding: "20px 16px 40px",
           background: "#F8FAFC",
         }}
       >
@@ -269,57 +269,41 @@ const TopUp = () => {
                 Card · Bank Transfer · USSD · Safe Escrow Protection
               </div>
             </div>
-          </form>
-        </div>
-      </div>
 
-      {/* Sticky Bottom Action Bar */}
-      <div
-        style={{
-          position: "fixed",
-          bottom: 0,
-          left: 0,
-          right: 0,
-          background: "#FFFFFF",
-          borderTop: "1.5px solid #E2E8F0",
-          padding: "14px 16px calc(14px + env(safe-area-inset-bottom, 14px))",
-          boxShadow: "0 -10px 30px rgba(0,0,0,0.06)",
-          zIndex: 100000,
-        }}
-      >
-        <div style={{ maxWidth: 540, margin: "0 auto" }}>
-          <motion.button
-            whileTap={isFormValid ? { scale: 0.98 } : {}}
-            type="button"
-            onClick={handleDeposit}
-            disabled={loading || !isFormValid}
-            style={{
-              width: "100%",
-              height: 54,
-              borderRadius: 16,
-              border: "none",
-              background: isFormValid ? "linear-gradient(135deg, #1E4DB7, #2563EB)" : "#E2E8F0",
-              color: isFormValid ? "#FFFFFF" : "#94A3B8",
-              fontWeight: 900,
-              fontSize: "1.02rem",
-              cursor: isFormValid ? "pointer" : "not-allowed",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 8,
-              boxShadow: isFormValid ? "0 8px 24px rgba(37,99,235,0.35)" : "none",
-              transition: "all 0.18s ease",
-            }}
-          >
-            {loading ? (
-              <>
-                <div className="loader" style={{ width: 22, height: 22, borderTopColor: "#fff" }} />
-                <span>Redirecting to Paystack…</span>
-              </>
-            ) : (
-              <span>Deposit ₦{Number(amount || 0).toLocaleString()}</span>
-            )}
-          </motion.button>
+            {/* Deposit Button at the bottom of the form */}
+            <motion.button
+              whileTap={isFormValid ? { scale: 0.98 } : {}}
+              type="submit"
+              disabled={loading || !isFormValid}
+              style={{
+                width: "100%",
+                height: 54,
+                borderRadius: 16,
+                border: "none",
+                background: isFormValid ? "linear-gradient(135deg, #1E4DB7, #2563EB)" : "#E2E8F0",
+                color: isFormValid ? "#FFFFFF" : "#94A3B8",
+                fontWeight: 900,
+                fontSize: "1.02rem",
+                cursor: isFormValid ? "pointer" : "not-allowed",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 8,
+                boxShadow: isFormValid ? "0 8px 24px rgba(37,99,235,0.35)" : "none",
+                transition: "all 0.18s ease",
+                marginTop: 6,
+              }}
+            >
+              {loading ? (
+                <>
+                  <div className="loader" style={{ width: 22, height: 22, borderTopColor: "#fff" }} />
+                  <span>Redirecting to Paystack…</span>
+                </>
+              ) : (
+                <span>Deposit ₦{Number(amount || 0).toLocaleString()}</span>
+              )}
+            </motion.button>
+          </form>
         </div>
       </div>
     </motion.div>

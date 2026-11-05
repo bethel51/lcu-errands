@@ -105,7 +105,14 @@ const ErrandStream = () => {
 
   // Keep userId fresh without causing re-renders
   const userIdRef = useRef(getUserId());
-  const userRole = localStorage.getItem("userRole") || "messenger";
+  const userRole = (() => {
+    try {
+      const u = JSON.parse(localStorage.getItem("user") || "{}");
+      return u.role || localStorage.getItem("userRole") || "messenger";
+    } catch {
+      return localStorage.getItem("userRole") || "messenger";
+    }
+  })();
 
   const mapBackendToFrontend = useCallback((err) => {
     const uid = userIdRef.current;

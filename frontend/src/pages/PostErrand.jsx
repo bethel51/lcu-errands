@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { X, MapPin, Banknote, Wallet, AlertCircle } from "lucide-react";
+import { X, MapPin, Banknote, Wallet, AlertCircle, ShieldCheck } from "lucide-react";
 import api from "../api";
 import { useToast } from "../context/ToastContext";
 
@@ -183,7 +183,7 @@ const PostErrand = () => {
           flex: 1,
           overflowY: "auto",
           WebkitOverflowScrolling: "touch",
-          padding: "20px 16px 130px",
+          padding: "20px 16px 40px",
           background: "#F8FAFC",
         }}
       >
@@ -441,96 +441,97 @@ const PostErrand = () => {
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               />
             </div>
-          </form>
-        </div>
-      </div>
 
-      {/* ── Solid White Bottom Sticky Action Bar ── */}
-      <div
-        style={{
-          position: "fixed",
-          bottom: 0,
-          left: 0,
-          right: 0,
-          background: "#FFFFFF",
-          borderTop: "1.5px solid #E2E8F0",
-          padding: "14px 16px calc(14px + env(safe-area-inset-bottom, 14px))",
-          boxShadow: "0 -10px 30px rgba(0,0,0,0.06)",
-          zIndex: 100000,
-        }}
-      >
-        <div style={{ maxWidth: 540, margin: "0 auto" }}>
-          {insufficientBalance && (
-            <div
-              style={{
-                marginBottom: 12,
-                padding: "10px 14px",
-                borderRadius: 14,
-                background: "#FEF2F2",
-                border: "1.5px solid #FECACA",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                color: "#991B1B",
-                fontSize: "0.82rem",
-                fontWeight: 800,
-              }}
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <AlertCircle size={16} color="#DC2626" />
-                <span>Insufficient balance (₦{userBalance.toLocaleString()})</span>
-              </div>
-              <button
-                type="button"
-                onClick={() => navigate("/top-up")}
+            {/* ── Form Actions at the Bottom ── */}
+            <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 12 }}>
+              {insufficientBalance && (
+                <div
+                  style={{
+                    padding: "12px 16px",
+                    borderRadius: 14,
+                    background: "#FEF2F2",
+                    border: "1.5px solid #FECACA",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    color: "#991B1B",
+                    fontSize: "0.85rem",
+                    fontWeight: 800,
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <AlertCircle size={18} color="#DC2626" />
+                    <span>Insufficient balance (₦{userBalance.toLocaleString()})</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => navigate("/top-up")}
+                    style={{
+                      background: "#DC2626",
+                      color: "#FFFFFF",
+                      border: "none",
+                      borderRadius: 10,
+                      padding: "6px 14px",
+                      fontSize: "0.82rem",
+                      fontWeight: 900,
+                      cursor: "pointer",
+                    }}
+                  >
+                    Top Up
+                  </button>
+                </div>
+              )}
+
+              <motion.button
+                whileTap={isFormValid ? { scale: 0.98 } : {}}
+                type="submit"
+                disabled={!isFormValid || submitting}
                 style={{
-                  background: "#DC2626",
-                  color: "#FFFFFF",
+                  width: "100%",
+                  height: 54,
+                  borderRadius: 16,
                   border: "none",
-                  borderRadius: 10,
-                  padding: "5px 12px",
-                  fontSize: "0.78rem",
+                  background: isFormValid ? "linear-gradient(135deg, #1E4DB7, #2563EB)" : "#E2E8F0",
+                  color: isFormValid ? "#FFFFFF" : "#94A3B8",
                   fontWeight: 900,
-                  cursor: "pointer",
+                  fontSize: "1.05rem",
+                  cursor: isFormValid ? "pointer" : "not-allowed",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 8,
+                  boxShadow: isFormValid ? "0 8px 24px rgba(37,99,235,0.3)" : "none",
+                  transition: "all 0.18s ease",
                 }}
               >
-                Top Up
-              </button>
-            </div>
-          )}
+                {submitting ? (
+                  <>
+                    <div className="loader" style={{ width: 22, height: 22, borderTopColor: "#fff" }} />
+                    <span>Publishing Errand…</span>
+                  </>
+                ) : (
+                  <span>🚀 Publish Errand</span>
+                )}
+              </motion.button>
 
-          <motion.button
-            whileTap={isFormValid ? { scale: 0.98 } : {}}
-            type="button"
-            onClick={handleSubmit}
-            disabled={!isFormValid || submitting}
-            style={{
-              width: "100%",
-              height: 54,
-              borderRadius: 16,
-              border: "none",
-              background: isFormValid ? "linear-gradient(135deg, #1E4DB7, #2563EB)" : "#E2E8F0",
-              color: isFormValid ? "#FFFFFF" : "#94A3B8",
-              fontWeight: 900,
-              fontSize: "1.02rem",
-              cursor: isFormValid ? "pointer" : "not-allowed",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 8,
-              boxShadow: isFormValid ? "0 8px 24px rgba(37,99,235,0.35)" : "none",
-              transition: "all 0.18s ease",
-            }}
-          >
-            {submitting ? (
-              <>
-                <div className="loader" style={{ width: 22, height: 22, borderTopColor: "#fff" }} />
-                <span>Publishing Errand…</span>
-              </>
-            ) : (
-              <span>🚀 Publish Errand</span>
-            )}
-          </motion.button>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 6,
+                  color: "#64748B",
+                  fontSize: "0.78rem",
+                  fontWeight: 700,
+                  textAlign: "center",
+                  marginTop: 2,
+                }}
+              >
+                <ShieldCheck size={16} color="#16A34A" />
+                <span>Payment is held safely in escrow until delivery is confirmed</span>
+              </div>
+            </div>
+          </form>
         </div>
       </div>
     </motion.div>

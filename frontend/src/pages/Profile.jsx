@@ -90,6 +90,9 @@ const Profile = () => {
       const res = await api.get("/users/profile");
       setUser(res.data);
       localStorage.setItem("user", JSON.stringify(res.data));
+      if (res.data?.role) {
+        localStorage.setItem("userRole", res.data.role);
+      }
       setFormData({
         location: res.data.location || "",
         phoneNumber: res.data.phoneNumber || "",
@@ -125,18 +128,16 @@ const Profile = () => {
   };
 
   const handleDeleteAccount = async () => {
-    if (!deleteConfirmOpen) {
-      setDeleteConfirmOpen(true);
-      return;
-    }
-    setDeleteConfirmOpen(false);
     try {
       await api.delete("/users/profile");
       localStorage.clear();
-      navigate("/login");
+      showToast("Account deleted permanently.");
+      window.location.href = "/login";
     } catch (err) {
       console.error("Failed to delete account", err);
-      showToast("Failed to delete account. Please try again.", "error");
+      showToast(err.response?.data?.message || "Failed to delete account. Please try again.", "error");
+    } finally {
+      setDeleteConfirmOpen(false);
     }
   };
 
@@ -146,6 +147,9 @@ const Profile = () => {
       const res = await api.put("/users/profile", formData);
       setUser(res.data);
       localStorage.setItem("user", JSON.stringify(res.data));
+      if (res.data?.role) {
+        localStorage.setItem("userRole", res.data.role);
+      }
       setIsEditing(false);
       showToast("Profile updated successfully!");
     } catch (err) {
@@ -245,6 +249,9 @@ const Profile = () => {
       });
       setUser(res.data);
       localStorage.setItem("user", JSON.stringify(res.data));
+      if (res.data?.role) {
+        localStorage.setItem("userRole", res.data.role);
+      }
       setFormData((prev) => ({
         ...prev,
         profilePicture: res.data.profilePicture,
@@ -692,18 +699,70 @@ const Profile = () => {
                 >
                   <LogOut size={18} style={{ marginRight: 8 }} /> Log Out
                 </button>
-                <button
-                  onClick={handleDeleteAccount}
-                  className="btn btn-ghost"
-                  style={{
-                    width: "100%",
-                    color: "var(--pink-600)",
-                    fontSize: "0.85rem",
-                    fontWeight: 700,
-                  }}
-                >
-                  Delete Account
-                </button>
+                {deleteConfirmOpen ? (
+                  <div
+                    style={{
+                      background: "#FEF2F2",
+                      border: "1.5px solid #FECACA",
+                      borderRadius: 12,
+                      padding: "12px 14px",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 10,
+                      textAlign: "center",
+                      width: "100%",
+                    }}
+                  >
+                    <p style={{ margin: 0, fontSize: "0.82rem", fontWeight: 700, color: "#991B1B" }}>
+                      Permanently delete this account? This cannot be undone.
+                    </p>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <button
+                        type="button"
+                        onClick={() => setDeleteConfirmOpen(false)}
+                        className="btn btn-sm"
+                        style={{
+                          flex: 1,
+                          background: "#FFFFFF",
+                          border: "1px solid #CBD5E1",
+                          color: "#475569",
+                          fontWeight: 700,
+                          fontSize: "0.8rem",
+                        }}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleDeleteAccount}
+                        className="btn btn-sm"
+                        style={{
+                          flex: 1,
+                          background: "#DC2626",
+                          border: "none",
+                          color: "#FFFFFF",
+                          fontWeight: 800,
+                          fontSize: "0.8rem",
+                        }}
+                      >
+                        Yes, Delete
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setDeleteConfirmOpen(true)}
+                    className="btn btn-ghost"
+                    style={{
+                      width: "100%",
+                      color: "var(--pink-600)",
+                      fontSize: "0.85rem",
+                      fontWeight: 700,
+                    }}
+                  >
+                    Delete Account
+                  </button>
+                )}
               </div>
             )}
           </div>

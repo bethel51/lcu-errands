@@ -181,11 +181,23 @@ const Signup: React.FC = () => {
     setProcessing(true);
     setError("");
     try {
-      await api.post("/auth/verify-otp", {
+      const res = await api.post("/auth/verify-otp", {
         email: formData.email,
         otp: otpString,
       });
-      window.location.href = "/login?registration=success";
+
+      // Clear any prior stale session completely
+      localStorage.clear();
+
+      if (res.data?.token && res.data?.user) {
+        localStorage.setItem("token", res.data.token);
+        localStorage.setItem("user", JSON.stringify(res.data.user));
+        localStorage.setItem("userRole", res.data.user.role);
+        localStorage.setItem("isAuthenticated", "true");
+        window.location.href = "/dashboard";
+      } else {
+        window.location.href = `/login?registration=success&role=${role}&email=${encodeURIComponent(formData.email)}`;
+      }
     } catch (err: any) {
       setError(err.response?.data?.message || "Invalid code. Please try again.");
       isSubmittingOtp.current = false;

@@ -162,7 +162,7 @@ const Dashboard = () => {
     }
   };
 
-  const userRole = localStorage.getItem("userRole") || "messenger";
+  const userRole = user?.role || localStorage.getItem("userRole") || "messenger";
   const isMobile = typeof window !== "undefined" && window.innerWidth <= 768;
   const modalAnimation = isMobile ? {
     initial: { y: "100%" },
@@ -175,9 +175,10 @@ const Dashboard = () => {
     exit: { opacity: 0, scale: 0.95, y: 10 },
     transition: { type: "spring", stiffness: 400, damping: 28 }
   };
-  const cachedUserId = (() => {
+  const cachedUserId = user?._id || user?.id || (() => {
     try {
-      return JSON.parse(localStorage.getItem("user") || "{}").id || "";
+      const u = JSON.parse(localStorage.getItem("user") || "{}");
+      return u.id || u._id || "";
     } catch {
       return "";
     }
@@ -231,6 +232,9 @@ const Dashboard = () => {
       ]);
       setUser(profileRes.data);
       localStorage.setItem("user", JSON.stringify(profileRes.data));
+      if (profileRes.data?.role) {
+        localStorage.setItem("userRole", profileRes.data.role);
+      }
       setTransactions(Array.isArray(txsRes.data) ? txsRes.data.slice(0, 5) : []);
       setWithdrawals(Array.isArray(withdrawalsRes.data) ? withdrawalsRes.data : []);
     } catch (err) {
@@ -283,6 +287,16 @@ const Dashboard = () => {
         const u = profileRes.value.data;
         setUser(u);
         localStorage.setItem("user", JSON.stringify(u));
+        if (u?.role) {
+          localStorage.setItem("userRole", u.role);
+        }
+      } else if (profileRes.status === "rejected") {
+        const status = profileRes.reason?.response?.status;
+        if (status === 401 || status === 404) {
+          localStorage.clear();
+          window.location.href = "/login";
+          return;
+        }
       }
       if (messengersRes.status === "fulfilled") {
         const data = Array.isArray(messengersRes.value.data) ? messengersRes.value.data : [];

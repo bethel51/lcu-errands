@@ -232,7 +232,26 @@ export const verifyOtpAndRegister = catchAsync(async (req: Request<{}, {}, Verif
     console.error("Background Welcome Email Error:", err),
   );
 
-  res.status(201).json({ message: "Account created successfully! You can now log in." });
+  const secret = process.env.JWT_SECRET!;
+  const token = jwt.sign({ id: newUser._id, role: newUser.role }, secret, {
+    expiresIn: "1d",
+  });
+
+  res.status(201).json({
+    message: "Account created successfully!",
+    token,
+    user: {
+      id: newUser._id,
+      name: newUser.name,
+      email: newUser.email,
+      role: newUser.role,
+      location: newUser.location,
+      phoneNumber: newUser.phoneNumber,
+      matricNumber: newUser.matricNumber,
+      balance: newUser.balance,
+      isVerified: newUser.isVerified,
+    },
+  });
 });
 
 // Keep the old register route for backwards compat (can be removed later)

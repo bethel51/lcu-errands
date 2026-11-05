@@ -14,10 +14,10 @@ import BottomSheet from "../components/BottomSheet";
 
 const History = () => {
   const navigate = useNavigate();
-  const userRole = localStorage.getItem("userRole") || "messenger";
-  const filterType = userRole === "sender" ? "posted" : "accepted";
   const userStr = localStorage.getItem("user");
-  const user = userStr ? JSON.parse(userStr) : null;
+  const user = userStr ? (() => { try { return JSON.parse(userStr); } catch { return null; } })() : null;
+  const userRole = user?.role || localStorage.getItem("userRole") || "messenger";
+  const filterType = userRole === "sender" ? "posted" : "accepted";
 
   const { socket } = useSocket();
   const [historyItems, setHistoryItems] = useState([]);

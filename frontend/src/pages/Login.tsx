@@ -9,18 +9,27 @@ type LoginRole = "sender" | "messenger";
 const Login: React.FC = () => {
   const location = useLocation();
 
-  const [role, setRole] = useState<LoginRole>("sender");
-  const [email, setEmail] = useState<string>("");
+  // Read success message and initial role from URL params
+  const searchParams = new URLSearchParams(location.search);
+  const regSuccess = searchParams.get("registration") === "success";
+  const urlRole = searchParams.get("role");
+  const initialRole: LoginRole = (urlRole === "messenger" || urlRole === "sender") ? urlRole : "sender";
+  const urlEmail = searchParams.get("email");
+
+  const [role, setRole] = useState<LoginRole>(initialRole);
+  const [email, setEmail] = useState<string>(urlEmail ? decodeURIComponent(urlEmail) : "");
   const [password, setPassword] = useState<string>("");
   const [showPw, setShowPw] = useState<boolean>(false);
   const [error, setError] = useState<string>("");
   const [processing, setProcessing] = useState<boolean>(false);
   const [redirecting, setRedirecting] = useState<boolean>(false);
 
-  // Read success message from URL params
-  const searchParams = new URLSearchParams(location.search);
-  const regSuccess = searchParams.get("registration") === "success";
-  
+  useEffect(() => {
+    if (regSuccess) {
+      localStorage.clear();
+    }
+  }, [regSuccess]);
+
   const state = location.state as { message?: string } | null;
   const [successMsg, setSuccessMsg] = useState<string>(
     regSuccess
@@ -28,8 +37,8 @@ const Login: React.FC = () => {
       : state?.message || "",
   );
 
-  // Auth check
-  const isAuth = localStorage.getItem("isAuthenticated") === "true";
+  // Auth check — only redirect if not coming from a fresh registration
+  const isAuth = !regSuccess && localStorage.getItem("isAuthenticated") === "true";
   if (isAuth) return <Navigate to="/dashboard" replace />;
 
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {

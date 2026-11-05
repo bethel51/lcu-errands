@@ -488,8 +488,12 @@ export const deleteAccount = catchAsync(async (req, res) => {
     const { OTP } = await import("../models/OTP.js");
     const { WithdrawalRequest } = await import("../models/WithdrawalRequest.js");
 
-    // Only delete unassigned open errands posted by this user
-    await Errand.deleteMany({ posterId: userId, status: "open", erranderId: { $exists: false } });
+    // Delete unassigned open or cancelled errands posted by this user
+    await Errand.deleteMany({
+      posterId: userId,
+      status: { $in: ["open", "cancelled"] },
+      $or: [{ erranderId: { $exists: false } }, { erranderId: null }],
+    });
     // For completed errands, simply hide them from the deleted user's view
     await Errand.updateMany(
       { $or: [{ posterId: userId }, { erranderId: userId }] },

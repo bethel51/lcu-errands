@@ -21,11 +21,20 @@ const CATEGORY_COLORS = {
   Other: { bg: "#f5f3ff", border: "#ddd6fe", text: "#7c3aed", active: "#8b5cf6" },
 };
 
+const CAMPUS_RESTAURANTS = [
+  { id: "tasty-vine", name: "Tasty Vine", emoji: "🍲", color: "#EA580C", bg: "#FFF7ED" },
+  { id: "cresta", name: "Cresta", emoji: "🍛", color: "#7C3AED", bg: "#F5F3FF" },
+  { id: "marigold", name: "Marigold", emoji: "🌻", color: "#D97706", bg: "#FFFBEB" },
+  { id: "zangabar", name: "Zangabar", emoji: "🔥", color: "#DC2626", bg: "#FEF2F2" },
+  { id: "citrus", name: "Citrus", emoji: "🍊", color: "#16A34A", bg: "#F0FDF4" },
+];
+
 const STEPS = ["Task", "Where & Pay", "Details"];
 
 const PostErrandModal = ({ isOpen, onClose, onSubmit, isProcessing }) => {
   const [step, setStep] = useState(0); // 0, 1, 2
   const [submitted, setSubmitted] = useState(false);
+  const [selectedRestaurant, setSelectedRestaurant] = useState("");
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -44,6 +53,7 @@ const PostErrandModal = ({ isOpen, onClose, onSubmit, isProcessing }) => {
     if (isOpen) {
       setStep(0);
       setSubmitted(false);
+      setSelectedRestaurant("");
       setFormData({ title: "", description: "", fee: "", location: "", category: "Meals" });
     }
   }, [isOpen]);
@@ -81,7 +91,11 @@ const PostErrandModal = ({ isOpen, onClose, onSubmit, isProcessing }) => {
     if (step === 2) {
       try {
         setSubmitted(true);
-        await onSubmit(formData);
+        await onSubmit({
+          ...formData,
+          pickupLocation: selectedRestaurant || "Campus",
+          restaurant: selectedRestaurant,
+        });
       } catch (err) {
         setSubmitted(false);
       }
@@ -210,7 +224,10 @@ const PostErrandModal = ({ isOpen, onClose, onSubmit, isProcessing }) => {
                       <button
                         key={cat}
                         type="button"
-                        onClick={() => setFormData({ ...formData, category: cat })}
+                        onClick={() => {
+                          setFormData({ ...formData, category: cat });
+                          if (cat !== "Meals") setSelectedRestaurant("");
+                        }}
                         style={{
                           padding: "12px 8px",
                           borderRadius: 14,
@@ -233,6 +250,51 @@ const PostErrandModal = ({ isOpen, onClose, onSubmit, isProcessing }) => {
                     );
                   })}
                 </div>
+
+                {/* Campus Restaurants for Meals */}
+                {formData.category === "Meals" && (
+                  <div style={{ marginTop: 14, paddingTop: 12, borderTop: "1px dashed var(--gray-200)" }}>
+                    <label style={{ display: "block", fontSize: "0.75rem", fontWeight: 800, color: "var(--gray-600)", marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.04em" }}>
+                      Pick Restaurant (Optional)
+                    </label>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(80px, 1fr))", gap: 6 }}>
+                      {CAMPUS_RESTAURANTS.map((r) => {
+                        const isSelected = selectedRestaurant === r.name;
+                        return (
+                          <button
+                            key={r.id}
+                            type="button"
+                            onClick={() => {
+                              setSelectedRestaurant(r.name);
+                              setFormData((prev) => ({
+                                ...prev,
+                                title: prev.title.trim() === "" || prev.title.startsWith("Buy Lunch") ? `Buy Lunch at ${r.name}` : prev.title,
+                              }));
+                            }}
+                            style={{
+                              padding: "8px 4px",
+                              borderRadius: 12,
+                              border: `1.5px solid ${isSelected ? r.color : "var(--gray-200)"}`,
+                              background: isSelected ? r.bg : "#FFFFFF",
+                              color: isSelected ? r.color : "var(--gray-700)",
+                              fontWeight: 800,
+                              fontSize: "0.74rem",
+                              cursor: "pointer",
+                              display: "flex",
+                              flexDirection: "column",
+                              alignItems: "center",
+                              gap: 2,
+                              transition: "all 0.15s",
+                            }}
+                          >
+                            <span style={{ fontSize: "1.1rem" }}>{r.emoji}</span>
+                            <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "100%" }}>{r.name}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
             </motion.div>
           )}

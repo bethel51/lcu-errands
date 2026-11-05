@@ -1081,7 +1081,13 @@ const Dashboard = () => {
                   className="dash-template-card"
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
-                  onClick={() => navigate("/post-errand", { state: { template: tpl } })}
+                  onClick={() => {
+                    if (tpl.category === "Meals") {
+                      navigate("/restaurants", { state: { template: tpl } });
+                    } else {
+                      navigate("/post-errand", { state: { template: tpl } });
+                    }
+                  }}
                 >
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                     <span style={{ fontSize: "1.5rem" }}>{tpl.emoji}</span>

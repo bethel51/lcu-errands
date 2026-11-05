@@ -23,6 +23,14 @@ const CATEGORY_COLORS = {
   Other: { bg: "#f5f3ff", border: "#ddd6fe", text: "#7c3aed", active: "#8b5cf6" },
 };
 
+const CAMPUS_RESTAURANTS = [
+  { id: "tasty-vine", name: "Tasty Vine", emoji: "🍲", color: "#EA580C", bg: "#FFF7ED" },
+  { id: "cresta", name: "Cresta", emoji: "🍛", color: "#7C3AED", bg: "#F5F3FF" },
+  { id: "marigold", name: "Marigold", emoji: "🌻", color: "#D97706", bg: "#FFFBEB" },
+  { id: "zangabar", name: "Zangabar", emoji: "🔥", color: "#DC2626", bg: "#FEF2F2" },
+  { id: "citrus", name: "Citrus", emoji: "🍊", color: "#16A34A", bg: "#F0FDF4" },
+];
+
 const PostErrand = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -37,6 +45,7 @@ const PostErrand = () => {
     location: template?.location || "",
     category: template?.category || "Meals",
   });
+  const [selectedRestaurant, setSelectedRestaurant] = useState(template?.restaurant || "");
   const [submitting, setSubmitting] = useState(false);
   // Hydrate user instantly from localStorage — no blank balance
   const [user, setUser] = useState(() => {
@@ -67,6 +76,20 @@ const PostErrand = () => {
     feeNum >= 100 &&
     !insufficientBalance;
 
+  const handlePickRestaurant = (restaurantName) => {
+    setSelectedRestaurant(restaurantName);
+    setFormData((prev) => ({
+      ...prev,
+      category: "Meals",
+      title: prev.title.trim() === "" || prev.title.startsWith("Buy Lunch") || prev.title.startsWith("Cafeteria Lunch")
+        ? `Buy Lunch at ${restaurantName}`
+        : prev.title,
+      description: prev.description.trim() === "" || prev.description.includes("Order food from")
+        ? `Please buy food from ${restaurantName} and deliver to my location.`
+        : prev.description,
+    }));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!isFormValid || submitting) return;
@@ -79,7 +102,7 @@ const PostErrand = () => {
         fee: feeNum,
         category: formData.category,
         dropoffLocation: formData.location.trim(),
-        pickupLocation: "Campus",
+        pickupLocation: selectedRestaurant || template?.restaurant || "Campus",
       });
 
       // Invalidate errand stream cache so it reloads with the new errand
@@ -210,6 +233,49 @@ const PostErrand = () => {
             </p>
           </div>
 
+          {/* Restaurant Badge (when selected from picker) */}
+          {template?.restaurant && (
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                padding: "12px 16px",
+                background: "#FFFFFF",
+                borderRadius: 16,
+                border: "1.5px solid #FDE68A",
+                marginBottom: 18,
+                boxShadow: "0 2px 10px rgba(0, 0, 0, 0.03)",
+              }}
+            >
+              <span style={{ fontSize: "1.3rem" }}>🍽️</span>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 800, fontSize: "0.88rem", color: "#0F172A" }}>
+                  Ordering from {template.restaurant}
+                </div>
+                <div style={{ fontSize: "0.73rem", color: "#64748B", fontWeight: 600, marginTop: 1 }}>
+                  Pre-filled with restaurant details
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => navigate("/restaurants", { state: { template } })}
+                style={{
+                  fontSize: "0.72rem",
+                  fontWeight: 800,
+                  color: "#2563EB",
+                  background: "#EFF6FF",
+                  border: "1px solid #BFDBFE",
+                  borderRadius: 10,
+                  padding: "5px 12px",
+                  cursor: "pointer",
+                }}
+              >
+                Change
+              </button>
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 18 }}>
             {/* Card 1: Task Title & Category */}
             <div
@@ -275,7 +341,10 @@ const PostErrand = () => {
                       <button
                         key={cat}
                         type="button"
-                        onClick={() => setFormData({ ...formData, category: cat })}
+                        onClick={() => {
+                          setFormData({ ...formData, category: cat });
+                          if (cat !== "Meals") setSelectedRestaurant("");
+                        }}
                         style={{
                           padding: "14px 8px",
                           borderRadius: 16,
@@ -300,6 +369,71 @@ const PostErrand = () => {
                   })}
                 </div>
               </div>
+
+              {/* Restaurant Selector for Meals Category */}
+              {formData.category === "Meals" && (
+                <div style={{ marginTop: 18, paddingTop: 16, borderTop: "1.5px dashed #E2E8F0" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                    <label
+                      style={{
+                        fontSize: "0.78rem",
+                        fontWeight: 800,
+                        color: "#475569",
+                        textTransform: "uppercase",
+                        letterSpacing: "0.05em",
+                      }}
+                    >
+                      Campus Restaurant *
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => navigate("/restaurants", { state: { template: { ...formData, restaurant: selectedRestaurant } } })}
+                      style={{
+                        background: "none",
+                        border: "none",
+                        color: "#2563EB",
+                        fontSize: "0.75rem",
+                        fontWeight: 800,
+                        cursor: "pointer",
+                        padding: 0,
+                      }}
+                    >
+                      Full Details →
+                    </button>
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(90px, 1fr))", gap: 8 }}>
+                    {CAMPUS_RESTAURANTS.map((r) => {
+                      const isSelected = selectedRestaurant === r.name;
+                      return (
+                        <button
+                          key={r.id}
+                          type="button"
+                          onClick={() => handlePickRestaurant(r.name)}
+                          style={{
+                            padding: "10px 6px",
+                            borderRadius: 14,
+                            border: `1.5px solid ${isSelected ? r.color : "#E2E8F0"}`,
+                            background: isSelected ? r.bg : "#FFFFFF",
+                            color: isSelected ? r.color : "#334155",
+                            fontWeight: 800,
+                            fontSize: "0.78rem",
+                            cursor: "pointer",
+                            display: "flex",
+                            flexDirection: "column",
+                            alignItems: "center",
+                            gap: 4,
+                            transition: "all 0.15s ease",
+                            boxShadow: isSelected ? `0 4px 12px ${r.color}25` : "none",
+                          }}
+                        >
+                          <span style={{ fontSize: "1.25rem" }}>{r.emoji}</span>
+                          <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "100%" }}>{r.name}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Card 2: Drop-off Location & Reward */}

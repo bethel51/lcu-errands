@@ -27,6 +27,7 @@ export const PageImports = {
   TopUp: () => import("./pages/TopUp"),
   Withdraw: () => import("./pages/Withdraw"),
   PostErrand: () => import("./pages/PostErrand"),
+  RestaurantPicker: () => import("./pages/RestaurantPicker"),
 };
 
 // Lazy load pages for performance
@@ -41,6 +42,7 @@ const ErrandStream = lazy(PageImports.ErrandStream);
 const TopUp = lazy(PageImports.TopUp);
 const Withdraw = lazy(PageImports.Withdraw);
 const PostErrand = lazy(PageImports.PostErrand);
+const RestaurantPicker = lazy(PageImports.RestaurantPicker);
 
 const PageLoader = () => (
   <div style={{
@@ -65,7 +67,7 @@ const PageLoader = () => (
 );
 
 // Pages where Navbar and BottomNav should be hidden for full-screen view
-const HIDE_NAV_PATHS = ["/login", "/register", "/forgot-password", "/post-errand", "/top-up", "/withdraw"];
+const HIDE_NAV_PATHS = ["/login", "/register", "/forgot-password", "/post-errand", "/top-up", "/withdraw", "/restaurants"];
 
 const AppLayout = () => {
   const location = useLocation();
@@ -166,6 +168,14 @@ const AppLayout = () => {
             element={
               <ProtectedRoute>
                 <PostErrand />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/restaurants"
+            element={
+              <ProtectedRoute>
+                <RestaurantPicker />
               </ProtectedRoute>
             }
           />

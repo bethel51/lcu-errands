@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import { X, MapPin, Banknote, Wallet, AlertCircle, ShieldCheck } from "lucide-react";
 import api from "../api";
@@ -25,14 +25,17 @@ const CATEGORY_COLORS = {
 
 const PostErrand = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { showToast } = useToast();
 
+  const template = location.state?.template;
+
   const [formData, setFormData] = useState({
-    title: "",
-    description: "",
-    fee: "",
-    location: "",
-    category: "Meals",
+    title: template?.title || "",
+    description: template?.description || "",
+    fee: template?.fee ? String(template.fee) : "",
+    location: template?.location || "",
+    category: template?.category || "Meals",
   });
   const [submitting, setSubmitting] = useState(false);
   // Hydrate user instantly from localStorage — no blank balance

@@ -566,6 +566,10 @@ const Signup: React.FC = () => {
           </div>
         )}
       </motion.div>
+
+      <p style={{ marginTop: 18, textAlign: "center", fontSize: "0.76rem", color: "var(--gray-400)", fontWeight: 500, letterSpacing: "0.02em" }}>
+        Developed by <span style={{ color: "var(--gray-600)", fontWeight: 600 }}>Ifeanyichukwu Bethel</span>
+      </p>
     </div>
   );
 };

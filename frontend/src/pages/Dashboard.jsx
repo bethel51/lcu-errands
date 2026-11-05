@@ -16,6 +16,16 @@ import {
   Users,
   CheckCircle,
   Activity,
+  TrendingUp,
+  Clock,
+  ShieldCheck,
+  PackageCheck,
+  Sparkles,
+  Plus,
+  RotateCcw,
+  AlertCircle,
+  Award,
+  ChevronRight,
 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import api from "../api";
@@ -60,6 +70,57 @@ const CATEGORY_STYLES = {
   Gates: { backgroundColor: "var(--gray-50)", color: "var(--gray-700)", border: "1px solid var(--gray-200)" },
   Other: { backgroundColor: "var(--gray-50)", color: "var(--gray-600)", border: "1px solid var(--gray-200)" },
 };
+
+const SENDER_TEMPLATES = [
+  {
+    id: "cafeteria",
+    title: "Cafeteria Lunch Delivery",
+    category: "Meals",
+    emoji: "🍽️",
+    badge: "Hot",
+    location: "Campus Cafeteria",
+    fee: 500,
+    description: "Please buy lunch at the campus cafeteria and deliver to my hostel/hall.",
+    color: "#EA580C",
+    bg: "#FFF7ED",
+  },
+  {
+    id: "supermarket",
+    title: "Supermarket Snacks & Drinks",
+    category: "Shopping",
+    emoji: "🛒",
+    badge: "Quick",
+    location: "Campus Supermarket",
+    fee: 600,
+    description: "Pickup drinks, water or snacks from the supermarket.",
+    color: "#DB2777",
+    bg: "#FDF2F8",
+  },
+  {
+    id: "gate_pickup",
+    title: "Main Gate Package Pickup",
+    category: "Gates",
+    emoji: "📦",
+    badge: "Essential",
+    location: "Lead City Main Gate",
+    fee: 700,
+    description: "Pickup delivery package / dispatch rider parcel waiting at the main gate.",
+    color: "#2563EB",
+    bg: "#EFF6FF",
+  },
+  {
+    id: "academic",
+    title: "Print & Bind Lecture Notes",
+    category: "Academic",
+    emoji: "📚",
+    badge: "Study",
+    location: "Business Center / Library",
+    fee: 500,
+    description: "Print and staple lecture handouts or project pages from business center.",
+    color: "#16A34A",
+    bg: "#F0FDF4",
+  },
+];
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -183,6 +244,38 @@ const Dashboard = () => {
       return "";
     }
   })();
+
+  // ── Role-Specific Computed Stats ──
+  const dashStats = useMemo(() => {
+    if (userRole === "sender") {
+      // Sender stats: from history (activeRequests = non-completed from /errands/history)
+      const totalPosted = errands.filter(e => e.posterId === cachedUserId).length + activeRequests.length;
+      const inProgress = activeRequests.filter(e => ["assigned", "accepted", "in_progress"].includes(e.status)).length;
+      const awaitingConfirm = activeRequests.filter(e => ["pending_confirmation", "pending_sender_confirmation"].includes(e.status)).length;
+      const escrowHeld = activeRequests.reduce((sum, e) => {
+        if (!["cancelled", "completed", "confirmed_completed"].includes(e.status)) return sum + (e.fee || 0);
+        return sum;
+      }, 0);
+      return { totalPosted, inProgress, awaitingConfirm, escrowHeld };
+    } else {
+      // Messenger stats
+      const runsCompleted = transactions.filter(t =>
+        t.type === "errand_earning" || t.type === "credit" || t.description?.toLowerCase().includes("errand")
+      ).length;
+      const totalEarned = transactions
+        .filter(t => t.type === "errand_earning" || t.type === "credit" || (t.amount > 0 && t.description?.toLowerCase().includes("errand")))
+        .reduce((sum, t) => sum + (t.amount || 0), 0);
+      const pendingPayouts = withdrawals.filter(w => w.status === "pending").reduce((sum, w) => sum + (w.amount || 0), 0);
+      return {
+        runsCompleted,
+        totalEarned,
+        rating: user?.rating || 0,
+        ratingCount: user?.ratingCount || 0,
+        isVerified: user?.isVerified || false,
+        pendingPayouts,
+      };
+    }
+  }, [userRole, errands, activeRequests, transactions, withdrawals, cachedUserId, user]);
 
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
   const [selectedErrandId, setSelectedErrandId] = useState(null);
@@ -727,116 +820,375 @@ const Dashboard = () => {
           </div>
         </motion.div>
 
-        {/* ── Wallet & Payouts Card ── */}
-        <motion.div
-          className="card dash-wallet-card"
-          variants={itemVariants}
-        >
-          {/* Left Column: Balance & Action */}
-          <div style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", gap: 16 }}>
-            <div>
-              <span style={{ fontSize: "0.8rem", textTransform: "uppercase", letterSpacing: "0.1em", opacity: 0.8, fontWeight: 700 }}>
-                LCU Errand Wallet
-              </span>
-              <div className="dash-wallet-balance">
-                <Wallet size={32} /> ₦{user?.balance?.toLocaleString() || "0"}
-              </div>
-            </div>
-            <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-              <button
-                className="btn"
-                onClick={() => navigate("/top-up")}
-                style={{
-                  background: "#ffffff",
-                  color: "#1e4db7",
-                  fontWeight: 800,
-                  borderRadius: 12,
-                  padding: "10px 18px",
-                  border: "none",
-                  cursor: "pointer",
-                  boxShadow: "0 4px 12px rgba(255,255,255,0.15)",
-                }}
-              >
-                Top Up Funds
-              </button>
-              <button
-                className="btn"
-                onClick={() => navigate("/withdraw")}
-                style={{
-                  background: "rgba(255, 255, 255, 0.15)",
-                  color: "#ffffff",
-                  fontWeight: 800,
-                  borderRadius: 12,
-                  padding: "10px 18px",
-                  border: "1px solid rgba(255, 255, 255, 0.3)",
-                  cursor: "pointer",
-                  transition: "all 0.2s",
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = "rgba(255, 255, 255, 0.25)";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = "rgba(255, 255, 255, 0.15)";
-                }}
-              >
-                Withdraw Funds
-              </button>
-            </div>
-          </div>
-
-          {/* Right Column: Explainer / Recent Request */}
-          <div className="dash-wallet-right">
-            <h4 style={{ fontSize: "0.85rem", fontWeight: 800, margin: 0, textTransform: "uppercase", letterSpacing: "0.05em", color: "#60a5fa" }}>
-              Secure Payment System
-            </h4>
-            <ul style={{ margin: 0, paddingLeft: 18, fontSize: "0.82rem", opacity: 0.9, display: "flex", flexDirection: "column", gap: 6 }}>
-              <li><strong>Escrow Protection:</strong> Senders pay in advance. Funds are held securely in escrow.</li>
-              <li><strong>Delivery Release:</strong> When the sender confirms delivery, funds release instantly to the messenger's LCU Wallet.</li>
-              <li><strong>Direct Cash Out:</strong> Withdraw from your wallet balance to your bank account anytime.</li>
-            </ul>
-
-            {/* Pending withdrawal notice */}
-            {withdrawals.filter(w => w.status === "pending").length > 0 && (
-              <div style={{ background: "rgba(245, 158, 11, 0.15)", border: "1px solid rgba(245, 158, 11, 0.3)", borderRadius: 12, padding: "8px 12px", display: "flex", alignItems: "center", gap: 8, marginTop: 8 }}>
-                <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#f59e0b", display: "inline-block" }} />
-                <span style={{ fontSize: "0.78rem", color: "#fef3c7", fontWeight: 700 }}>
-                  Pending payout: ₦{withdrawals.find(w => w.status === "pending")?.amount?.toLocaleString()} (Processing)
+        {/* ── Wallet & Payouts Card (SENDER VERSION) ── */}
+        {userRole === "sender" && (
+          <motion.div
+            className="card dash-wallet-card"
+            variants={itemVariants}
+          >
+            {/* Left Column: Balance & Action */}
+            <div style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", gap: 16 }}>
+              <div>
+                <span style={{ fontSize: "0.8rem", textTransform: "uppercase", letterSpacing: "0.1em", opacity: 0.8, fontWeight: 700 }}>
+                  Sender Wallet
                 </span>
+                <div className="dash-wallet-balance">
+                  <Wallet size={32} /> ₦{user?.balance?.toLocaleString() || "0"}
+                </div>
               </div>
-            )}
-          </div>
+              <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+                <button
+                  className="btn"
+                  onClick={() => navigate("/top-up")}
+                  style={{
+                    background: "#ffffff",
+                    color: "#1e4db7",
+                    fontWeight: 800,
+                    borderRadius: 12,
+                    padding: "10px 18px",
+                    border: "none",
+                    cursor: "pointer",
+                    boxShadow: "0 4px 12px rgba(255,255,255,0.15)",
+                  }}
+                >
+                  <Plus size={15} style={{ marginRight: 4, verticalAlign: "middle" }} />
+                  Top Up Wallet
+                </button>
+                <button
+                  className="btn"
+                  onClick={() => navigate("/withdraw")}
+                  style={{
+                    background: "rgba(255, 255, 255, 0.15)",
+                    color: "#ffffff",
+                    fontWeight: 800,
+                    borderRadius: 12,
+                    padding: "10px 18px",
+                    border: "1px solid rgba(255, 255, 255, 0.3)",
+                    cursor: "pointer",
+                    transition: "all 0.2s",
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(255, 255, 255, 0.25)"; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(255, 255, 255, 0.15)"; }}
+                >
+                  Withdraw
+                </button>
+              </div>
+            </div>
+
+            {/* Right Column: Sender-Specific Explainer */}
+            <div className="dash-wallet-right">
+              <h4 style={{ fontSize: "0.85rem", fontWeight: 800, margin: 0, textTransform: "uppercase", letterSpacing: "0.05em", color: "#60a5fa" }}>
+                <ShieldCheck size={14} style={{ marginRight: 4, verticalAlign: "middle" }} />
+                Escrow-Protected
+              </h4>
+              <ul style={{ margin: 0, paddingLeft: 18, fontSize: "0.82rem", opacity: 0.9, display: "flex", flexDirection: "column", gap: 6 }}>
+                <li><strong>Post & Pay:</strong> Your fee is held in safe escrow until delivery.</li>
+                <li><strong>You Confirm:</strong> Funds only release when you approve the delivery.</li>
+                <li><strong>100% Safe:</strong> If undelivered, your money stays in your wallet.</li>
+              </ul>
+              {dashStats.escrowHeld > 0 && (
+                <div style={{ background: "rgba(59, 130, 246, 0.15)", border: "1px solid rgba(59, 130, 246, 0.3)", borderRadius: 12, padding: "8px 12px", display: "flex", alignItems: "center", gap: 8, marginTop: 4 }}>
+                  <Clock size={14} color="#93C5FD" />
+                  <span style={{ fontSize: "0.78rem", color: "#BFDBFE", fontWeight: 700 }}>
+                    ₦{dashStats.escrowHeld.toLocaleString()} held in escrow
+                  </span>
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+
+        {/* ── Wallet & Payouts Card (MESSENGER VERSION) ── */}
+        {userRole === "messenger" && (
+          <motion.div
+            className="card dash-wallet-card"
+            variants={itemVariants}
+          >
+            {/* Left Column: Balance & Action */}
+            <div style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", gap: 16 }}>
+              <div>
+                <span style={{ fontSize: "0.8rem", textTransform: "uppercase", letterSpacing: "0.1em", opacity: 0.8, fontWeight: 700 }}>
+                  Earnings Wallet
+                </span>
+                <div className="dash-wallet-balance">
+                  <Wallet size={32} /> ₦{user?.balance?.toLocaleString() || "0"}
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+                <button
+                  className="btn"
+                  onClick={() => navigate("/withdraw")}
+                  style={{
+                    background: "#ffffff",
+                    color: "#059669",
+                    fontWeight: 800,
+                    borderRadius: 12,
+                    padding: "10px 18px",
+                    border: "none",
+                    cursor: "pointer",
+                    boxShadow: "0 4px 12px rgba(255,255,255,0.15)",
+                  }}
+                >
+                  <ArrowRight size={15} style={{ marginRight: 4, verticalAlign: "middle" }} />
+                  Withdraw to Bank
+                </button>
+                <button
+                  className="btn"
+                  onClick={() => navigate("/top-up")}
+                  style={{
+                    background: "rgba(255, 255, 255, 0.15)",
+                    color: "#ffffff",
+                    fontWeight: 800,
+                    borderRadius: 12,
+                    padding: "10px 18px",
+                    border: "1px solid rgba(255, 255, 255, 0.3)",
+                    cursor: "pointer",
+                    transition: "all 0.2s",
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(255, 255, 255, 0.25)"; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(255, 255, 255, 0.15)"; }}
+                >
+                  Top Up
+                </button>
+              </div>
+            </div>
+
+            {/* Right Column: Messenger Earnings Summary */}
+            <div className="dash-wallet-right">
+              <h4 style={{ fontSize: "0.85rem", fontWeight: 800, margin: 0, textTransform: "uppercase", letterSpacing: "0.05em", color: "#34D399" }}>
+                <TrendingUp size={14} style={{ marginRight: 4, verticalAlign: "middle" }} />
+                Your Earnings
+              </h4>
+              <ul style={{ margin: 0, paddingLeft: 18, fontSize: "0.82rem", opacity: 0.9, display: "flex", flexDirection: "column", gap: 6 }}>
+                <li><strong>Accept & Run:</strong> Pick up open errands and earn per delivery.</li>
+                <li><strong>Instant Payout:</strong> Funds credit your wallet once the sender confirms.</li>
+                <li><strong>Cash Out:</strong> Withdraw earnings to your bank account anytime.</li>
+              </ul>
+              {dashStats.pendingPayouts > 0 && (
+                <div style={{ background: "rgba(245, 158, 11, 0.15)", border: "1px solid rgba(245, 158, 11, 0.3)", borderRadius: 12, padding: "8px 12px", display: "flex", alignItems: "center", gap: 8, marginTop: 4 }}>
+                  <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#f59e0b", display: "inline-block" }} />
+                  <span style={{ fontSize: "0.78rem", color: "#fef3c7", fontWeight: 700 }}>
+                    Pending payout: ₦{dashStats.pendingPayouts.toLocaleString()} (Processing)
+                  </span>
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+
+        {/* ── Role-Specific Stats Bar ── */}
+        <motion.div variants={itemVariants}>
+          {userRole === "sender" ? (
+            <div className="dash-stats-grid">
+              <div className="dash-stat-card">
+                <div className="dash-stat-icon-wrap" style={{ background: "#EFF6FF" }}>
+                  <Send size={20} color="#2563EB" />
+                </div>
+                <div>
+                  <div className="dash-stat-val">{dashStats.totalPosted}</div>
+                  <div className="dash-stat-lbl">Posted</div>
+                </div>
+              </div>
+              <div className="dash-stat-card">
+                <div className="dash-stat-icon-wrap" style={{ background: "#FEF3C7" }}>
+                  <Clock size={20} color="#D97706" />
+                </div>
+                <div>
+                  <div className="dash-stat-val">{dashStats.inProgress}</div>
+                  <div className="dash-stat-lbl">In Transit</div>
+                </div>
+              </div>
+              <div className="dash-stat-card">
+                <div className="dash-stat-icon-wrap" style={{ background: "#FEE2E2" }}>
+                  <AlertCircle size={20} color="#DC2626" />
+                </div>
+                <div>
+                  <div className="dash-stat-val">{dashStats.awaitingConfirm}</div>
+                  <div className="dash-stat-lbl">Awaiting You</div>
+                </div>
+              </div>
+              <div className="dash-stat-card">
+                <div className="dash-stat-icon-wrap" style={{ background: "#F0FDF4" }}>
+                  <ShieldCheck size={20} color="#16A34A" />
+                </div>
+                <div>
+                  <div className="dash-stat-val">₦{dashStats.escrowHeld.toLocaleString()}</div>
+                  <div className="dash-stat-lbl">In Escrow</div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="dash-stats-grid">
+              <div className="dash-stat-card">
+                <div className="dash-stat-icon-wrap" style={{ background: "#ECFDF5" }}>
+                  <PackageCheck size={20} color="#059669" />
+                </div>
+                <div>
+                  <div className="dash-stat-val">{dashStats.runsCompleted}</div>
+                  <div className="dash-stat-lbl">Runs Done</div>
+                </div>
+              </div>
+              <div className="dash-stat-card">
+                <div className="dash-stat-icon-wrap" style={{ background: "#EFF6FF" }}>
+                  <TrendingUp size={20} color="#2563EB" />
+                </div>
+                <div>
+                  <div className="dash-stat-val">₦{dashStats.totalEarned.toLocaleString()}</div>
+                  <div className="dash-stat-lbl">Earned</div>
+                </div>
+              </div>
+              <div className="dash-stat-card">
+                <div className="dash-stat-icon-wrap" style={{ background: "#FFFBEB" }}>
+                  <Star size={20} color="#D97706" />
+                </div>
+                <div>
+                  <div className="dash-stat-val">{dashStats.rating > 0 ? dashStats.rating.toFixed(1) : "—"}</div>
+                  <div className="dash-stat-lbl">{dashStats.ratingCount > 0 ? `${dashStats.ratingCount} Review${dashStats.ratingCount > 1 ? "s" : ""}` : "Rating"}</div>
+                </div>
+              </div>
+              <div className="dash-stat-card">
+                <div className="dash-stat-icon-wrap" style={{ background: dashStats.isVerified ? "#ECFDF5" : "#FEF2F2" }}>
+                  {dashStats.isVerified
+                    ? <Award size={20} color="#059669" />
+                    : <AlertCircle size={20} color="#DC2626" />
+                  }
+                </div>
+                <div>
+                  <div className="dash-stat-val" style={{ fontSize: "0.88rem" }}>{dashStats.isVerified ? "Verified" : "Unverified"}</div>
+                  <div className="dash-stat-lbl">{dashStats.isVerified ? "Trusted Runner" : "Verify ID"}</div>
+                </div>
+              </div>
+            </div>
+          )}
         </motion.div>
 
-        {/* ── Search ── */}
-        <motion.div className="search-bar" variants={itemVariants}>
-          <div className="search-input-wrapper">
-            <Search size={18} />
-            <input
-              id="errand-search"
-              placeholder="Search errands, meals, etc…"
-              className="input-field"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          </div>
-        </motion.div>
+        {/* ── Sender Quick Errand Templates ── */}
+        {userRole === "sender" && activeRequests.length === 0 && (
+          <motion.div variants={itemVariants} style={{ marginBottom: 8 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+              <h2 style={{ fontSize: "1rem", fontWeight: 900, color: "var(--gray-900)", margin: 0, display: "flex", alignItems: "center", gap: 6 }}>
+                <Sparkles size={18} color="#2563EB" />
+                Quick Errands
+              </h2>
+              <span style={{ fontSize: "0.73rem", color: "var(--gray-400)", fontWeight: 700 }}>
+                Tap to post instantly
+              </span>
+            </div>
+            <div className="dash-template-grid">
+              {SENDER_TEMPLATES.map((tpl) => (
+                <motion.div
+                  key={tpl.id}
+                  className="dash-template-card"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => navigate("/post-errand", { state: { template: tpl } })}
+                >
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <span style={{ fontSize: "1.5rem" }}>{tpl.emoji}</span>
+                    <span style={{
+                      fontSize: "0.68rem", fontWeight: 800, padding: "3px 10px", borderRadius: 20,
+                      background: tpl.bg, color: tpl.color, border: `1px solid ${tpl.color}20`,
+                      textTransform: "uppercase", letterSpacing: "0.04em",
+                    }}>
+                      {tpl.badge}
+                    </span>
+                  </div>
+                  <div>
+                    <div style={{ fontWeight: 800, fontSize: "0.88rem", color: "#0F172A", marginBottom: 4 }}>
+                      {tpl.title}
+                    </div>
+                    <div style={{ fontSize: "0.76rem", color: "#64748B", fontWeight: 600 }}>
+                      {tpl.location} · from ₦{tpl.fee.toLocaleString()}
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <span style={{ fontSize: "0.72rem", color: "#94A3B8", fontWeight: 600 }}>
+                      Pre-filled for you
+                    </span>
+                    <ChevronRight size={16} color="#CBD5E1" />
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          </motion.div>
+        )}
 
-        {/* ── Category Filters ── */}
-        <motion.div className="filter-chips" variants={itemVariants}>
-          {CATEGORIES.map((cat) => (
-            <motion.button
-              key={cat}
-              id={`filter-${cat.toLowerCase()}`}
-              onClick={() => setActiveCategory(cat)}
-              className={`chip ${activeCategory === cat ? "active" : ""}`}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              {CATEGORY_EMOJI[cat] && <span>{CATEGORY_EMOJI[cat]}</span>}
-              {cat}
-            </motion.button>
-          ))}
-        </motion.div>
+        {/* ── Messenger: Active Run Banner ── */}
+        {userRole === "messenger" && activeRequests.filter(e => ["in_progress"].includes(e.status)).length > 0 && (
+          <motion.div variants={itemVariants}>
+            {activeRequests.filter(e => e.status === "in_progress").map(run => (
+              <div key={run.id} className="dash-active-run-banner">
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: "0.72rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", opacity: 0.85, marginBottom: 4 }}>
+                    🏃 Active Run
+                  </div>
+                  <div style={{ fontWeight: 900, fontSize: "1.05rem", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                    {run.title}
+                  </div>
+                  <div style={{ fontSize: "0.78rem", opacity: 0.85, marginTop: 2 }}>
+                    ₦{run.fee?.toLocaleString()} · {run.status.replace(/_/g, " ")}
+                  </div>
+                </div>
+                <button
+                  onClick={() => handleRequestCompletion(run.id)}
+                  style={{
+                    background: "#FFFFFF",
+                    color: "#059669",
+                    fontWeight: 900,
+                    fontSize: "0.85rem",
+                    border: "none",
+                    borderRadius: 14,
+                    padding: "10px 20px",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6,
+                    boxShadow: "0 4px 14px rgba(0,0,0,0.1)",
+                    whiteSpace: "nowrap",
+                    flexShrink: 0,
+                  }}
+                >
+                  <CheckCircle size={16} /> Mark Delivered
+                </button>
+              </div>
+            ))}
+          </motion.div>
+        )}
+
+        {/* ── Search (Messenger only — they browse the errand feed) ── */}
+        {userRole === "messenger" && (
+          <motion.div className="search-bar" variants={itemVariants}>
+            <div className="search-input-wrapper">
+              <Search size={18} />
+              <input
+                id="errand-search"
+                placeholder="Search errands, meals, etc…"
+                className="input-field"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
+          </motion.div>
+        )}
+
+        {/* ── Category Filters (Messenger only) ── */}
+        {userRole === "messenger" && (
+          <motion.div className="filter-chips" variants={itemVariants}>
+            {CATEGORIES.map((cat) => (
+              <motion.button
+                key={cat}
+                id={`filter-${cat.toLowerCase()}`}
+                onClick={() => setActiveCategory(cat)}
+                className={`chip ${activeCategory === cat ? "active" : ""}`}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                {CATEGORY_EMOJI[cat] && <span>{CATEGORY_EMOJI[cat]}</span>}
+                {cat}
+              </motion.button>
+            ))}
+          </motion.div>
+        )}
 
         {/* ── Action Required Banner (sender pending confirmation) ── */}
         {userRole === "sender" && activeRequests.some(e => ["pending_confirmation", "pending_sender_confirmation"].includes(e.status)) && (
@@ -1163,15 +1515,8 @@ const Dashboard = () => {
                           >
                             {CATEGORY_EMOJI[errand.category] || "✨"} {errand.category}
                           </span>
-                          <span
-                            style={{
-                              fontWeight: 900,
-                              fontSize: "1.15rem",
-                              color: "var(--blue-700)",
-                              letterSpacing: "-0.5px",
-                            }}
-                          >
-                            ₦{errand.fee?.toLocaleString()}
+                          <span className="errand-fee-badge messenger">
+                            💰 Earn ₦{errand.fee?.toLocaleString()}
                           </span>
                         </div>
 

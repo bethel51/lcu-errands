@@ -315,6 +315,9 @@ const Home = () => {
             © 2026 LCU Errands. LeadCity University, Ibadan. All rights
             reserved.
           </p>
+          <p style={{ marginTop: 6, fontSize: "0.8rem", color: "var(--gray-400)", fontWeight: 500 }}>
+            Developed by <span style={{ color: "var(--gray-600)", fontWeight: 600 }}>Ifeanyichukwu Bethel</span>
+          </p>
         </div>
       </footer>
     </>

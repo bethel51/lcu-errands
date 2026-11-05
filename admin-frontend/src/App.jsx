@@ -273,16 +273,16 @@ const AdminPortal = () => {
         setConfirmDialog(null);
         setBroadcastLoading(true);
         try {
-          await adminApi.post("/management/broadcast", {
+          const res = await adminApi.post("/management/broadcast", {
             subject: broadcastSubject,
             message: broadcastMessage,
           });
-          showAdminToast("Broadcast sent successfully!");
+          showAdminToast(res.data?.message || "Broadcast sent successfully!");
           setBroadcastSubject("");
           setBroadcastMessage("");
           fetchData();
         } catch (_err) {
-          showAdminToast("Failed to send broadcast", "error");
+          showAdminToast(_err.response?.data?.message || "Failed to send broadcast", "error");
         } finally {
           setBroadcastLoading(false);
         }

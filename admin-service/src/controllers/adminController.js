@@ -638,20 +638,64 @@ export const getUserWithdrawalEvidence = catchAsync(async (req, res) => {
 
 export const sendBroadcast = catchAsync(async (req, res) => {
   const { subject, message } = req.body;
-  const users = await User.find({ isSuspended: false }).select("email name");
-  res.json({ message: `Broadcast initiated for ${users.length} users` });
+  if (!subject || !message) {
+    return res.status(400).json({ message: "Subject and message are required" });
+  }
+
+  const users = await User.find({ isSuspended: false }).select("email name _id");
+  if (!users || users.length === 0) {
+    return res.status(404).json({ message: "No active users found to broadcast to." });
+  }
+
+  // 1. Deliver in-app notification to all users so they receive it on their dashboard
+  const notifications = users.map((u) => ({
+    userId: u._id,
+    title: subject,
+    message: message,
+    type: "account_update",
+    isRead: false,
+    createdAt: new Date(),
+  }));
+
+  try {
+    await Notification.insertMany(notifications);
+  } catch (err) {
+    console.error("Failed to insert in-app notifications:", err);
+  }
+
+  // 2. Dispatch emails in background with delivery tracking
+  let emailSuccess = 0;
+  let emailFailed = 0;
 
   (async () => {
     for (const user of users) {
       try {
-        await sendBroadcastEmail(user.email, user.name, subject, message);
-        await new Promise((r) => setTimeout(r, 500));
+        const ok = await sendBroadcastEmail(user.email, user.name, subject, message);
+        if (ok) {
+          emailSuccess++;
+        } else {
+          emailFailed++;
+        }
+        await new Promise((r) => setTimeout(r, 200));
       } catch (err) {
-        console.error(`Broadcast error for ${user.email}`);
+        emailFailed++;
+        console.error(`Broadcast error for ${user.email}:`, err.message || err);
       }
     }
-    await Log.create({ adminId: req.admin.id, adminName: req.admin.name || "Admin", action: "BROADCAST_SENT", targetName: "Global", details: `Mass campaign "${subject}" complete.` });
+
+    await Log.create({
+      adminId: req.admin?.id,
+      adminName: req.admin?.name || "Admin",
+      action: "BROADCAST_SENT",
+      targetName: "Global",
+      details: `Mass campaign "${subject}" complete. In-app: ${notifications.length}, Emails sent: ${emailSuccess}, Emails failed: ${emailFailed}.`,
+    });
   })();
+
+  res.json({
+    message: `Broadcast delivered in-app to ${users.length} users. Outbound email dispatch is running in background.`,
+    userCount: users.length,
+  });
 });
 
 export const getAllFootprints = catchAsync(async (req, res) => {

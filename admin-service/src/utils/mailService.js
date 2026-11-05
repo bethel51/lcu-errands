@@ -80,6 +80,9 @@ export const sendEmail = async (to, subject, text, html) => {
       } else {
         const errorText = await response.text();
         console.error("❌ Brevo API ERROR: Failed to send email", response.status, errorText);
+        if (response.status === 401 && errorText.includes("unrecognised IP address")) {
+          console.error("⚠️ [Brevo IP Lock] Your current IP is not authorized in Brevo. Please add your IP or disable IP restrictions at: https://app.brevo.com/security/authorised_ips");
+        }
         console.log("Falling back...");
       }
     } catch (error) {

@@ -418,7 +418,7 @@ const Signup: React.FC = () => {
         ) : (
           <div>
             {/* Monospace OTP Grid */}
-            <div style={{ display: "flex", gap: 8, justifyContent: "center", marginBottom: 24 }}>
+            <div className="clean-auth-otp-row">
               {otp.map((digit, i) => (
                 <motion.input
                   key={i}
@@ -429,22 +429,13 @@ const Signup: React.FC = () => {
                   autoComplete={i === 0 ? "one-time-code" : "off"}
                   maxLength={6}
                   value={digit}
+                  className="clean-auth-otp-input"
                   whileFocus={{ scale: 1.05, borderColor: "var(--blue-500)", boxShadow: "0 0 0 3px rgba(37,99,235,0.15)" }}
                   onChange={(e) => handleOtpChange(e.target.value, i)}
                   onKeyDown={(e) => handleOtpKeyDown(e, i)}
                   style={{
-                    width: 48,
-                    height: 56,
-                    textAlign: "center",
-                    fontSize: "1.5rem",
-                    fontWeight: 700,
-                    borderRadius: "var(--radius-md)",
                     border: `1.5px solid ${digit ? "var(--blue-600)" : "var(--gray-300)"}`,
-                    outline: "none",
                     background: digit ? "var(--blue-50)" : "var(--white)",
-                    color: "var(--blue-900)",
-                    fontFamily: "monospace",
-                    transition: "border-color 0.2s, background 0.2s"
                   }}
                 />
               ))}
@@ -567,9 +558,11 @@ const Signup: React.FC = () => {
         )}
       </motion.div>
 
-      <p style={{ marginTop: 18, textAlign: "center", fontSize: "0.76rem", color: "var(--gray-400)", fontWeight: 500, letterSpacing: "0.02em" }}>
-        Developed by <span style={{ color: "var(--gray-600)", fontWeight: 600 }}>Ifeanyichukwu Bethel</span>
-      </p>
+      <footer className="clean-auth-footer">
+        <p className="clean-auth-attribution">
+          Developed by <span>Ifeanyichukwu Bethel</span>
+        </p>
+      </footer>
     </div>
   );
 };

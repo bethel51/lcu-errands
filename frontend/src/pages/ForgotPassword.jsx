@@ -377,6 +377,12 @@ const ForgotPassword = () => {
           )}
         </AnimatePresence>
       </motion.div>
+
+      <footer className="clean-auth-footer">
+        <p className="clean-auth-attribution">
+          Developed by <span>Ifeanyichukwu Bethel</span>
+        </p>
+      </footer>
     </div>
   );
 };

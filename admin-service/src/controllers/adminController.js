@@ -663,52 +663,54 @@ export const sendBroadcast = catchAsync(async (req, res) => {
     console.error("Failed to insert in-app notifications:", err);
   }
 
-  // 2. Dispatch emails in concurrent batches of 5 with delivery tracking
-  let emailSuccess = 0;
-  let emailFailed = 0;
-
-  const BATCH_SIZE = 5;
-  for (let i = 0; i < users.length; i += BATCH_SIZE) {
-    const batch = users.slice(i, i + BATCH_SIZE);
-    const results = await Promise.allSettled(
-      batch.map(async (u) => {
-        try {
-          return await sendBroadcastEmail(u.email, u.name, subject, message);
-        } catch (err) {
-          console.error(`Broadcast error for ${u.email}:`, err.message || err);
-          return false;
-        }
-      })
-    );
-
-    for (const res of results) {
-      if (res.status === "fulfilled" && res.value === true) {
-        emailSuccess++;
-      } else {
-        emailFailed++;
-      }
-    }
-  }
-
-  try {
-    await Log.create({
-      adminId: req.admin?.id,
-      adminName: req.admin?.name || "Admin",
-      action: "BROADCAST_SENT",
-      targetName: "Global",
-      details: `Mass campaign "${subject}" complete. In-app: ${notifications.length}, Emails sent: ${emailSuccess}, Emails failed: ${emailFailed}.`,
-    });
-  } catch (logErr) {
-    console.error("Failed to write broadcast log:", logErr);
-  }
-
+  // Respond immediately so admin UI receives instant confirmation and never times out
   res.json({
-    message: `Campaign complete! In-app: ${notifications.length} delivered, Emails: ${emailSuccess} sent${emailFailed > 0 ? `, ${emailFailed} failed` : ""}.`,
+    success: true,
+    message: `Campaign initiated! Delivered in-app to ${users.length} user dashboards. Email dispatch is running.`,
     userCount: users.length,
     inAppCount: notifications.length,
-    emailSuccess,
-    emailFailed,
   });
+
+  // 2. Dispatch emails in concurrent batches in background with delivery tracking
+  (async () => {
+    let emailSuccess = 0;
+    let emailFailed = 0;
+
+    const BATCH_SIZE = 5;
+    for (let i = 0; i < users.length; i += BATCH_SIZE) {
+      const batch = users.slice(i, i + BATCH_SIZE);
+      const results = await Promise.allSettled(
+        batch.map(async (u) => {
+          try {
+            return await sendBroadcastEmail(u.email, u.name, subject, message);
+          } catch (err) {
+            console.error(`Broadcast error for ${u.email}:`, err.message || err);
+            return false;
+          }
+        })
+      );
+
+      for (const res of results) {
+        if (res.status === "fulfilled" && res.value === true) {
+          emailSuccess++;
+        } else {
+          emailFailed++;
+        }
+      }
+    }
+
+    try {
+      await Log.create({
+        adminId: req.admin?.id,
+        adminName: req.admin?.name || "Admin",
+        action: "BROADCAST_SENT",
+        targetName: "Global",
+        details: `Mass campaign "${subject}" complete. In-app: ${notifications.length}, Emails sent: ${emailSuccess}, Emails failed: ${emailFailed}.`,
+      });
+    } catch (logErr) {
+      console.error("Failed to write broadcast log:", logErr);
+    }
+  })();
 });
 
 export const getAllFootprints = catchAsync(async (req, res) => {

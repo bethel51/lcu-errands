@@ -57,6 +57,50 @@ app.get("/health", (req, res) => {
   res.json({ status: "operational", service: "leadcity-admin" });
 });
 
+app.get("/health/test-email", async (req, res) => {
+  try {
+    const brevoApiKey = (process.env.BREVO_API_KEY || "").trim();
+    let myIp = "unknown";
+    try {
+      const ipRes = await fetch("https://api.ipify.org?format=json");
+      const ipData = await ipRes.json();
+      myIp = ipData.ip;
+    } catch (e) {
+      myIp = e.message;
+    }
+
+    let brevoStatus = null;
+    let brevoBody = null;
+    if (brevoApiKey) {
+      const bRes = await fetch("https://api.brevo.com/v3/smtp/email", {
+        method: "POST",
+        headers: {
+          "accept": "application/json",
+          "api-key": brevoApiKey,
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          sender: { name: "LCU Errands", email: "hbet1988@gmail.com" },
+          to: [{ email: "hbet1988@gmail.com" }],
+          subject: "Diagnostic Brevo Test",
+          textContent: "Testing Brevo connectivity from Render cloud instance",
+        }),
+      });
+      brevoStatus = bRes.status;
+      brevoBody = await bRes.text();
+    }
+
+    res.json({
+      serverIp: myIp,
+      hasBrevoKey: !!brevoApiKey,
+      brevoStatus,
+      brevoBody,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.get("/health/monitor", async (req, res) => {
   if (req.headers.authorization !== `Bearer ${process.env.CRON_SECRET}`) {
     return res.status(401).json({ error: "Unauthorized" });

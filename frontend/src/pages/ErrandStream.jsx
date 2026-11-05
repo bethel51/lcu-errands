@@ -114,6 +114,14 @@ const ErrandStream = () => {
     }
   })();
 
+  const isVerified = (() => {
+    try {
+      return Boolean(JSON.parse(localStorage.getItem("user") || "{}").isVerified);
+    } catch {
+      return false;
+    }
+  })();
+
   const mapBackendToFrontend = useCallback((err) => {
     const uid = userIdRef.current;
     const posterIdStr = err.posterId?._id || err.posterId;
@@ -557,7 +565,26 @@ const ErrandStream = () => {
                         <span>Drop off: {errand.location || "Not specified"}</span>
                       </div>
 
-                      {userRole === "messenger" && !isOwner && (() => {
+                      {userRole === "messenger" && !isOwner && !isVerified && (
+                        <button
+                          onClick={() => navigate("/profile")}
+                          className="btn btn-outline btn-sm"
+                          style={{
+                            flexShrink: 0,
+                            fontSize: "0.75rem",
+                            borderColor: "var(--amber-300)",
+                            color: "var(--amber-700)",
+                            background: "var(--amber-50)",
+                            padding: "4px 10px",
+                            borderRadius: 10,
+                            fontWeight: 700,
+                          }}
+                        >
+                          Verify to Accept
+                        </button>
+                      )}
+
+                      {userRole === "messenger" && !isOwner && isVerified && (() => {
                         const isExpanded = pendingAcceptId === errand.id;
                         if (errand.hasApplied) {
                           return (

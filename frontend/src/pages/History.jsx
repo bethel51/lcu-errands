@@ -722,7 +722,7 @@ const History = () => {
                     )}
 
                     {/* ── MESSENGER ACTIONS ── */}
-                    {filterType === "accepted" && item.status === "assigned" && (
+                    {filterType === "accepted" && ["assigned", "accepted"].includes(item.status) && (
                       <motion.button
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
@@ -904,7 +904,7 @@ const History = () => {
                 )}
 
                 {/* ── Messenger: Assigned-but-not-started info banner ── */}
-                {filterType === "accepted" && item.status === "assigned" && (
+                {filterType === "accepted" && ["assigned", "accepted"].includes(item.status) && (
                   <div style={{
                     background: "var(--blue-50)",
                     border: "1px solid var(--blue-100)",

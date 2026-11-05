@@ -1050,7 +1050,7 @@ const Dashboard = () => {
                       </button>
                     )}
                     {/* Start Errand button (Messenger) */}
-                    {userRole === "messenger" && errand.status === "assigned" && (
+                    {userRole === "messenger" && ["assigned", "accepted"].includes(errand.status) && (
                       <button
                         onClick={() => handleStartErrand(errand.id)}
                         className="btn btn-primary btn-sm"
@@ -1330,6 +1330,25 @@ const Dashboard = () => {
                               </button>
                             );
                           })()}
+
+                          {userRole === "messenger" && !user?.isVerified && errand.posterId !== cachedUserId && (
+                            <button
+                              onClick={() => navigate("/profile")}
+                              className="btn btn-outline btn-sm"
+                              style={{
+                                flexShrink: 0,
+                                fontSize: "0.75rem",
+                                borderColor: "var(--amber-300)",
+                                color: "var(--amber-700)",
+                                background: "var(--amber-50)",
+                                padding: "4px 10px",
+                                borderRadius: 10,
+                                fontWeight: 700,
+                              }}
+                            >
+                              Verify to Accept
+                            </button>
+                          )}
 
                           {errand.posterId === cachedUserId && (
                             <span

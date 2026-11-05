@@ -663,26 +663,34 @@ export const sendBroadcast = catchAsync(async (req, res) => {
     console.error("Failed to insert in-app notifications:", err);
   }
 
-  // 2. Dispatch emails in background with delivery tracking
+  // 2. Dispatch emails in concurrent batches of 5 with delivery tracking
   let emailSuccess = 0;
   let emailFailed = 0;
 
-  (async () => {
-    for (const user of users) {
-      try {
-        const ok = await sendBroadcastEmail(user.email, user.name, subject, message);
-        if (ok) {
-          emailSuccess++;
-        } else {
-          emailFailed++;
+  const BATCH_SIZE = 5;
+  for (let i = 0; i < users.length; i += BATCH_SIZE) {
+    const batch = users.slice(i, i + BATCH_SIZE);
+    const results = await Promise.allSettled(
+      batch.map(async (u) => {
+        try {
+          return await sendBroadcastEmail(u.email, u.name, subject, message);
+        } catch (err) {
+          console.error(`Broadcast error for ${u.email}:`, err.message || err);
+          return false;
         }
-        await new Promise((r) => setTimeout(r, 200));
-      } catch (err) {
+      })
+    );
+
+    for (const res of results) {
+      if (res.status === "fulfilled" && res.value === true) {
+        emailSuccess++;
+      } else {
         emailFailed++;
-        console.error(`Broadcast error for ${user.email}:`, err.message || err);
       }
     }
+  }
 
+  try {
     await Log.create({
       adminId: req.admin?.id,
       adminName: req.admin?.name || "Admin",
@@ -690,11 +698,16 @@ export const sendBroadcast = catchAsync(async (req, res) => {
       targetName: "Global",
       details: `Mass campaign "${subject}" complete. In-app: ${notifications.length}, Emails sent: ${emailSuccess}, Emails failed: ${emailFailed}.`,
     });
-  })();
+  } catch (logErr) {
+    console.error("Failed to write broadcast log:", logErr);
+  }
 
   res.json({
-    message: `Broadcast delivered in-app to ${users.length} users. Outbound email dispatch is running in background.`,
+    message: `Campaign complete! In-app: ${notifications.length} delivered, Emails: ${emailSuccess} sent${emailFailed > 0 ? `, ${emailFailed} failed` : ""}.`,
     userCount: users.length,
+    inAppCount: notifications.length,
+    emailSuccess,
+    emailFailed,
   });
 });
 

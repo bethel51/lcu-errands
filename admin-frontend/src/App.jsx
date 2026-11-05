@@ -1313,7 +1313,7 @@ const AdminPortal = () => {
                   }}
                 >
                   {broadcastLoading ? (
-                    "Sending..."
+                    "Dispatching Campaign..."
                   ) : (
                     <>
                       <Send size={18} /> Dispatch Campaign
@@ -1321,6 +1321,57 @@ const AdminPortal = () => {
                   )}
                 </button>
               </form>
+
+              {/* Recent Broadcast History */}
+              {logs.filter((l) => l.action === "BROADCAST_SENT").length > 0 && (
+                <div style={{ marginTop: 32, borderTop: "1px solid #E2E8F0", paddingTop: 24 }}>
+                  <h4 style={{ fontWeight: 800, fontSize: "0.95rem", color: "#1E293B", marginBottom: 16 }}>
+                    Recent Campaign History
+                  </h4>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                    {logs
+                      .filter((l) => l.action === "BROADCAST_SENT")
+                      .slice(0, 5)
+                      .map((log) => (
+                        <div
+                          key={log._id}
+                          style={{
+                            padding: 16,
+                            borderRadius: 12,
+                            backgroundColor: "#F8FAFC",
+                            border: "1px solid #E2E8F0",
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                            flexWrap: "wrap",
+                            gap: 10,
+                          }}
+                        >
+                          <div>
+                            <div style={{ fontWeight: 700, color: "#0F172A", fontSize: "0.9rem" }}>
+                              {log.details}
+                            </div>
+                            <div style={{ fontSize: "0.78rem", color: "#64748B", marginTop: 4 }}>
+                              Sent by {log.adminName || "Admin"} • {new Date(log.createdAt).toLocaleString()}
+                            </div>
+                          </div>
+                          <span
+                            style={{
+                              padding: "4px 10px",
+                              borderRadius: 20,
+                              fontSize: "0.75rem",
+                              fontWeight: 700,
+                              backgroundColor: log.details?.includes("Emails sent: 0") ? "#FEF3C7" : "#DCFCE7",
+                              color: log.details?.includes("Emails sent: 0") ? "#92400E" : "#166534",
+                            }}
+                          >
+                            {log.details?.includes("Emails sent: 0") ? "Partially Delivered" : "Delivered"}
+                          </span>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
             </motion.div>
           )}
 

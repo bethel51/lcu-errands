@@ -47,7 +47,11 @@ transporter.verify((error) => {
 export const sendEmail = async (to, subject, text, html) => {
   const brevoApiKey = (process.env.BREVO_API_KEY || "").trim();
   const resendApiKey = (process.env.RESEND_API_KEY || "").trim();
-  const emailFrom = process.env.EMAIL_FROM || process.env.EMAIL_USER || "no-reply@leadcityerrands.com";
+  let emailFrom = (process.env.EMAIL_FROM || "").trim();
+  // Ensure valid verified sender - avoid rejected SMTP usernames or unauthenticated domains
+  if (!emailFrom || emailFrom.includes("smtp-brevo.com") || emailFrom.includes("no-reply")) {
+    emailFrom = "hbet1988@gmail.com";
+  }
   const senderName = process.env.EMAIL_SENDER_NAME || "LCU Errands";
 
   // Try Brevo API first
@@ -202,7 +206,7 @@ export const sendErrandNotification = async (
     </div>
   `;
 
-  await sendEmail(userEmail, subjects[type], messages[type], html);
+  return await sendEmail(userEmail, subjects[type], messages[type], html);
 };
 
 export const sendPasswordResetEmail = async (userEmail, resetUrl) => {
@@ -224,7 +228,7 @@ export const sendPasswordResetEmail = async (userEmail, resetUrl) => {
       </div>
     </div>
   `;
-  await sendEmail(userEmail, subject, "Password Reset Request", html);
+  return await sendEmail(userEmail, subject, "Password Reset Request", html);
 };
 
 export const sendWelcomeEmail = async (userEmail, userName) => {
@@ -253,7 +257,7 @@ export const sendWelcomeEmail = async (userEmail, userName) => {
       </div>
     </div>
   `;
-  await sendEmail(userEmail, subject, "Welcome to LCU Errands!", html);
+  return await sendEmail(userEmail, subject, "Welcome to LCU Errands!", html);
 };
 
 export const sendPayoutNotification = async (
@@ -295,7 +299,7 @@ export const sendPayoutNotification = async (
     </div>
   `;
 
-  await sendEmail(userEmail, subject, message, html);
+  return await sendEmail(userEmail, subject, message, html);
 };
 
 export const sendTopUpNotification = async (
@@ -327,7 +331,7 @@ export const sendTopUpNotification = async (
     </div>
   `;
 
-  await sendEmail(userEmail, subject, message, html);
+  return await sendEmail(userEmail, subject, message, html);
 };
 
 export const sendVerificationEmail = async (
@@ -368,7 +372,7 @@ export const sendVerificationEmail = async (
       </div>
     </div>
   `;
-  await sendEmail(userEmail, subject, message, html);
+  return await sendEmail(userEmail, subject, message, html);
 };
 
 export const sendSuspensionEmail = async (userEmail, userName, isSuspended) => {
@@ -398,7 +402,7 @@ export const sendSuspensionEmail = async (userEmail, userName, isSuspended) => {
       </div>
     </div>
   `;
-  await sendEmail(userEmail, subject, message, html);
+  return await sendEmail(userEmail, subject, message, html);
 };
 
 export const sendBroadcastEmail = async (
@@ -423,7 +427,7 @@ export const sendBroadcastEmail = async (
       </div>
     </div>
   `;
-  await sendEmail(userEmail, subject, "Official Platform Update", html);
+  return await sendEmail(userEmail, subject, "Official Platform Update", html);
 };
 
 export const sendOtpEmail = async (userEmail, userName, otp) => {
@@ -442,5 +446,5 @@ export const sendOtpEmail = async (userEmail, userName, otp) => {
       </div>
     </div>
   `;
-  await sendEmail(userEmail, subject, `Your OTP is: ${otp}`, html);
+  return await sendEmail(userEmail, subject, `Your OTP is: ${otp}`, html);
 };

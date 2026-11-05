@@ -44,7 +44,7 @@ services:
       - key: BREVO_API_KEY
         sync: false
       - key: EMAIL_FROM
-        sync: false
+        value: hbet1988@gmail.com
 
 
   # 2. Administrative Backend
@@ -64,7 +64,7 @@ services:
       - key: ADMIN_JWT_SECRET
         generateValue: true
       - key: ADMIN_FRONTEND_URL
-        value: https://leadcity-admin-portal.onrender.com
+        value: https://lcu-admin-portal.onrender.com
       - key: FRONTEND_URL
         value: https://lcu-errands-1.onrender.com
       - key: CRON_SECRET
@@ -82,7 +82,7 @@ services:
       - key: BREVO_API_KEY
         sync: false
       - key: EMAIL_FROM
-        sync: false
+        value: hbet1988@gmail.com
 
 
   # 3. Admin Portal (Static Frontend)
@@ -93,7 +93,7 @@ services:
     publishPath: dist
     envVars:
       - key: VITE_ADMIN_API_URL
-        value: https://leadcity-admin-service.onrender.com
+        value: https://lcu-admin-service.onrender.com
       - key: VITE_API_URL
         value: https://lcu-errands.onrender.com
       - key: VITE_CRON_SECRET

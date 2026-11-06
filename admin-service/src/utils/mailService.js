@@ -1,5 +1,4 @@
 import nodemailer from "nodemailer";
-import dnsPromises from "dns/promises";
 import dns from "dns";
 
 // Globally force Node.js to prefer IPv4 for Render/Production compatibility
@@ -7,42 +6,59 @@ if (dns.setDefaultResultOrder) {
   dns.setDefaultResultOrder('ipv4first');
 }
 
-const smtpPort = Number(process.env.SMTP_PORT) || 465;
-const smtpSecure = process.env.SMTP_SECURE !== undefined
-  ? process.env.SMTP_SECURE === "true"
-  : smtpPort === 465;
+// ⚠️ SMTP is disabled in production — Render's free tier blocks outbound SMTP ports (25, 465, 587).
+// All email is sent via Brevo HTTP API in production. SMTP is only used as a local dev fallback.
+const isProduction = process.env.NODE_ENV === "production";
 
-// Manually resolve IPv4 address to forcefully bypass Render's broken IPv6 routing
-const smtpHostName = process.env.SMTP_HOST || "smtp.gmail.com";
-const { address: smtpIpAddress } = await dnsPromises.lookup(smtpHostName, { family: 4 });
+let transporter = null;
 
-const transporter = nodemailer.createTransport({
-  host: smtpIpAddress,
-  port: smtpPort,
-  secure: smtpSecure,
-  family: 4, // Forces IPv4 for the socket connection
-  localAddress: "0.0.0.0", // Explicitly binds to IPv4 stack
-  tls: { servername: smtpHostName },
-  pool: true,
-  maxConnections: 5,
-  maxMessages: 100,
-  connectionTimeout: 4000,
-  greetingTimeout: 3000,
-  socketTimeout: 5000,
-  auth: {
-    user: process.env.SMTP_USER || process.env.EMAIL_USER,
-    pass: process.env.SMTP_PASS || process.env.EMAIL_PASS,
-  },
-});
+if (!isProduction) {
+  const { default: dnsPromises } = await import("dns/promises");
+  const smtpPort = Number(process.env.SMTP_PORT) || 465;
+  const smtpSecure = process.env.SMTP_SECURE !== undefined
+    ? process.env.SMTP_SECURE === "true"
+    : smtpPort === 465;
 
-// Verify SMTP config on startup
-transporter.verify((error) => {
-  if (error) {
-    console.error("⚠️ SMTP connection failed:", error.message);
-  } else {
-    console.log("✅ SMTP server is ready to send emails.");
+  // Manually resolve IPv4 address to forcefully bypass broken IPv6 routing
+  const smtpHostName = process.env.SMTP_HOST || "smtp.gmail.com";
+  let smtpIpAddress = smtpHostName;
+  try {
+    const resolved = await dnsPromises.lookup(smtpHostName, { family: 4 });
+    smtpIpAddress = resolved.address;
+  } catch (err) {
+    console.warn("⚠️ DNS lookup for SMTP host failed:", err.message);
   }
-});
+
+  transporter = nodemailer.createTransport({
+    host: smtpIpAddress,
+    port: smtpPort,
+    secure: smtpSecure,
+    family: 4, // Forces IPv4 for the socket connection
+    localAddress: "0.0.0.0", // Explicitly binds to IPv4 stack
+    tls: { servername: smtpHostName },
+    pool: true,
+    maxConnections: 5,
+    maxMessages: 100,
+    connectionTimeout: 4000,
+    greetingTimeout: 3000,
+    socketTimeout: 5000,
+    auth: {
+      user: process.env.SMTP_USER || process.env.EMAIL_USER,
+      pass: process.env.SMTP_PASS || process.env.EMAIL_PASS,
+    },
+  });
+
+  // Verify SMTP config on startup (local dev only)
+  transporter.verify((error) => {
+    if (error) {
+      console.error("⚠️ SMTP connection failed:", error.message);
+    } else {
+      console.log("✅ SMTP server is ready to send emails.");
+    }
+  });
+} else {
+  console.log("ℹ️ Production mode: SMTP transporter disabled. Using Brevo HTTP API for all email delivery.");
+}
 
 export const sendEmail = async (to, subject, text, html) => {
   const brevoApiKey = (process.env.BREVO_API_KEY || "").trim();
@@ -129,12 +145,22 @@ export const sendEmail = async (to, subject, text, html) => {
     }
   }
 
-  // Fallback to Nodemailer SMTP
+  // Fallback to Nodemailer SMTP — SKIPPED in production (Render blocks outbound SMTP ports 25/465/587)
+  if (isProduction) {
+    console.warn(`⚠️ [Production] SMTP fallback skipped for ${to}. No Brevo or Resend API key was available. Configure BREVO_API_KEY in Render dashboard.`);
+    return false;
+  }
+
   const user = process.env.SMTP_USER || process.env.EMAIL_USER;
   const pass = process.env.SMTP_PASS || process.env.EMAIL_PASS;
 
   if (!user || !pass) {
     console.warn("⚠️ Email credentials not set. Skipping email notification.");
+    return false;
+  }
+
+  if (!transporter) {
+    console.warn("⚠️ SMTP transporter not initialized. Skipping email notification.");
     return false;
   }
 
